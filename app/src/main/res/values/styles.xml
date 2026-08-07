@@ -1,0 +1,256 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        Unified status-pill styles. Two parallel hooks that produce visually identical pills:
+        - Widget.RH.StatusPill is for plain TextView elements (use with @drawable/pill_status_*).
+        - Widget.RH.StatusChip is for Material Chip elements (set app:chipBackgroundColor per intent).
+        Both target ~22dp height, 11sp bold text, rounded full pill.
+    -->
+    <style name="Widget.RH.StatusPill" parent="android:Widget.TextView">
+        <item name="android:textSize">11sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="android:paddingStart">10dp</item>
+        <item name="android:paddingEnd">10dp</item>
+        <item name="android:paddingTop">4dp</item>
+        <item name="android:paddingBottom">4dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:includeFontPadding">false</item>
+        <item name="android:singleLine">true</item>
+        <item name="android:letterSpacing">0.02</item>
+    </style>
+
+    <style name="Widget.RH.StatusChip" parent="Widget.MaterialComponents.Chip.Action">
+        <item name="android:textSize">11sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="chipMinHeight">24dp</item>
+        <item name="chipMinTouchTargetSize">24dp</item>
+        <item name="ensureMinTouchTargetSize">false</item>
+        <item name="chipStrokeWidth">0dp</item>
+        <item name="chipStartPadding">8dp</item>
+        <item name="chipEndPadding">8dp</item>
+        <item name="closeIconVisible">false</item>
+        <item name="android:checkable">false</item>
+        <item name="android:clickable">false</item>
+        <item name="android:focusable">false</item>
+    </style>
+
+    <style name="AlertDialogTheme" parent="ThemeOverlay.MaterialComponents.Dialog.Alert">
+        <item name="android:background">#121212</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="android:textColorPrimary">@color/white</item>
+        <item name="android:windowTitleStyle">@style/DialogTitleStyle</item>
+        <item name="buttonBarPositiveButtonStyle">@style/AlertDialogButtonStyle</item>
+        <item name="buttonBarNeutralButtonStyle">@style/AlertDialogButtonStyle</item>
+        <!-- Explicit dark + teal palette so dialogs don't fall back to Material's default
+             (purple) colors or depend on force-dark, which shifted with the SDK upgrade. -->
+        <item name="colorPrimary">#008b8b</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorSecondary">#008b8b</item>
+        <item name="colorSurface">#1A1A1A</item>
+        <item name="colorOnSurface">#FFFFFF</item>
+        <item name="android:colorBackground">#121212</item>
+        <item name="android:textColorSecondary">#CCCCCC</item>
+    </style>
+
+    <style name="DialogTitleStyle" parent="TextAppearance.MaterialComponents.Headline6">
+        <item name="android:textColor">#008b8b</item>
+        <item name="android:textSize">20sp</item>
+        <item name="android:paddingTop">16dp</item>
+        <item name="android:paddingBottom">16dp</item>
+        <item name="android:paddingStart">16dp</item>
+        <item name="android:paddingEnd">16dp</item>
+    </style>
+
+    <style name="AlertDialogButtonStyle" parent="Widget.MaterialComponents.Button.TextButton.Dialog">
+        <item name="android:textColor">#008b8b</item>
+        <item name="android:textAllCaps">true</item>
+    </style>
+
+    <style name="CustomTextInputLayoutDropdown" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
+        <item name="boxBackgroundColor">#262626</item>
+        <item name="boxStrokeWidth">0dp</item>
+        <item name="boxStrokeColor">#008b8b</item>
+        <item name="android:textColorHint">#8A8A8A</item>
+        <item name="hintTextColor">#008b8b</item>
+    </style>
+
+    <style name="FullScreenDialog" parent="Theme.MaterialComponents.Dialog">
+        <item name="android:windowMinWidthMajor">90%</item>
+        <item name="android:windowMinWidthMinor">90%</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowIsFloating">false</item>
+        <item name="android:windowFullscreen">false</item>
+        <item name="colorSurface">#1A1A1A</item>
+        <item name="elevationOverlayEnabled">false</item>
+    </style>
+
+    <style name="CustomTextInputLayout" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+        <item name="boxBackgroundColor">#1A1A1A</item>
+        <item name="boxStrokeWidth">0dp</item>
+        <item name="boxStrokeColor">#008b8b</item>
+        <item name="hintTextColor">#008b8b</item>
+    </style>
+
+    <style name="DialogAnimationSlideRight">
+        <item name="android:windowEnterAnimation">@anim/slide_in_right</item>
+        <item name="android:windowExitAnimation">@anim/slide_out_right</item>
+    </style>
+
+    <style name="DialogTheme" parent="Theme.MaterialComponents.Dialog">
+        <!-- Make the dialog appear as a floating dialog that doesn't fill the entire screen -->
+        <item name="android:windowMinWidthMajor">85%</item>
+        <item name="android:windowMinWidthMinor">85%</item>
+
+        <!-- Make the dialog background transparent so we can control rounded corners -->
+        <item name="android:windowBackground">@android:color/transparent</item>
+
+        <!-- No dim behind the dialog -->
+        <item name="android:backgroundDimEnabled">true</item>
+        <item name="android:backgroundDimAmount">0.5</item>
+
+        <!-- Animation for the dialog -->
+        <item name="android:windowEnterAnimation">@android:anim/fade_in</item>
+        <item name="android:windowExitAnimation">@android:anim/fade_out</item>
+
+        <!-- Explicit dark + teal palette so buttons/surfaces inside this dialog theme render
+             correctly (Material's default is purple/light) without relying on force-dark,
+             whose behaviour changed with the targetSdk 35+ upgrade. -->
+        <item name="colorPrimary">#008b8b</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorSecondary">#008b8b</item>
+        <item name="colorSurface">#1A1A1A</item>
+        <item name="colorOnSurface">#FFFFFF</item>
+        <item name="android:colorBackground">#121212</item>
+        <item name="android:textColorPrimary">#FFFFFF</item>
+        <item name="android:textColorSecondary">#CCCCCC</item>
+        <!-- Dark Material themes composite a translucent WHITE "elevation overlay" on any
+             elevated surface whose colour == colorSurface, which made our #1A1A1A dialogs/
+             cards look washed-out grey after the AGP/Material/target bump. Turn it off so
+             declared dark colours render true regardless of elevation. -->
+        <item name="elevationOverlayEnabled">false</item>
+    </style>
+
+    <style name="AppTheme" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="bottomNavigationStyle">@style/Widget.RH.BottomNav</item>
+        <item name="android:windowBackground">#121212</item>
+        <item name="colorPrimary">#008b8b</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorSecondary">#008b8b</item>
+        <item name="colorSurface">#1A1A1A</item>
+        <item name="colorOnSurface">#FFFFFF</item>
+        <item name="android:textColor">#FFFFFF</item>
+        <item name="android:colorBackground">#1A1A1A</item>
+        <item name="android:navigationBarColor">#000000</item>
+        <item name="android:statusBarColor">#000000</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <!-- See DialogTheme: disable the white elevation-overlay tint so elevated
+             MaterialCardViews/surfaces keep their true dark colour app-wide. -->
+        <item name="elevationOverlayEnabled">false</item>
+    </style>
+
+    <style name="PillTabText" parent="TextAppearance.MaterialComponents.Body2">
+        <item name="android:textSize">13sp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:letterSpacing">0</item>
+    </style>
+
+    <!-- Bottom navigation. Root cause of the label-over-icon overlap: a FIXED bar
+         height + Material's labeled-mode item layout (which positions the icon by a
+         shift that assumes a specific label band) collide, and the default label
+         text appearance is too tall. Fix: a compact label appearance + let the bar
+         size itself (wrap_content in the layout) so icon and label always fit. -->
+    <style name="TextAppearance.RH.BottomNavLabel" parent="TextAppearance.MaterialComponents.Caption">
+        <item name="android:textSize">11sp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:letterSpacing">0</item>
+    </style>
+
+    <!-- Bottom-sheet dialog: transparent, flat sheet so the dialog's own rounded/
+         elevated surface doesn't peek out behind our content (which supplies its own
+         rounded dark background). Removes the "curved layer showing through" artifact. -->
+    <style name="Widget.RH.BottomSheet.Modal" parent="Widget.MaterialComponents.BottomSheet.Modal">
+        <item name="backgroundTint">@android:color/transparent</item>
+        <item name="android:backgroundTint">@android:color/transparent</item>
+        <item name="android:elevation">0dp</item>
+    </style>
+
+    <style name="RH.Theme.BottomSheetDialog" parent="Theme.MaterialComponents.DayNight.BottomSheetDialog">
+        <item name="bottomSheetStyle">@style/Widget.RH.BottomSheet.Modal</item>
+        <item name="elevationOverlayEnabled">false</item>
+        <item name="android:navigationBarColor">#000000</item>
+    </style>
+
+    <style name="Widget.RH.BottomNav" parent="Widget.MaterialComponents.BottomNavigationView">
+        <item name="itemTextAppearanceActive">@style/TextAppearance.RH.BottomNavLabel</item>
+        <item name="itemTextAppearanceInactive">@style/TextAppearance.RH.BottomNavLabel</item>
+        <item name="itemIconSize">24dp</item>
+        <item name="labelVisibilityMode">labeled</item>
+    </style>
+
+    <!--
+        ╔══════════════════════════════════════════════════════════════════╗
+        ║  RICHHEALTH PROFILE TYPE / SURFACE TOKENS                         ║
+        ║  Minimalist scale: weight comes from color & spacing, not bold.  ║
+        ║  Palette is unchanged — these only reference existing rh_* hues. ║
+        ╚══════════════════════════════════════════════════════════════════╝
+    -->
+
+    <!-- Small caps section label above each card (thin, quiet). -->
+    <style name="Widget.RH.SectionLabel" parent="android:Widget.TextView">
+        <item name="android:textSize">11sp</item>
+        <item name="android:textColor">#666666</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:letterSpacing">0.14</item>
+        <item name="android:layout_marginStart">4dp</item>
+        <item name="android:layout_marginBottom">10dp</item>
+    </style>
+
+    <!-- Standard grouped card surface. -->
+    <style name="Widget.RH.Card" parent="Widget.MaterialComponents.CardView">
+        <item name="cardCornerRadius">18dp</item>
+        <item name="cardElevation">0dp</item>
+        <item name="cardBackgroundColor">@color/rh_surface</item>
+        <item name="android:layout_marginBottom">20dp</item>
+    </style>
+
+    <!-- A single info row inside a card. Roomier for a calmer, modern rhythm. -->
+    <style name="Widget.RH.Row" parent="">
+        <item name="android:orientation">horizontal</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:paddingHorizontal">16dp</item>
+        <item name="android:paddingVertical">11dp</item>
+    </style>
+
+    <!-- Row leading icon. Slightly smaller so it supports the label, not shouts. -->
+    <style name="Widget.RH.Row.Icon" parent="">
+        <item name="android:layout_width">20dp</item>
+        <item name="android:layout_height">20dp</item>
+        <item name="android:layout_marginEnd">16dp</item>
+        <item name="tint">@color/rh_accent</item>
+    </style>
+
+    <!-- Row label (left, quiet). Recedes so the value reads first. -->
+    <style name="Widget.RH.RowLabel" parent="android:Widget.TextView">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textColor">@color/rh_text_label</item>
+    </style>
+
+    <!-- Row value (right). Bright, regular weight — hierarchy from color, not bold. -->
+    <style name="Widget.RH.RowValue" parent="android:Widget.TextView">
+        <item name="android:textSize">15sp</item>
+        <item name="android:textColor">@color/rh_text_primary</item>
+        <item name="android:gravity">end</item>
+    </style>
+
+    <!-- Full-width hairline divider — spans the row incl. under the leading icon. -->
+    <style name="Widget.RH.Divider" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">1dp</item>
+        <item name="android:background">@color/rh_divider_subtle</item>
+    </style>
+
+</resources>

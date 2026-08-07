@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Bottom nav USER icon — StateListDrawable (avatar / account circle)
+    checked=true  → filled account circle, teal
+    default       → account circle, white
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_checked="true"  android:drawable="@drawable/ic_account_circle" />
+    <item                               android:drawable="@drawable/ic_account_circle_outline" />
+</selector>

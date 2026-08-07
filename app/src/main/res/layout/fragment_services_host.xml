@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/black">
+
+    <!-- Feed / Tools pill tabs (same language as Profile) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="@drawable/pill_tab_container_bg"
+        android:padding="4dp"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="6dp">
+
+        <LinearLayout
+            android:id="@+id/tab_feed"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:background="@drawable/pill_tab_selected"
+            android:paddingVertical="9dp"
+            android:clickable="true"
+            android:focusable="true">
+            <ImageView
+                android:id="@+id/tab_icon_feed"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:layout_marginEnd="6dp"
+                android:src="@drawable/ic_feed"
+                app:tint="@color/white"/>
+            <TextView
+                android:id="@+id/tab_label_feed"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Feed"
+                android:textSize="13sp"
+                android:textColor="@color/white"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/tab_tools"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:background="@drawable/pill_tab_unselected"
+            android:paddingVertical="9dp"
+            android:clickable="true"
+            android:focusable="true">
+            <ImageView
+                android:id="@+id/tab_icon_tools"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:layout_marginEnd="6dp"
+                android:src="@drawable/ic_apps"
+                app:tint="#AAAAAA"/>
+            <TextView
+                android:id="@+id/tab_label_tools"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Tools"
+                android:textSize="13sp"
+                android:textColor="#AAAAAA"/>
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Active child fragment (HealthFeedFragment or AIFragment) -->
+    <FrameLayout
+        android:id="@+id/services_container"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+</LinearLayout>

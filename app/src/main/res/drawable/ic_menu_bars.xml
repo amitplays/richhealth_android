@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <!-- Modern, elegant hamburger menu icon with rounded bars -->
+
+    <!-- Top bar -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M3,6C3,5.45 3.45,5 4,5H20C20.55,5 21,5.45 21,6C21,6.55 20.55,7 20,7H4C3.45,7 3,6.55 3,6Z"/>
+
+    <!-- Middle bar (slightly shorter for modern look) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M5,12C5,11.45 5.45,11 6,11H18C18.55,11 19,11.45 19,12C19,12.55 18.55,13 18,13H6C5.45,13 5,12.55 5,12Z"/>
+
+    <!-- Bottom bar -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M3,18C3,17.45 3.45,17 4,17H20C20.55,17 21,17.45 21,18C21,18.55 20.55,19 20,19H4C3.45,19 3,18.55 3,18Z"/>
+</vector>

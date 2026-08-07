@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Host container for an AI autofill "log this" card. The card itself is built
+  programmatically in ChatAdapter.HealthCardViewHolder so its fields can vary by
+  type (symptom / measurement / medication / period), matching the programmatic
+  style used for chat suggestion cards.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/health_card_root"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingStart="12dp"
+    android:paddingEnd="40dp"
+    android:paddingTop="2dp"
+    android:paddingBottom="6dp" />

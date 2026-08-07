@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+    <group android:translateY="960">
+        <path
+            android:fillColor="#008b8b"
+            android:pathData="M177-177q-17-17-17-43t17-43q17-17 43-17t43 17q17 17 17 43t-17 43q-17 17-43 17t-43-17Zm0-260q-17-17-17-43t17-43q17-17 43-17t43 17q17 17 17 43t-17 43q-17 17-43 17t-43-17Zm0-260q-17-17-17-43t17-43q17-17 43-17t43 17q17 17 17 43t-17 43q-17 17-43 17t-43-17Zm260 0q-17-17-17-43t17-43q17-17 43-17t43 17q17 17 17 43t-17 43q-17 17-43 17t-43-17Zm260 0q-17-17-17-43t17-43q17-17 43-17t43 17q17 17 17 43t-17 43q-17 17-43 17t-43-17ZM437-437q-17-17-17-43t17-43q17-17 43-17t43 17q17 17 17 43t-17 43q-17 17-43 17t-43-17Zm101 277v-96l215-214q7-6 14-9t15-3q7 0 15 2.5t14 8.5l37 39q7 7 9.5 14t2.5 15q0 8-2.5 15t-9.5 14L634-160h-96Zm253-214 28-29-37-38-29 29 38 38Z"/>
+    </group>
+</vector>

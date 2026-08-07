@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Mental Health / Mind Wellness icon — vector replacement for ic_mental_health_chat.png
+    Used in: Health data mental health section, Richie AI chat when contextual.
+    A head silhouette with a small heart inside — combines "person" + "emotional health."
+    fillColor: #FFFFFF — tinted externally.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <!-- Head/brain outline -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M9,10h1v1H9zM14,10h1v1h-1zM12,2C6.48,2 2,6.48 2,12c0,5.52 4.48,10 10,10 5.52,0 10,-4.48 10,-10C22,6.48 17.52,2 12,2zM12,20c-4.41,0 -8,-3.59 -8,-8 0,-4.41 3.59,-8 8,-8 4.41,0 8,3.59 8,8 0,4.41 -3.59,8 -8,8z"/>
+
+    <!-- Small heart inside -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M12,13.5c-1.33,-1.14 -2,-2 -2,-2.75 0,-0.69 0.56,-1.25 1.25,-1.25 0.4,0 0.74,0.19 0.75,0.5 0.01,-0.31 0.35,-0.5 0.75,-0.5 0.69,0 1.25,0.56 1.25,1.25 0,0.75 -0.67,1.61 -2,2.75z"/>
+</vector>

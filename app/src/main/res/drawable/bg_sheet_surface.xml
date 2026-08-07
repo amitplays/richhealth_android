@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Bottom-sheet surface: solid dark neutral with rounded top corners, matching
+     the app's dialog surface so white text + teal accent stay legible. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#141414"/>
+    <corners
+        android:topLeftRadius="22dp"
+        android:topRightRadius="22dp"/>
+</shape>

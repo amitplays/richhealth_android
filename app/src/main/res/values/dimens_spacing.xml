@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    ╔══════════════════════════════════════════════════════════════════╗
+    ║  RICHHEALTH SPACING SCALE  — the app-wide standard                ║
+    ║  Set here on the Profile/Settings/Plan overhaul; reuse elsewhere. ║
+    ║  Loose, modern, breathable — spacing does the work, not borders.  ║
+    ╚══════════════════════════════════════════════════════════════════╝
+-->
+<resources>
+    <!-- Screen edge padding -->
+    <dimen name="rh_screen_margin">16dp</dimen>
+    <!-- Vertical gap between stacked cards -->
+    <dimen name="rh_card_gap">18dp</dimen>
+    <!-- Inner padding of a card -->
+    <dimen name="rh_card_padding">16dp</dimen>
+    <!-- Vertical padding of a single info row -->
+    <dimen name="rh_row_v_padding">15dp</dimen>
+    <!-- Gap under a section label -->
+    <dimen name="rh_section_gap">10dp</dimen>
+    <!-- Standard card corner -->
+    <dimen name="rh_card_radius">18dp</dimen>
+</resources>

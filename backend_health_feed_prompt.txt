@@ -1,0 +1,121 @@
+BACKEND TASK: Health Feed API - Podcasts, Articles, and News
+
+CONTEXT:
+The Android app now has a "Health Feed" section that displays three types of content: Podcasts, Articles, and News. Currently podcasts are hardcoded locally on the app. We need backend endpoints to serve all three content types, plus a scheduled agent that fetches health news from the internet.
+
+The app already has user health data (medical reports, symptoms, medications, measurements, health analysis cache, dietary insights) that should inform what content is personalized/shown to the user.
+
+WHAT TO BUILD:
+
+1. FEED ITEM MODEL (MongoDB Schema)
+
+Create a single "FeedItem" collection that stores all content types:
+
+Fields:
+- type: String, enum ["podcast", "article", "news"], required
+- title: String, required
+- description: String, required
+- category: String (e.g., "Wellness", "Heart Health", "Sleep", "Research")
+- content: String (full article text for articles, optional for others)
+- url: String (external link for news, source for articles)
+- audioUrl: String (for podcasts - URL to hosted audio file, or resource name for local)
+- audioDuration: Number (seconds, for podcasts)
+- imageUrl: String (optional thumbnail)
+- sourceLinks: [String] (reference URLs)
+- tags: [String] (for matching with user health data)
+- isProOnly: Boolean, default false
+- isActive: Boolean, default true
+- priority: Number, default 0 (higher = shown first, use for editorial boosting)
+- createdAt: Date
+- updatedAt: Date
+- fetchedFrom: String (for news items - domain it was fetched from)
+
+Index on: { type: 1, isActive: 1, createdAt: -1 }
+Index on: { tags: 1 }
+
+2. API ENDPOINTS
+
+All endpoints require Bearer token auth (same pattern as existing routes).
+
+GET /api/feed
+Query params:
+- type: optional, filter by "podcast", "article", "news" (omit for all)
+- page: optional, default 1
+- limit: optional, default 20
+- category: optional, filter by category
+
+Logic:
+- Fetch active feed items matching filters, sorted by priority desc then createdAt desc
+- For personalization: look up the user's health analysis cache (User.healthAnalysisCache) and medical data tags. If user has conditions/interests, boost items whose tags overlap. Simple approach: do the DB query normally, then re-sort results client-side by tag overlap score. Don't overcomplicate this.
+- Return: { items: [...], page, totalPages, total }
+
+GET /api/feed/:id
+Returns a single feed item by ID. For articles, include the full "content" field.
+
+POST /api/feed (admin only - or use this for the news agent)
+Create a new feed item. Body matches the schema above.
+
+POST /api/feed/batch (for the news agent to insert multiple items at once)
+Body: { items: [...] }
+Upsert by title+type combo to avoid duplicates.
+
+3. NEWS FETCHING AGENT
+
+Create a function/script that can be called on a schedule (cron or manual trigger) to fetch health news:
+
+Function: fetchHealthNews()
+
+Approach (keep it simple):
+- Use a free news API. Options in order of preference:
+  a) NewsAPI.org (free tier: 100 requests/day) - search health topics
+  b) Google News RSS feeds - parse XML from health category
+  c) WHO/NIH RSS feeds for official health news
+
+- Fetch from 2-3 sources:
+  1. General health news: query "health wellness nutrition exercise"
+  2. Medical research: query "medical research study findings"
+  3. Specific to user base: query based on most common tags in your FeedItem collection
+
+- For each fetched article:
+  - Extract: title, description/snippet, url, source domain, published date
+  - Set type = "news"
+  - Auto-generate tags from title/description keywords (simple keyword matching against a predefined health tag list: ["heart health", "diabetes", "nutrition", "exercise", "mental health", "sleep", "immune system", "weight management", "blood pressure", "cholesterol", etc.])
+  - Upsert into FeedItem collection (use title+fetchedFrom as unique key to avoid dupes)
+
+- Run this daily or every 12 hours
+
+Implementation:
+const fetchHealthNews = async () => {
+  // 1. Fetch from news API
+  // 2. Transform to FeedItem format
+  // 3. Bulk upsert into DB
+  // 4. Delete news items older than 30 days to keep collection clean
+  // 5. Log results
+}
+
+Add a route to trigger manually: POST /api/feed/fetch-news (admin/internal only)
+Also set up a simple setInterval or node-cron to run automatically.
+
+4. SEED DATA
+
+Create a seed script that inserts the 4 existing podcasts into the FeedItem collection so they come from the backend instead of being hardcoded. Also insert 5-10 sample articles about common health topics (blood pressure, sleep, nutrition, stress management, etc.) with real source links from WHO/NIH/Mayo Clinic.
+
+5. PERSONALIZATION (simple approach)
+
+In the GET /api/feed endpoint, after fetching items:
+- Load user's health tags from their healthAnalysisCache or recent medical data
+- For each feed item, calculate a simple overlap score: count of matching tags
+- Sort: items with higher overlap + higher priority come first
+- This is good enough. Don't build a recommendation engine.
+
+6. ENVIRONMENT VARIABLES NEEDED
+
+- NEWS_API_KEY: API key for NewsAPI.org (or whichever news source you pick)
+- Add to .env file
+
+IMPORTANT NOTES:
+- Follow the same patterns as existing routes (Express router, auth middleware, try/catch with proper error responses)
+- Keep it simple. The goal is to have content flowing into the feed quickly, not to build a perfect recommendation system.
+- The Android app will call GET /api/feed with optional type filter. The response format should be straightforward: { items: [], page: 1, totalPages: 1, total: 8 }
+- News items should auto-expire after 30 days (delete in the fetch agent, not via TTL index, to keep control)
+- Articles and podcasts are editorial content that persist

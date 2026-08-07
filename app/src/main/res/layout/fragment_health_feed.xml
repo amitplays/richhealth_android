@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/black">
+
+    <!-- Search bar — same thin field used in the chat-history side panel
+         (bg_search_field + ic_search_thin). Filters the feed live. -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="16dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="10dp">
+
+        <EditText
+            android:id="@+id/feed_search_input"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:background="@drawable/bg_search_field"
+            android:drawableStart="@drawable/ic_search_thin"
+            android:drawablePadding="10dp"
+            android:drawableTint="#808080"
+            android:hint="Search for News &amp; Podcast"
+            android:textColorHint="#666666"
+            android:textColor="@color/white"
+            android:textSize="14sp"
+            android:paddingStart="14dp"
+            android:paddingEnd="16dp"
+            android:paddingTop="9dp"
+            android:paddingBottom="9dp"
+            android:minHeight="40dp"
+            android:maxLines="1"
+            android:singleLine="true"
+            android:inputType="text"
+            android:imeOptions="actionSearch"
+            android:importantForAutofill="no" />
+
+        <!-- Richie logo spins while the feed is fetching fresh news (trailing the
+             search field so it reads as a live "loading" cue). -->
+        <ImageView
+            android:id="@+id/feed_news_spinner"
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:layout_marginStart="10dp"
+            android:src="@drawable/ic_launcher"
+            android:contentDescription="Fetching news"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <!-- Feed list -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/feed_recycler"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:paddingTop="4dp"
+        android:paddingBottom="16dp"
+        android:scrollbars="none" />
+
+    <!-- Empty state -->
+    <LinearLayout
+        android:id="@+id/empty_state"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:visibility="gone"
+        android:padding="40dp">
+
+        <ImageView
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:src="@drawable/ic_podcast"
+            android:alpha="0.3"
+            android:layout_marginBottom="16dp"
+            android:contentDescription="Empty" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="No content yet"
+            android:textColor="#808080"
+            android:textSize="16sp"
+            android:fontFamily="sans-serif-medium"
+            android:layout_marginBottom="4dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Health articles, podcasts and news will appear here"
+            android:textColor="#666666"
+            android:textSize="13sp"
+            android:gravity="center" />
+    </LinearLayout>
+
+    <!-- Mini player bar (for podcasts) -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/feed_mini_player"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="8dp"
+        android:layout_marginBottom="4dp"
+        android:visibility="gone"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="8dp"
+        app:cardBackgroundColor="#262626">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="10dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <ImageView
+                    android:layout_width="@dimen/icon_lg"
+                    android:layout_height="@dimen/icon_lg"
+                    android:src="@drawable/ic_podcast"
+                    app:tint="#008b8b"
+                    android:layout_marginEnd="10dp"
+                    android:contentDescription="Now playing" />
+
+                <TextView
+                    android:id="@+id/feed_mini_player_title"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textColor="@color/white"
+                    android:textSize="13sp"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+
+                <TextView
+                    android:id="@+id/feed_mini_player_time"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="#808080"
+                    android:textSize="11sp"
+                    android:layout_marginEnd="8dp" />
+
+                <ImageButton
+                    android:id="@+id/feed_mini_play_pause"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:src="@drawable/ic_play"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    app:tint="#008b8b"
+                    android:contentDescription="Play/pause" />
+
+                <ImageButton
+                    android:id="@+id/feed_mini_close"
+                    android:layout_width="@dimen/icon_container_sm"
+                    android:layout_height="@dimen/icon_container_sm"
+                    android:src="@drawable/ic_close"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:padding="8dp"
+                    app:tint="#808080"
+                    android:layout_marginStart="4dp"
+                    android:contentDescription="Close" />
+            </LinearLayout>
+
+            <SeekBar
+                android:id="@+id/feed_mini_seekbar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:progressTint="#008b8b"
+                android:thumbTint="#008b8b"
+                android:progressBackgroundTint="#444444"
+                android:maxHeight="2dp" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+</LinearLayout>

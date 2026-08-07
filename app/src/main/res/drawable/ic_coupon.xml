@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ticket / coupon icon — outline style consistent with app icon design system. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M20,12c0,-1.1 0.9,-2 2,-2L22,6c0,-1.1 -0.9,-2 -2,-2L4,4c-1.1,0 -1.99,0.9 -1.99,2v4c1.1,0 1.99,0.9 1.99,2s-0.89,2 -2,2v4c0,1.1 0.9,2 2,2h16c1.1,0 2,-0.9 2,-2v-4c-1.1,0 -2,-0.9 -2,-2zM20,11.54c-1.19,0.69 -2,1.99 -2,3.46v2L4,17v-2c0,-1.48 -0.81,-2.77 -1.99,-3.46L2.01,9c1.18,-0.69 2,-1.99 2,-3.46V6h16v0.54c0,1.47 0.81,2.77 1.99,3.46l0.01,1.54zM9.5,7.5L8,7.5L8,9h1.5zM9.5,11L8,11v1.5h1.5zM9.5,14.5L8,14.5L8,16h1.5z" />
+</vector>

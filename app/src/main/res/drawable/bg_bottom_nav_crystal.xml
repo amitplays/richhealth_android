@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Native "liquid glass" floating pill for the bottom navigation (dark app).
+    Pure vector drawable (no CSS, no code, no library) - works on all API levels (minSdk 29).
+    Neutral WHITE-based translucency (no blue tint) so it reads as frosted glass
+    floating on the app's black background, while staying dark enough that the
+    white/teal nav icons remain visible:
+      - fully rounded corners            = capsule / pill
+      - white translucent gradient       = frosted glass, brighter at the top (light)
+      - bright 1.5dp white stroke         = specular crystal rim (the "floating" cue on black)
+      - top white sheen overlay          = glossy highlight
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Glass body: white translucency, brighter toward the top -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="90"
+                android:startColor="#24FFFFFF"
+                android:centerColor="#33FFFFFF"
+                android:endColor="#4DFFFFFF"
+                android:type="linear" />
+            <corners android:radius="30dp" />
+            <stroke
+                android:width="1.5dp"
+                android:color="#80FFFFFF" />
+        </shape>
+    </item>
+
+    <!-- Glossy top sheen -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="90"
+                android:startColor="#00FFFFFF"
+                android:centerColor="#00FFFFFF"
+                android:endColor="#26FFFFFF"
+                android:type="linear" />
+            <corners android:radius="30dp" />
+        </shape>
+    </item>
+
+</layer-list>

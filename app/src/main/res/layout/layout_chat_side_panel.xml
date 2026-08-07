@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0B0B0B"
+    android:orientation="vertical">
+
+    <!-- Header: thin search field (like the chat input) + teal close -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="12dp"
+        android:paddingEnd="8dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="10dp">
+
+        <EditText
+            android:id="@+id/search_input"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:background="@drawable/bg_search_field"
+            android:drawableStart="@drawable/ic_search_thin"
+            android:drawablePadding="10dp"
+            android:drawableTint="#808080"
+            android:hint="Search conversations"
+            android:textColorHint="#666666"
+            android:textColor="@color/white"
+            android:textSize="14sp"
+            android:paddingStart="14dp"
+            android:paddingEnd="16dp"
+            android:paddingTop="9dp"
+            android:paddingBottom="9dp"
+            android:minHeight="40dp"
+            android:maxLines="1"
+            android:singleLine="true"
+            android:inputType="text"
+            android:imeOptions="actionSearch"
+            android:importantForAutofill="no"/>
+
+        <ImageButton
+            android:id="@+id/close_panel_button"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginStart="2dp"
+            android:src="@drawable/ic_close"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            app:tint="#008b8b"
+            android:contentDescription="Close panel" />
+    </LinearLayout>
+
+    <!-- Content -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <LinearLayout
+            android:id="@+id/empty_state"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:padding="24dp"
+            android:visibility="gone">
+
+            <ImageView
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:src="@drawable/ic_chat"
+                app:tint="#008b8b"
+                android:alpha="0.4"
+                android:layout_marginBottom="12dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="No chat history yet"
+                android:textColor="#808080"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Your chat sessions will appear here"
+                android:textColor="#666666"
+                android:textSize="12sp"
+                android:textAlignment="center" />
+        </LinearLayout>
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/chat_sessions_recycler"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:paddingTop="5dp"
+            android:paddingBottom="2dp" />
+
+        <!-- In-panel loading (shown only during the real fetch, so it sits inside
+             the side sheet instead of behind it). -->
+        <ProgressBar
+            android:id="@+id/history_loading"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_gravity="center"
+            android:indeterminateTint="#008b8b"
+            android:visibility="gone" />
+    </FrameLayout>
+
+    <!-- Bottom action buttons (hidden — functionality kept in Java) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="0dp"
+        android:visibility="gone">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/delete_all_chats_button"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_weight="1"
+            android:text="Delete All"
+            android:textSize="12sp"
+            android:textColor="#FF5252"
+            app:cornerRadius="8dp"
+            app:strokeColor="#FF5252"
+            app:strokeWidth="1dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/new_chat_button"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_weight="1"
+            android:text="New Chat"
+            android:textSize="12sp"
+            android:textColor="@color/white"
+            app:cornerRadius="8dp"
+            app:backgroundTint="#008b8b" />
+    </LinearLayout>
+</LinearLayout>

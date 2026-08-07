@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    ╔══════════════════════════════════════════════════════════════════╗
+    ║                 RICHHEALTH ICON SIZE DESIGN TOKENS               ║
+    ╠══════════════════════════════════════════════════════════════════╣
+    ║  Rule: Every icon in the app must use one of these tokens.       ║
+    ║  Style: Line/outline by default; filled when selected/active.    ║
+    ║  Touch targets: always ≥ 48dp (Material Design requirement).     ║
+    ╚══════════════════════════════════════════════════════════════════╝
+
+    TOKEN GUIDE
+    ─────────────────────────────────────────────────────────────────
+    icon_xs   (16dp) — tiny supplementary detail (timestamps, tags)
+    icon_sm   (20dp) — secondary inline icons (feed type badge row)
+    icon_md   (24dp) — STANDARD. Forms, lists, most action icons
+    icon_lg   (28dp) — card primary icons, section-level actions
+    icon_xl   (36dp) — hero/prominent interactive buttons
+    icon_nav  (26dp) — bottom navigation bar icons
+
+    TOUCH TARGET CONTAINERS
+    ─────────────────────────────────────────────────────────────────
+    container_sm  (40dp) — tight action row (edit, close in cards)
+    container_md  (48dp) — standard Material touch target
+    container_lg  (56dp) — avatar, large circular action button
+
+    ICON-TO-CONTAINER PAIRING
+    ─────────────────────────────────────────────────────────────────
+    icon_xs  → no container (inline text decoration)
+    icon_sm  → no container or container_sm
+    icon_md  → container_md  (the most common pairing)
+    icon_lg  → container_lg
+    icon_xl  → container_lg
+    icon_nav → managed by BottomNavigationView (app:itemIconSize)
+-->
+<resources>
+
+    <!-- ── Icon sizes ── -->
+    <dimen name="icon_xs">16dp</dimen>
+    <dimen name="icon_sm">20dp</dimen>
+    <dimen name="icon_md">24dp</dimen>
+    <dimen name="icon_lg">30dp</dimen>
+    <dimen name="icon_xl">36dp</dimen>
+    <dimen name="icon_nav">20dp</dimen>
+
+    <!-- ── Touch-target containers ── -->
+    <dimen name="icon_container_sm">40dp</dimen>
+    <dimen name="icon_container_md">48dp</dimen>
+    <dimen name="icon_container_lg">56dp</dimen>
+
+    <!-- ── Profile-specific ── -->
+    <!-- Avatar placeholder icon inside its 56dp circular card -->
+    <dimen name="icon_avatar">32dp</dimen>
+    <!-- Edit-profile pen icon inside its 40dp circular card -->
+    <dimen name="icon_edit_profile">22dp</dimen>
+    <!-- Inline row icons in profile metrics / health-lifestyle sections -->
+    <dimen name="icon_profile_row">22dp</dimen>
+
+    <!-- ── Feed card specific ── -->
+    <!-- Small icon that sits beside the content title -->
+    <dimen name="icon_feed_title">20dp</dimen>
+    <!-- Action buttons: link source, read-more arrow -->
+    <dimen name="icon_feed_action">24dp</dimen>
+    <!-- Play/Pause primary media action -->
+    <dimen name="icon_feed_play">32dp</dimen>
+
+    <!-- ── AI / Chat screen ── -->
+    <dimen name="icon_chat_action">24dp</dimen>
+    <dimen name="icon_send">24dp</dimen>
+
+</resources>

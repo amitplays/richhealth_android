@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Lean list row (matches item_medical_data.xml): no card, hairline divider below.
+     IDs preserved for MedicationsAdapter binding. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="?attr/selectableItemBackground"
+    android:paddingStart="16dp"
+    android:paddingEnd="10dp"
+    android:paddingTop="11dp"
+    android:paddingBottom="0dp">
+
+    <!-- Row 1: name + status chip -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/medication_name"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Medication Name"
+            android:textColor="@color/white"
+            android:textSize="15sp"
+            android:maxLines="1"
+            android:ellipsize="end" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/status_chip"
+            style="@style/Widget.RH.StatusChip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="ACTIVE"
+            app:chipBackgroundColor="#4CAF50" />
+    </LinearLayout>
+
+    <!-- Row 2: dosage + frequency + sharing + edit + delete -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="2dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Dosage: "
+            android:textColor="#808080"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/medication_dosage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="10mg"
+            android:textColor="#008b8b"
+            android:textSize="13sp"
+            android:layout_marginEnd="8dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Freq: "
+            android:textColor="#808080"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/medication_frequency"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Once daily"
+            android:textColor="#008b8b"
+            android:textSize="13sp"
+            android:maxLines="1"
+            android:ellipsize="end" />
+
+        <ImageView
+            android:id="@+id/sharing_icon"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:padding="2dp"
+            android:src="@drawable/ic_visibility_off"
+            app:tint="#666666"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Sharing status"
+            android:layout_marginStart="6dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/edit_button"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_marginStart="2dp"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:padding="0dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:insetLeft="0dp"
+            android:insetRight="0dp"
+            app:icon="@drawable/ic_edit"
+            app:iconTint="#008b8b"
+            app:iconSize="16dp"
+            app:iconPadding="0dp"
+            app:iconGravity="textStart"
+            app:backgroundTint="@android:color/transparent"
+            app:cornerRadius="15dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/delete_button"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_marginStart="2dp"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:padding="0dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:insetLeft="0dp"
+            android:insetRight="0dp"
+            app:icon="@drawable/ic_delete"
+            app:iconTint="#FF5252"
+            app:iconSize="16dp"
+            app:iconPadding="0dp"
+            app:iconGravity="textStart"
+            app:backgroundTint="@android:color/transparent"
+            app:rippleColor="#30FF5252"
+            app:cornerRadius="15dp" />
+    </LinearLayout>
+
+    <!-- Row 3: duration -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="2dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Duration: "
+            android:textColor="#808080"
+            android:textSize="12sp" />
+
+        <TextView
+            android:id="@+id/medication_duration"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Since Jun 1, 2025"
+            android:textColor="#757575"
+            android:textSize="12sp"
+            android:maxLines="1"
+            android:ellipsize="end" />
+    </LinearLayout>
+
+    <!-- Notes (optional) -->
+    <TextView
+        android:id="@+id/medication_notes"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Additional notes..."
+        android:textColor="#999999"
+        android:textSize="12sp"
+        android:layout_marginTop="2dp"
+        android:layout_marginEnd="24dp"
+        android:maxLines="2"
+        android:ellipsize="end"
+        android:visibility="gone" />
+
+    <!-- Discontinue button (optional, for current medications) -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/discontinue_button"
+        style="@style/Widget.MaterialComponents.Button.TextButton"
+        android:layout_width="wrap_content"
+        android:layout_height="32dp"
+        android:text="Discontinue"
+        android:textSize="11sp"
+        android:textColor="#FF9800"
+        app:backgroundTint="@android:color/transparent"
+        app:cornerRadius="8dp"
+        android:visibility="gone"
+        android:layout_marginTop="2dp" />
+
+    <!-- Inset hairline divider (profile-style) -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="0.5dp"
+        android:layout_marginTop="11dp"
+        android:background="#2C2C2C" />
+</LinearLayout>

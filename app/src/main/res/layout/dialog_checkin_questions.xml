@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="16dp">
+
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="0dp"
+        app:cardBackgroundColor="#1A1A1A">
+
+        <androidx.core.widget.NestedScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fillViewport="true">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <!-- Progress label: "Question 2 of 5" -->
+                <TextView
+                    android:id="@+id/question_progress"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Question 1 of 4"
+                    android:textColor="#808080"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="6dp" />
+
+                <!-- Horizontal progress bar -->
+                <ProgressBar
+                    android:id="@+id/question_progress_bar"
+                    style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="4dp"
+                    android:progressTint="#008b8b"
+                    android:progressBackgroundTint="#2A2A2A"
+                    android:max="100"
+                    android:progress="25"
+                    android:layout_marginBottom="20dp" />
+
+                <!-- Question text -->
+                <TextView
+                    android:id="@+id/question_text"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/white"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:lineSpacingExtra="4dp"
+                    android:layout_marginBottom="20dp" />
+
+                <!-- Options: card grid (SelectableCardAdapter, 2 columns) -->
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/options_recycler"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:nestedScrollingEnabled="false"
+                    android:layout_marginBottom="20dp" />
+
+                <!-- Saving indicator -->
+                <LinearLayout
+                    android:id="@+id/submit_loading"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:layout_marginBottom="8dp"
+                    android:visibility="gone">
+
+                    <ImageView
+                        android:id="@+id/submit_loading_logo"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_launcher" />
+
+                </LinearLayout>
+
+                <!-- Next / Done button -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_next"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:text="Next"
+                    android:textColor="@color/white"
+                    android:textSize="15sp"
+                    app:backgroundTint="#008b8b"
+                    app:cornerRadius="12dp" />
+
+            </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
+    </com.google.android.material.card.MaterialCardView>
+</FrameLayout>

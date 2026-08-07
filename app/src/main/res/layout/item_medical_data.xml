@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Lean list row (profile/chat-history style), no card.
+     Title + status chip on one line, value/date/actions under it,
+     optional description, hairline divider below.
+     IDs preserved for MedicalDataAdapter binding. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="?attr/selectableItemBackground"
+    android:paddingStart="16dp"
+    android:paddingEnd="10dp"
+    android:paddingTop="11dp"
+    android:paddingBottom="0dp">
+
+    <!-- Row 1: title + status chip -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/title_text"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Medical Data Title"
+            android:textColor="@color/white"
+            android:textSize="15sp"
+            android:maxLines="1"
+            android:ellipsize="end" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/status_chip"
+            style="@style/Widget.RH.StatusChip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="Moderate"
+            app:chipBackgroundColor="#FF9800" />
+    </LinearLayout>
+
+    <!-- Row 2: value + date + sharing + edit + delete -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="2dp">
+
+        <TextView
+            android:id="@+id/value_text"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Duration: 3 days"
+            android:textColor="#008b8b"
+            android:textSize="13sp"
+            android:maxLines="1"
+            android:ellipsize="end" />
+
+        <TextView
+            android:id="@+id/date_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Jun 22, 2025"
+            android:textColor="#757575"
+            android:textSize="11sp"
+            android:layout_marginStart="8dp" />
+
+        <ImageView
+            android:id="@+id/sharing_icon"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:padding="2dp"
+            android:src="@drawable/ic_visibility_off"
+            app:tint="#666666"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Sharing status"
+            android:layout_marginStart="6dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/edit_button"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_marginStart="2dp"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:padding="0dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:insetLeft="0dp"
+            android:insetRight="0dp"
+            app:icon="@drawable/ic_edit"
+            app:iconTint="#008b8b"
+            app:iconSize="16dp"
+            app:iconPadding="0dp"
+            app:iconGravity="textStart"
+            app:backgroundTint="@android:color/transparent"
+            app:cornerRadius="15dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/delete_button"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_marginStart="2dp"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:padding="0dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:insetLeft="0dp"
+            android:insetRight="0dp"
+            app:icon="@drawable/ic_delete"
+            app:iconTint="#FF5252"
+            app:iconSize="16dp"
+            app:iconPadding="0dp"
+            app:iconGravity="textStart"
+            app:backgroundTint="@android:color/transparent"
+            app:rippleColor="#30FF5252"
+            app:cornerRadius="15dp" />
+    </LinearLayout>
+
+    <!-- Row 3: description / notes (optional) -->
+    <TextView
+        android:id="@+id/description_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Description or notes..."
+        android:textColor="#999999"
+        android:textSize="12sp"
+        android:layout_marginTop="2dp"
+        android:layout_marginEnd="24dp"
+        android:maxLines="2"
+        android:ellipsize="end"
+        android:visibility="visible" />
+
+    <!-- Inset hairline divider between rows (profile-style) -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="0.5dp"
+        android:layout_marginTop="11dp"
+        android:background="#2C2C2C" />
+</LinearLayout>

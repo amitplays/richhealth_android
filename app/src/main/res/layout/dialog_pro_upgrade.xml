@@ -1,0 +1,400 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:fitsSystemWindows="true"
+    android:background="#1A1A1A">
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/dialog_card"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        app:cardBackgroundColor="#1A1A1A"
+        app:cardCornerRadius="0dp"
+        app:cardElevation="0dp"
+        app:strokeWidth="0dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:paddingTop="20dp"
+            android:paddingBottom="12dp"
+            android:clipChildren="false">
+
+            <!-- ═══════════════════════════════════════════════
+                 HEADER — logo + title + "On: Free" pill + subtitle
+                 ═══════════════════════════════════════════════ -->
+
+            <!-- Header: small launcher icon · title + tier pill · subtitle.
+                 Logo is inline to the left of "Upgrade Your Plan". -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="4dp">
+
+                <!-- Small brand mark beside the title. Same `dialog_logo` id
+                     so the existing rotation animator keeps working. -->
+                <ImageView
+                    android:id="@+id/dialog_logo"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:src="@drawable/ic_launcher"
+                    android:layout_marginEnd="12dp"
+                    android:contentDescription="RichHealth" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <!-- Title row: "Upgrade Your Plan" (left) + "On: Free" pill (right) -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Upgrade Your Plan"
+                            android:textColor="#FFFFFF"
+                            android:textSize="20sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/current_tier_label"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="#FFFFFF"
+                            android:textSize="11sp"
+                            android:visibility="gone" />
+
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/header_subtitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Unlock premium health features"
+                        android:textColor="#606060"
+                        android:textSize="13sp"
+                        android:layout_marginTop="2dp" />
+
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Hidden compat — old layout had a separate hero ImageView. -->
+            <ImageView
+                android:id="@+id/hero_image"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:visibility="gone"
+                android:contentDescription="RichHealth" />
+
+            <!-- ═══════════════════════════════════════════════
+                 LIMIT CONTEXT BANNER
+                 ═══════════════════════════════════════════════ -->
+            <TextView
+                android:id="@+id/limit_context_banner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#0D008b8b"
+                android:padding="10dp"
+                android:textColor="#00BFA5"
+                android:textSize="13sp"
+                android:gravity="center"
+                android:layout_marginTop="12dp"
+                android:visibility="gone" />
+
+            <!-- ═══════════════════════════════════════════════
+                 DIVIDER
+                 ═══════════════════════════════════════════════ -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="0.5dp"
+                android:background="#242424"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="12dp" />
+
+            <!-- ═══════════════════════════════════════════════
+                 SECTION HEADER — plan selector label
+                 ═══════════════════════════════════════════════ -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="CHOOSE A PLAN"
+                android:textColor="#FFFFFF"
+                android:textSize="11sp"
+                android:textAllCaps="true"
+                android:letterSpacing="0.07"
+                android:layout_marginBottom="4dp" />
+
+            <!-- ═══════════════════════════════════════════════
+                 LOADING STATE
+                 ═══════════════════════════════════════════════ -->
+            <LinearLayout
+                android:id="@+id/plans_loading_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:paddingTop="16dp"
+                android:paddingBottom="20dp">
+
+                <ProgressBar
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:indeterminateTint="#008b8b"
+                    android:layout_marginEnd="10dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Loading plans…"
+                    android:textColor="#606060"
+                    android:textSize="14sp" />
+
+            </LinearLayout>
+
+            <!-- ═══════════════════════════════════════════════
+                 PLAN SELECTOR — chip tabs + swipeable pager
+                 ═══════════════════════════════════════════════ -->
+            <LinearLayout
+                android:id="@+id/plan_selector_container"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:clipChildren="false"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:id="@+id/plans_chip_row"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginBottom="14dp" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/plans_pager"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:layout_marginLeft="-20dp"
+                    android:layout_marginRight="-20dp"
+                    android:clipToPadding="false"
+                    android:clipChildren="false"
+                    android:overScrollMode="never" />
+
+            </LinearLayout>
+
+            <!-- ═══════════════════════════════════════════════
+                 ERROR STATE
+                 ═══════════════════════════════════════════════ -->
+            <LinearLayout
+                android:id="@+id/plans_error_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingTop="8dp"
+                android:paddingBottom="4dp"
+                android:visibility="gone">
+
+                <ImageView
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:src="@drawable/ic_warning"
+                    app:tint="#555555"
+                    android:layout_marginEnd="7dp"
+                    android:contentDescription="Warning" />
+
+                <TextView
+                    android:id="@+id/plans_error_text"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Could not load plans. Showing last known prices."
+                    android:textColor="#555555"
+                    android:textSize="11sp" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- ═══════════════════════════════════════════════
+         PINNED FOOTER — coupon section + action bar
+         The coupon stays just above the buttons; the scroll
+         area above expands to fill remaining vertical space.
+         ═══════════════════════════════════════════════ -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="0.5dp"
+        android:background="#242424" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="#1A1A1A"
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="0dp">
+
+        <!-- COUPON TICKET — dashed-border ticket with input + apply -->
+        <LinearLayout
+            android:id="@+id/coupon_row"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="@drawable/bg_coupon_ticket"
+            android:paddingStart="12dp"
+            android:paddingEnd="6dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
+            android:minHeight="52dp">
+
+            <ImageView
+                android:id="@+id/coupon_icon"
+                android:layout_width="@dimen/icon_md"
+                android:layout_height="@dimen/icon_md"
+                android:src="@drawable/ic_coupon"
+                app:tint="#008b8b"
+                android:layout_marginEnd="10dp"
+                android:contentDescription="Coupon" />
+
+            <EditText
+                android:id="@+id/coupon_input"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="Have a code?"
+                android:textColorHint="#606060"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.05"
+                android:background="@android:color/transparent"
+                android:inputType="textCapCharacters"
+                android:maxLines="1"
+                android:imeOptions="actionDone"
+                android:fontFamily="monospace"
+                android:padding="6dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/coupon_apply_button"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="APPLY"
+                android:textColor="#FFFFFF"
+                android:textStyle="bold"
+                android:textSize="11sp"
+                android:letterSpacing="0.1"
+                android:minWidth="72dp"
+                android:paddingHorizontal="14dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                app:backgroundTint="#008b8b"
+                app:cornerRadius="8dp" />
+
+        </LinearLayout>
+
+        <!-- Status row: shows applied / error / loading. Dismissed when empty. -->
+        <LinearLayout
+            android:id="@+id/coupon_status_row"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="6dp"
+            android:visibility="gone">
+
+            <ImageView
+                android:id="@+id/coupon_status_icon"
+                android:layout_width="@dimen/icon_xs"
+                android:layout_height="@dimen/icon_xs"
+                android:layout_marginEnd="6dp"
+                android:src="@drawable/ic_success"
+                android:contentDescription="" />
+
+            <TextView
+                android:id="@+id/coupon_status"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <!-- Tiny hint: example coupons (optional, dev/test mode visible) -->
+        <TextView
+            android:id="@+id/coupon_hint"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Try: WELCOME20"
+            android:textColor="#404040"
+            android:textSize="10sp"
+            android:fontFamily="monospace" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="#1A1A1A"
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="16dp">
+
+        <TextView
+            android:id="@+id/cancel_button"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Maybe Later"
+            android:textColor="#555555"
+            android:textSize="13sp"
+            android:gravity="center"
+            android:padding="11dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?attr/selectableItemBackground" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/upgrade_button"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="2"
+            android:text="Upgrade Now"
+            android:textColor="@color/white"
+            android:paddingTop="11dp"
+            android:paddingBottom="11dp"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.01"
+            app:backgroundTint="#008b8b"
+            app:cornerRadius="12dp" />
+
+    </LinearLayout>
+
+</LinearLayout>

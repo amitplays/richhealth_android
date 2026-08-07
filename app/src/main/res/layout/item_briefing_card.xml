@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One page of the Daily Briefing carousel: a single prioritised action
+     (priority pill + action title + one-line why). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:paddingStart="2dp"
+    android:paddingEnd="12dp">
+
+    <!-- Uses the app-wide StatusPill style; colour set at runtime via Utils.StatusPill. -->
+    <TextView
+        android:id="@+id/briefing_priority"
+        style="@style/Widget.RH.StatusPill"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="7dp"
+        android:background="@drawable/pill_status_neutral"
+        android:text="PRIORITY" />
+
+    <TextView
+        android:id="@+id/briefing_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/rh_accent"
+        android:textSize="13.5sp"
+        android:fontFamily="sans-serif-medium"
+        android:letterSpacing="0.01"
+        android:maxLines="1"
+        android:ellipsize="end" />
+
+    <LinearLayout
+        android:id="@+id/briefing_points"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="9dp" />
+</LinearLayout>

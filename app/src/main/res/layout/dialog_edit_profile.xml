@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ===== APP DIALOG DESIGN STANDARD (canonical edit/add dialog shell) =====
+     Every edit/add dialog in the app should match this: dark rounded surface,
+     BLUE bold title, top divider, bounded scroll (id=fields_scroll), footer
+     divider, Cancel(text) + accent Save. Field rows = label (~35-40%) + input.
+     See DialogUtils.applyStandardEditDialogWindow() and the design-standard note
+     in DialogUtils.java. Reuse this shell; don't invent new dialog looks. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_dialog_surface"
+    android:paddingTop="20dp"
+    android:paddingBottom="10dp">
+
+    <TextView
+        android:id="@+id/dialog_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="22dp"
+        android:text="Edit Profile"
+        android:textColor="@color/rh_accent"
+        android:textSize="18sp"
+        android:textStyle="bold"/>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="14dp"
+        android:background="#2A2A2A"/>
+
+    <ScrollView
+        android:id="@+id/fields_scroll"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:scrollbars="none"
+        android:paddingHorizontal="18dp">
+
+        <LinearLayout
+            android:id="@+id/fields_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingVertical="10dp"/>
+    </ScrollView>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#2A2A2A"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="18dp"
+        android:paddingTop="12dp">
+
+        <!-- Optional secondary action (e.g. Change Password); hidden unless supplied. -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/action_button"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Change Password"
+            android:textColor="@color/rh_accent"
+            android:textAllCaps="false"
+            android:textSize="13sp"
+            android:paddingHorizontal="4dp"
+            android:minWidth="0dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:visibility="gone"/>
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/cancel_button"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="6dp"
+            android:text="Cancel"
+            android:textColor="@color/rh_text_secondary"
+            android:textAllCaps="false"
+            android:textSize="14sp"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/save_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Save"
+            android:textColor="@color/white"
+            android:textAllCaps="false"
+            android:textSize="14sp"
+            android:fontFamily="sans-serif-medium"
+            app:backgroundTint="@color/rh_accent"
+            app:cornerRadius="12dp"
+            app:elevation="0dp"/>
+    </LinearLayout>
+</LinearLayout>

@@ -1,0 +1,1058 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/black">
+
+    <!-- Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="8dp">
+
+        <ImageButton
+            android:id="@+id/back_button"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_back"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            app:tint="@color/white"
+            android:contentDescription="Back" />
+
+        <TextView
+            android:id="@+id/header_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Your Plan"
+            android:textColor="@color/white"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_marginStart="8dp" />
+
+        <!-- Plan badge (inline) -->
+        <!-- [PLAN-PILL-REVIEW] disabled for review (backend-driven, keep after review):
+        <TextView
+            android:id="@+id/plan_badge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Free Plan"
+            android:textColor="@color/white"
+            android:textSize="11sp"
+            android:background="@drawable/rounded_category_bg"
+            android:backgroundTint="#1A1A1A"
+            android:paddingHorizontal="10dp"
+            android:paddingVertical="4dp" />
+        -->
+    </LinearLayout>
+
+    <!-- Content -->
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:overScrollMode="never">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- ═══════ TOP SECTION (black bg shows through) ═══════ -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingHorizontal="16dp"
+                android:paddingTop="4dp"
+                android:paddingBottom="8dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="4dp">
+
+                    <ImageView
+                        android:layout_width="@dimen/icon_md"
+                        android:layout_height="@dimen/icon_md"
+                        android:tag="section_icon"
+                        android:src="@drawable/ic_bar_chart_4_bars"
+                        app:tint="#008b8b"
+                        android:layout_marginEnd="8dp" />
+
+                    <TextView
+                        android:id="@+id/dialog_usage_title"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Your Usage Overview"
+                        android:textColor="@color/white"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/dialog_plan_description"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Track your limits across chat, reports, and analysis"
+                    android:textColor="#999999"
+                    android:textSize="13sp"
+                    android:lineSpacingExtra="2dp"
+                    android:layout_marginBottom="6dp" />
+
+                <TextView
+                    android:id="@+id/usage_reset_label"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="#008b8b"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.04"
+                    android:visibility="gone"
+                    android:layout_marginBottom="12dp"
+                    tools:text="RESETS IN 12 DAYS" />
+
+                <com.github.mikephil.charting.charts.PieChart
+                    android:id="@+id/usage_overview_pie_chart"
+                    android:layout_width="match_parent"
+                    android:layout_height="200dp" />
+
+                <TextView
+                    android:id="@+id/chart_subtitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Plan allocation overview"
+                    android:textColor="#808080"
+                    android:textSize="11sp"
+                    android:gravity="center"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="8dp" />
+
+            </LinearLayout>
+
+            <!-- ═══════ CARDS CONTAINER (teal_700, rounded top) ═══════ -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/rounded_top_dark_bg"
+                android:padding="16dp">
+
+                <!-- Usage Summary Cards (3 columns): Analysis | Reports | Chat -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginBottom="8dp">
+
+                    <!-- Analysis Usage -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="5dp"
+                        app:cardCornerRadius="12dp"
+                        app:cardElevation="0dp"
+                        app:cardBackgroundColor="#262626">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:gravity="center_horizontal"
+                            android:padding="12dp">
+
+                            <ImageView
+                                android:layout_width="@dimen/icon_sm"
+                                android:layout_height="@dimen/icon_sm"
+                                android:tag="section_icon"
+                                android:src="@drawable/ic_analysis"
+                                app:tint="#008b8b"
+                                android:layout_marginBottom="8dp" />
+
+                            <TextView
+                                android:id="@+id/dialog_usage_analysis_count"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="0/1"
+                                android:textColor="@color/white"
+                                android:textSize="18sp"
+                                android:textStyle="bold"
+                                android:layout_marginBottom="2dp" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Analysis"
+                                android:textColor="#808080"
+                                android:textSize="10sp"
+                                android:layout_marginBottom="2dp" />
+
+                            <TextView
+                                android:id="@+id/dialog_usage_analysis_period"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="monthly"
+                                android:textColor="#808080"
+                                android:textSize="10sp" />
+
+                            <ProgressBar
+                                android:id="@+id/pb_usage_analysis"
+                                style="?android:attr/progressBarStyleHorizontal"
+                                android:layout_width="match_parent"
+                                android:layout_height="4dp"
+                                android:layout_marginTop="8dp"
+                                android:max="100"
+                                android:progress="0"
+                                android:progressTint="#008B8B"
+                                android:progressBackgroundTint="#1F1F1F" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- Reports Usage -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginHorizontal="3dp"
+                        app:cardCornerRadius="12dp"
+                        app:cardElevation="0dp"
+                        app:cardBackgroundColor="#262626">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:gravity="center_horizontal"
+                            android:padding="12dp">
+
+                            <ImageView
+                                android:layout_width="@dimen/icon_sm"
+                                android:layout_height="@dimen/icon_sm"
+                                android:tag="section_icon"
+                                android:src="@drawable/ic_doc"
+                                app:tint="#008b8b"
+                                android:layout_marginBottom="8dp" />
+
+                            <TextView
+                                android:id="@+id/dialog_usage_reports_count"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="0/2"
+                                android:textColor="@color/white"
+                                android:textSize="18sp"
+                                android:textStyle="bold"
+                                android:layout_marginBottom="2dp" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Reports"
+                                android:textColor="#808080"
+                                android:textSize="10sp"
+                                android:layout_marginBottom="2dp" />
+
+                            <TextView
+                                android:id="@+id/dialog_usage_reports_period"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="monthly"
+                                android:textColor="#808080"
+                                android:textSize="10sp" />
+
+                            <ProgressBar
+                                android:id="@+id/pb_usage_reports"
+                                style="?android:attr/progressBarStyleHorizontal"
+                                android:layout_width="match_parent"
+                                android:layout_height="4dp"
+                                android:layout_marginTop="8dp"
+                                android:max="100"
+                                android:progress="0"
+                                android:progressTint="#008B8B"
+                                android:progressBackgroundTint="#1F1F1F" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- Chat Usage -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="5dp"
+                        app:cardCornerRadius="12dp"
+                        app:cardElevation="0dp"
+                        app:cardBackgroundColor="#262626">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:gravity="center_horizontal"
+                            android:padding="12dp">
+
+                            <ImageView
+                                android:layout_width="@dimen/icon_sm"
+                                android:layout_height="@dimen/icon_sm"
+                                android:tag="section_icon"
+                                android:src="@drawable/ic_chat"
+                                app:tint="#008b8b"
+                                android:layout_marginBottom="8dp" />
+
+                            <TextView
+                                android:id="@+id/dialog_usage_chat_count"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="5"
+                                android:textColor="@color/white"
+                                android:textSize="18sp"
+                                android:textStyle="bold"
+                                android:layout_marginBottom="2dp" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Chat"
+                                android:textColor="#808080"
+                                android:textSize="10sp"
+                                android:layout_marginBottom="2dp" />
+
+                            <TextView
+                                android:id="@+id/dialog_usage_chat_period"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="per session"
+                                android:textColor="#808080"
+                                android:textSize="10sp" />
+
+                            <ProgressBar
+                                android:id="@+id/pb_usage_chat"
+                                style="?android:attr/progressBarStyleHorizontal"
+                                android:layout_width="match_parent"
+                                android:layout_height="4dp"
+                                android:layout_marginTop="8dp"
+                                android:max="100"
+                                android:progress="0"
+                                android:progressTint="#008B8B"
+                                android:progressBackgroundTint="#1F1F1F" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+                </LinearLayout>
+
+                <!-- Usage Summary Row 2: NutriCheck | Diet Guide | Report Analysis -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="20dp">
+
+                    <!-- NutriCheck -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="5dp"
+                        app:cardCornerRadius="12dp"
+                        app:cardElevation="0dp"
+                        app:cardBackgroundColor="#262626">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:gravity="center_horizontal"
+                            android:padding="12dp">
+
+                            <ImageView
+                                android:layout_width="@dimen/icon_sm"
+                                android:layout_height="@dimen/icon_sm"
+                                android:tag="section_icon"
+                                android:src="@drawable/ic_food"
+                                app:tint="#008b8b"
+                                android:layout_marginBottom="8dp" />
+
+                            <TextView
+                                android:id="@+id/dialog_usage_nutri_count"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Locked"
+                                android:textColor="#FF9800"
+                                android:textSize="14sp"
+                                android:textStyle="bold"
+                                android:layout_marginBottom="2dp" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="NutriCheck"
+                                android:textColor="#808080"
+                                android:textSize="10sp" />
+
+                            <ProgressBar
+                                android:id="@+id/pb_usage_nutri"
+                                style="?android:attr/progressBarStyleHorizontal"
+                                android:layout_width="match_parent"
+                                android:layout_height="4dp"
+                                android:layout_marginTop="8dp"
+                                android:max="100"
+                                android:progress="0"
+                                android:progressTint="#008B8B"
+                                android:progressBackgroundTint="#1F1F1F" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- Diet Guide -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="5dp"
+                        app:cardCornerRadius="12dp"
+                        app:cardElevation="0dp"
+                        app:cardBackgroundColor="#262626">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:gravity="center_horizontal"
+                            android:padding="12dp">
+
+                            <ImageView
+                                android:layout_width="@dimen/icon_sm"
+                                android:layout_height="@dimen/icon_sm"
+                                android:tag="section_icon"
+                                android:src="@drawable/ic_grocery"
+                                app:tint="#008b8b"
+                                android:layout_marginBottom="8dp" />
+
+                            <TextView
+                                android:id="@+id/dialog_usage_dietary_count"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="--"
+                                android:textColor="@color/white"
+                                android:textSize="14sp"
+                                android:textStyle="bold"
+                                android:layout_marginBottom="2dp" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Diet Guide"
+                                android:textColor="#808080"
+                                android:textSize="10sp" />
+
+                            <ProgressBar
+                                android:id="@+id/pb_usage_dietary"
+                                style="?android:attr/progressBarStyleHorizontal"
+                                android:layout_width="match_parent"
+                                android:layout_height="4dp"
+                                android:layout_marginTop="8dp"
+                                android:max="100"
+                                android:progress="0"
+                                android:progressTint="#008B8B"
+                                android:progressBackgroundTint="#1F1F1F" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                </LinearLayout>
+
+                <!-- Plan Tabs -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingStart="4dp"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="10dp">
+
+                    <ImageView
+                        android:layout_width="@dimen/icon_sm"
+                        android:layout_height="@dimen/icon_sm"
+                        android:tag="section_icon"
+                        android:src="@drawable/ic_dashboard_customize"
+                        app:tint="#fff"
+                        android:layout_marginEnd="6dp" />
+
+                    <TextView
+                        android:id="@+id/dialog_feature_section_title"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Plan Features"
+                        android:textColor="@color/white"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <HorizontalScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="14dp"
+                    android:scrollbars="none">
+
+                    <LinearLayout
+                        android:id="@+id/plan_tabs_container"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:background="@drawable/pill_tab_container_bg"
+                        android:padding="4dp">
+
+                        <TextView
+                            android:id="@+id/tab_plan_free"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Free"
+                            android:textSize="12sp"
+                            android:textColor="#AAAAAA"
+                            android:background="@drawable/pill_tab_unselected"
+                            android:paddingHorizontal="16dp"
+                            android:paddingVertical="9dp"
+                            android:clickable="true"
+                            android:focusable="true" />
+
+                        <TextView
+                            android:id="@+id/tab_plan_plus"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Plus"
+                            android:textSize="12sp"
+                            android:textColor="#AAAAAA"
+                            android:background="@drawable/pill_tab_unselected"
+                            android:paddingHorizontal="16dp"
+                            android:paddingVertical="9dp"
+                            android:clickable="true"
+                            android:focusable="true" />
+
+                        <TextView
+                            android:id="@+id/tab_plan_pro"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Pro"
+                            android:textSize="12sp"
+                            android:textColor="#AAAAAA"
+                            android:background="@drawable/pill_tab_unselected"
+                            android:paddingHorizontal="16dp"
+                            android:paddingVertical="9dp"
+                            android:clickable="true"
+                            android:focusable="true" />
+
+                        <TextView
+                            android:id="@+id/tab_plan_ultra"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Ultra"
+                            android:textSize="12sp"
+                            android:textColor="#AAAAAA"
+                            android:background="@drawable/pill_tab_unselected"
+                            android:paddingHorizontal="16dp"
+                            android:paddingVertical="9dp"
+                            android:clickable="true"
+                            android:focusable="true" />
+                    </LinearLayout>
+                </HorizontalScrollView>
+
+                <!-- Feature Table -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="20dp"
+                    app:cardCornerRadius="10dp"
+                    app:cardElevation="0dp"
+                    app:cardBackgroundColor="#262626">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <!-- Table Header -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:paddingVertical="10dp"
+                            android:paddingHorizontal="12dp"
+                            android:background="#1F1F1F">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1.5"
+                                android:text="FEATURE"
+                                android:textColor="#808080"
+                                android:textSize="10sp"
+                                android:textStyle="bold"
+                                android:letterSpacing="0.08" />
+
+                            <TextView
+                                android:id="@+id/dialog_feature_value_header"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="LIMIT"
+                                android:textColor="#008b8b"
+                                android:textSize="10sp"
+                                android:textStyle="bold"
+                                android:letterSpacing="0.08"
+                                android:gravity="center" />
+                        </LinearLayout>
+
+                        <!-- Row 1: Chat / session -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:paddingVertical="9dp"
+                            android:paddingHorizontal="12dp">
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1.5"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <ImageView
+                                    android:layout_width="@dimen/icon_xs"
+                                    android:layout_height="@dimen/icon_xs"
+                                    android:tag="section_icon"
+                                    android:src="@drawable/ic_forum"
+                                    app:tint="#008b8b"
+                                    android:layout_marginEnd="6dp" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Chat / session"
+                                    android:textColor="#CCCCCC"
+                                    android:textSize="12sp" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/feat_val_chat"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="5"
+                                android:textColor="#4CAF50"
+                                android:textSize="12sp"
+                                android:gravity="center" />
+                        </LinearLayout>
+
+                        <!-- Row 2: Sessions / month (alt bg) -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:paddingVertical="9dp"
+                            android:paddingHorizontal="12dp"
+                            android:background="#2A2A2A">
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1.5"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <ImageView
+                                    android:layout_width="@dimen/icon_xs"
+                                    android:layout_height="@dimen/icon_xs"
+                                    android:tag="section_icon"
+                                    android:src="@drawable/ic_calendar_month"
+                                    app:tint="#008b8b"
+                                    android:layout_marginEnd="6dp" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Sessions / month"
+                                    android:textColor="#CCCCCC"
+                                    android:textSize="12sp" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/feat_val_sessions"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="5"
+                                android:textColor="#4CAF50"
+                                android:textSize="12sp"
+                                android:gravity="center" />
+                        </LinearLayout>
+
+                        <!-- Row 3: Health analysis -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:paddingVertical="9dp"
+                            android:paddingHorizontal="12dp">
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1.5"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <ImageView
+                                    android:layout_width="@dimen/icon_xs"
+                                    android:layout_height="@dimen/icon_xs"
+                                    android:tag="section_icon"
+                                    android:src="@drawable/ic_health_metrics"
+                                    app:tint="#008b8b"
+                                    android:layout_marginEnd="6dp" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Health analysis"
+                                    android:textColor="#CCCCCC"
+                                    android:textSize="12sp" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/feat_val_analysis"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="1/month"
+                                android:textColor="#4CAF50"
+                                android:textSize="12sp"
+                                android:gravity="center" />
+                        </LinearLayout>
+
+                        <!-- Row 4: Medical reports (alt bg) -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:paddingVertical="9dp"
+                            android:paddingHorizontal="12dp"
+                            android:background="#2A2A2A">
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1.5"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <ImageView
+                                    android:layout_width="@dimen/icon_xs"
+                                    android:layout_height="@dimen/icon_xs"
+                                    android:tag="section_icon"
+                                    android:src="@drawable/ic_lab_profile"
+                                    app:tint="#008b8b"
+                                    android:layout_marginEnd="6dp" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Medical reports"
+                                    android:textColor="#CCCCCC"
+                                    android:textSize="12sp" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/feat_val_reports"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="2/month"
+                                android:textColor="#4CAF50"
+                                android:textSize="12sp"
+                                android:gravity="center" />
+                        </LinearLayout>
+
+                        <!-- Row 5: NutriCheck -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:paddingVertical="9dp"
+                            android:paddingHorizontal="12dp">
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1.5"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <ImageView
+                                    android:layout_width="@dimen/icon_xs"
+                                    android:layout_height="@dimen/icon_xs"
+                                    android:tag="section_icon"
+                                    android:src="@drawable/ic_nutrition"
+                                    app:tint="#008b8b"
+                                    android:layout_marginEnd="6dp" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="NutriCheck"
+                                    android:textColor="#CCCCCC"
+                                    android:textSize="12sp" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/feat_val_nutri"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="--"
+                                android:textColor="#4CAF50"
+                                android:textSize="12sp"
+                                android:gravity="center" />
+                        </LinearLayout>
+
+                        <!-- Row 5.5: Dietary Insights (alt bg) -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:paddingVertical="9dp"
+                            android:paddingHorizontal="12dp"
+                            android:background="#2A2A2A">
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1.5"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <ImageView
+                                    android:layout_width="@dimen/icon_xs"
+                                    android:layout_height="@dimen/icon_xs"
+                                    android:tag="section_icon"
+                                    android:src="@drawable/ic_grocery"
+                                    app:tint="#008b8b"
+                                    android:layout_marginEnd="6dp" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Diet Guide"
+                                    android:textColor="#CCCCCC"
+                                    android:textSize="12sp" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/feat_val_dietary"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="--"
+                                android:textColor="#4CAF50"
+                                android:textSize="12sp"
+                                android:gravity="center" />
+                        </LinearLayout>
+
+                        <!-- Row 6: Report analysis -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:paddingVertical="9dp"
+                            android:paddingHorizontal="12dp">
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1.5"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <ImageView
+                                    android:layout_width="@dimen/icon_xs"
+                                    android:layout_height="@dimen/icon_xs"
+                                    android:tag="section_icon"
+                                    android:src="@drawable/ic_diagnosis"
+                                    app:tint="#008b8b"
+                                    android:layout_marginEnd="6dp" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Report analysis"
+                                    android:textColor="#CCCCCC"
+                                    android:textSize="12sp" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/feat_val_report_analysis"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="--"
+                                android:textColor="#4CAF50"
+                                android:textSize="12sp"
+                                android:gravity="center" />
+                        </LinearLayout>
+
+                        <!-- Row 7: AI model (alt bg) -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:paddingVertical="9dp"
+                            android:paddingHorizontal="12dp"
+                            android:background="#2A2A2A">
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1.5"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <ImageView
+                                    android:layout_width="@dimen/icon_xs"
+                                    android:layout_height="@dimen/icon_xs"
+                                    android:tag="section_icon"
+                                    android:src="@drawable/ic_model_training"
+                                    app:tint="#008b8b"
+                                    android:layout_marginEnd="6dp" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="AI model"
+                                    android:textColor="#CCCCCC"
+                                    android:textSize="12sp" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/feat_val_model"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="All"
+                                android:textColor="#4CAF50"
+                                android:textSize="12sp"
+                                android:gravity="center" />
+                        </LinearLayout>
+
+                        <!-- Row 8: Data sharing -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:paddingVertical="9dp"
+                            android:paddingHorizontal="12dp">
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1.5"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <ImageView
+                                    android:layout_width="@dimen/icon_xs"
+                                    android:layout_height="@dimen/icon_xs"
+                                    android:tag="section_icon"
+                                    android:src="@drawable/ic_dataset_linked"
+                                    app:tint="#008b8b"
+                                    android:layout_marginEnd="6dp" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Data sharing"
+                                    android:textColor="#CCCCCC"
+                                    android:textSize="12sp" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/feat_val_sharing"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="--"
+                                android:textColor="#4CAF50"
+                                android:textSize="12sp"
+                                android:gravity="center" />
+                        </LinearLayout>
+
+                        <!-- Row 9: Dependents (alt bg) -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:paddingVertical="9dp"
+                            android:paddingHorizontal="12dp"
+                            android:background="#2A2A2A">
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1.5"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <ImageView
+                                    android:layout_width="@dimen/icon_xs"
+                                    android:layout_height="@dimen/icon_xs"
+                                    android:tag="section_icon"
+                                    android:src="@drawable/ic_family_group"
+                                    app:tint="#008b8b"
+                                    android:layout_marginEnd="6dp" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Dependents"
+                                    android:textColor="#CCCCCC"
+                                    android:textSize="12sp" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/feat_val_dependents"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="0"
+                                android:textColor="#4CAF50"
+                                android:textSize="12sp"
+                                android:gravity="center" />
+                        </LinearLayout>
+
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Upgrade Button — MaterialButton ignores android:background,
+                     so we must use app:backgroundTint for the base color.
+                     Java code overrides this for pro users (dark bg + teal outline). -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/dialog_usage_upgrade_button"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:text="Upgrade to Pro"
+                    android:textColor="@color/white"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.02"
+                    app:backgroundTint="#008B8B"
+                    app:cornerRadius="12dp" />
+
+            </LinearLayout>
+            <!-- end teal container -->
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+</LinearLayout>

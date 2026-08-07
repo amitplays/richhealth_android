@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="gold">#FFD700</color>
+    <color name="gray_inactive">#808080</color>
+    <color name="teal">#FF008B8B</color>
+
+    <!-- RichHealth canonical palette -->
+    <color name="rh_bg">#000000</color>
+    <color name="rh_surface">#0CFFFFFF</color>
+    <!-- rh_surface (#0CFFFFFF) composited on the pure-black feed = #0C0C0C. Use this
+         OPAQUE equivalent where a card must not be see-through (e.g. the feed card that
+         slides to reveal a swipe hint); looks identical at rest, no bleed-through. -->
+    <color name="rh_surface_opaque">#0C0C0C</color>
+    <color name="rh_surface_elevated">#262626</color>
+    <color name="rh_divider">#262626</color>
+    <!-- Subtler hairline for inset row dividers (delicate, modern) -->
+    <color name="rh_divider_subtle">#1F1F22</color>
+    <color name="rh_text_primary">#FFFFFF</color>
+    <color name="rh_text_secondary">#CCCCCC</color>
+    <color name="rh_text_tertiary">#808080</color>
+    <!-- Quiet label gray — labels recede, values read bright -->
+    <color name="rh_text_label">#8A8E96</color>
+    <color name="rh_accent">#008B8B</color>
+    <color name="rh_accent_dim">#0A2828</color>
+    <color name="rh_danger">#FF5252</color>
+    <color name="rh_success">#4CAF50</color>
+    <color name="rh_warning">#FFC107</color>
+
+    <!-- Plan tier identity colors — used by Utils/PlanBadge.java
+         Aligned with the upgrade dialog (ProUpgradeDialog.COLOR_*).
+         Plus  → sky-blue (lighter, entry tier)
+         Pro   → brand teal
+         Ultra → amber/gold (premium)
+         Family→ rich gold (shared / family branding)
+         Free  → muted gray -->
+    <color name="plan_free">#808080</color>
+    <color name="plan_plus">#4FC3F7</color>
+    <color name="plan_pro">#008B8B</color>
+    <color name="plan_ultra">#FFB300</color>
+    <color name="plan_family">#FFD700</color>
+</resources>

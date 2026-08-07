@@ -1,0 +1,324 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Add/Edit Symptom — uses the APP DIALOG DESIGN STANDARD (see dialog_edit_profile.xml
+     and DialogUtils.java): dark rounded surface, blue bold title, top+footer dividers,
+     bounded scroll (id=fields_scroll), label(~38%) + input rows, accent Save.
+     Custom controls (severity SeekBar, share Switch, date/time) sit inside the shell. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_dialog_surface"
+    android:paddingTop="20dp"
+    android:paddingBottom="10dp">
+
+    <!-- Title row: icon + BLUE title -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="22dp">
+
+        <ImageView
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:layout_marginEnd="10dp"
+            android:src="@drawable/ic_sick"
+            app:tint="@color/rh_accent" />
+
+        <TextView
+            android:id="@+id/dialog_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Add Symptom"
+            android:textColor="@color/rh_accent"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="14dp"
+        android:background="#2A2A2A" />
+
+    <ScrollView
+        android:id="@+id/fields_scroll"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:scrollbars="none"
+        android:paddingHorizontal="18dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingVertical="12dp">
+
+            <!-- Symptom name: label(38%) + input -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingVertical="6dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.38"
+                    android:text="Symptom name"
+                    android:textColor="@color/rh_text_secondary"
+                    android:textSize="14sp" />
+
+                <EditText
+                    android:id="@+id/name_input"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.62"
+                    android:background="@drawable/bg_dialog_input"
+                    android:paddingHorizontal="12dp"
+                    android:paddingVertical="8dp"
+                    android:minHeight="42dp"
+                    android:hint="Symptom name"
+                    android:inputType="text"
+                    android:maxLines="1"
+                    android:textSize="14sp"
+                    android:textColor="@color/rh_text_primary"
+                    android:textColorHint="@color/rh_text_tertiary"
+                    android:importantForAutofill="no" />
+            </LinearLayout>
+
+            <!-- Severity: label on top + full-width SeekBar (special control) -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="Severity"
+                android:textColor="@color/rh_text_secondary"
+                android:textSize="14sp" />
+
+            <SeekBar
+                android:id="@+id/severity_seekbar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:max="4"
+                android:progress="2"
+                android:progressTint="@color/rh_accent"
+                android:thumbTint="@color/rh_accent" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Very Mild"
+                    android:textColor="@color/rh_text_tertiary"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/severity_text"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Moderate"
+                    android:textAlignment="center"
+                    android:textColor="@color/rh_accent"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Very Severe"
+                    android:textAlignment="viewEnd"
+                    android:textColor="@color/rh_text_tertiary"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <!-- Duration: label(38%) + input -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginTop="10dp"
+                android:paddingVertical="6dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.38"
+                    android:text="Duration"
+                    android:textColor="@color/rh_text_secondary"
+                    android:textSize="14sp" />
+
+                <EditText
+                    android:id="@+id/duration_input"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.62"
+                    android:background="@drawable/bg_dialog_input"
+                    android:paddingHorizontal="12dp"
+                    android:paddingVertical="8dp"
+                    android:minHeight="42dp"
+                    android:hint="e.g. 2 hours, 3 days"
+                    android:inputType="text"
+                    android:maxLines="1"
+                    android:textSize="14sp"
+                    android:textColor="@color/rh_text_primary"
+                    android:textColorHint="@color/rh_text_tertiary"
+                    android:importantForAutofill="no" />
+            </LinearLayout>
+
+            <!-- Date & Time: lets past symptoms be logged (was always "now") -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:layout_marginBottom="4dp"
+                android:text="Date &amp; time"
+                android:textColor="@color/rh_text_secondary"
+                android:textSize="14sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/date_button"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:layout_weight="1"
+                    android:text="Select date"
+                    android:textColor="@color/rh_text_primary"
+                    android:textAllCaps="false"
+                    app:backgroundTint="#1E1E1E"
+                    app:cornerRadius="10dp"
+                    app:elevation="0dp"
+                    app:icon="@drawable/ic_date"
+                    app:iconTint="@color/rh_accent" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/time_button"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:text="Select time"
+                    android:textColor="@color/rh_text_primary"
+                    android:textAllCaps="false"
+                    app:backgroundTint="#1E1E1E"
+                    app:cornerRadius="10dp"
+                    app:elevation="0dp"
+                    app:icon="@drawable/ic_time"
+                    app:iconTint="@color/rh_accent" />
+            </LinearLayout>
+
+            <!-- Notes: label on top + full-width multiline (roomier input) -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:layout_marginBottom="4dp"
+                android:text="Additional notes (optional)"
+                android:textColor="@color/rh_text_secondary"
+                android:textSize="14sp" />
+
+            <EditText
+                android:id="@+id/description_input"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_dialog_input"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="8dp"
+                android:minHeight="60dp"
+                android:gravity="top|start"
+                android:hint="Anything else worth noting"
+                android:inputType="textMultiLine"
+                android:minLines="2"
+                android:textSize="14sp"
+                android:textColor="@color/rh_text_primary"
+                android:textColorHint="@color/rh_text_tertiary"
+                android:importantForAutofill="no" />
+
+            <!-- Share with family toggle -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginTop="14dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Share with family"
+                    android:textColor="@color/rh_text_primary"
+                    android:textSize="14sp" />
+
+                <com.google.android.material.switchmaterial.SwitchMaterial
+                    android:id="@+id/share_with_family_switch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="false"
+                    app:thumbTint="@color/rh_accent"
+                    app:trackTint="#33008b8b" />
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#2A2A2A" />
+
+    <!-- Footer: Cancel (text) + accent Save -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="18dp"
+        android:paddingTop="12dp">
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/cancel_button"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="6dp"
+            android:text="Cancel"
+            android:textColor="@color/rh_text_secondary"
+            android:textAllCaps="false"
+            android:textSize="14sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/save_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Save"
+            android:textColor="@color/white"
+            android:textAllCaps="false"
+            android:textSize="14sp"
+            android:fontFamily="sans-serif-medium"
+            app:backgroundTint="@color/rh_accent"
+            app:cornerRadius="12dp"
+            app:elevation="0dp" />
+    </LinearLayout>
+</LinearLayout>

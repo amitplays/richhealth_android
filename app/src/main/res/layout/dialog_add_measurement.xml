@@ -1,0 +1,280 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Add/Edit Measurement — APP DIALOG DESIGN STANDARD shell (see dialog_edit_profile.xml
+     and DialogUtils.java). Dropdown fields keep their ExposedDropdownMenu component
+     (their floating hint acts as the label); date/time + share controls unchanged. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_dialog_surface"
+    android:paddingTop="20dp"
+    android:paddingBottom="10dp">
+
+    <!-- Title row: icon + BLUE title -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="22dp">
+
+        <ImageView
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:layout_marginEnd="10dp"
+            android:src="@drawable/ic_ruler"
+            app:tint="@color/rh_accent" />
+
+        <TextView
+            android:id="@+id/dialog_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Add Measurement"
+            android:textColor="@color/rh_accent"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="14dp"
+        android:background="#2A2A2A" />
+
+    <ScrollView
+        android:id="@+id/fields_scroll"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:scrollbars="none"
+        android:paddingHorizontal="18dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingVertical="12dp">
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/type_layout"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:textColorHint="#757575"
+                app:boxCornerRadiusTopStart="8dp"
+                app:boxCornerRadiusTopEnd="8dp"
+                app:boxCornerRadiusBottomStart="8dp"
+                app:boxCornerRadiusBottomEnd="8dp"
+                app:boxBackgroundColor="#1E1E1E"
+                app:boxStrokeColor="@color/rh_accent"
+                app:boxStrokeWidth="1dp"
+                app:hintTextColor="@color/rh_accent">
+
+                <AutoCompleteTextView
+                    android:id="@+id/type_dropdown"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:dropDownHeight="200dp"
+                    android:hint="Measurement Type"
+                    android:inputType="none"
+                    android:textColor="@color/white" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:orientation="horizontal">
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/value_layout"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:layout_weight="2"
+                    android:textColorHint="#757575"
+                    app:boxBackgroundColor="#1E1E1E"
+                    app:boxStrokeColor="@color/rh_accent"
+                    app:boxStrokeWidth="1dp"
+                    app:hintTextColor="@color/rh_accent">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/value_input"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Value"
+                        app:boxCornerRadiusTopStart="8dp"
+                        app:boxCornerRadiusTopEnd="8dp"
+                        app:boxCornerRadiusBottomStart="8dp"
+                        app:boxCornerRadiusBottomEnd="8dp"
+                        android:inputType="numberDecimal"
+                        android:textColor="@color/white" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/unit_layout"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textColorHint="#757575"
+                    app:boxBackgroundColor="#1E1E1E"
+                    app:boxStrokeColor="@color/rh_accent"
+                    app:boxStrokeWidth="1dp"
+                    app:hintTextColor="@color/rh_accent">
+
+                    <AutoCompleteTextView
+                        android:id="@+id/unit_dropdown"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:dropDownHeight="200dp"
+                        android:hint="Unit"
+                        android:inputType="none"
+                        android:textColor="@color/white" />
+                </com.google.android.material.textfield.TextInputLayout>
+            </LinearLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/notes_layout"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:textColorHint="#757575"
+                app:boxBackgroundColor="#1E1E1E"
+                app:boxStrokeColor="@color/rh_accent"
+                app:boxCornerRadiusTopStart="8dp"
+                app:boxCornerRadiusTopEnd="8dp"
+                app:boxCornerRadiusBottomStart="8dp"
+                app:boxCornerRadiusBottomEnd="8dp"
+                app:boxStrokeWidth="1dp"
+                app:hintTextColor="@color/rh_accent">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/notes_input"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="top|start"
+                    android:hint="Notes (e.g., fasting, after meal)"
+                    android:inputType="textMultiLine"
+                    android:minLines="2"
+                    android:textColor="@color/white" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="4dp"
+                android:text="Date &amp; time"
+                android:textColor="@color/rh_text_secondary"
+                android:textSize="14sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:orientation="horizontal">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/date_button"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:layout_weight="1"
+                    android:text="Select date"
+                    android:textColor="@color/rh_text_primary"
+                    android:textAllCaps="false"
+                    app:backgroundTint="#1E1E1E"
+                    app:cornerRadius="10dp"
+                    app:elevation="0dp"
+                    app:icon="@drawable/ic_date"
+                    app:iconTint="@color/rh_accent" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/time_button"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:text="Select time"
+                    android:textColor="@color/rh_text_primary"
+                    android:textAllCaps="false"
+                    app:backgroundTint="#1E1E1E"
+                    app:cornerRadius="10dp"
+                    app:elevation="0dp"
+                    app:icon="@drawable/ic_time"
+                    app:iconTint="@color/rh_accent" />
+            </LinearLayout>
+
+            <!-- Share with family toggle -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Share with family"
+                    android:textColor="@color/rh_text_primary"
+                    android:textSize="14sp" />
+
+                <com.google.android.material.switchmaterial.SwitchMaterial
+                    android:id="@+id/share_with_family_switch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="false"
+                    app:thumbTint="@color/rh_accent"
+                    app:trackTint="#33008b8b" />
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#2A2A2A" />
+
+    <!-- Footer: Cancel (text) + accent Save -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="18dp"
+        android:paddingTop="12dp">
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/cancel_button"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="6dp"
+            android:text="Cancel"
+            android:textColor="@color/rh_text_secondary"
+            android:textAllCaps="false"
+            android:textSize="14sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/save_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Save"
+            android:textColor="@color/white"
+            android:textAllCaps="false"
+            android:textSize="14sp"
+            android:fontFamily="sans-serif-medium"
+            app:backgroundTint="@color/rh_accent"
+            app:cornerRadius="12dp"
+            app:elevation="0dp" />
+    </LinearLayout>
+</LinearLayout>

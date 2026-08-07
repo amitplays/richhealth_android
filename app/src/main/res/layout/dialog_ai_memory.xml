@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ===== DIALOG DESIGN STANDARD: header + close + divider =====
+     Reference pattern for profile/settings dialogs (AI Memory, and similar):
+       • Close "cross" (top-right) uses the BLUE accent (@color/rh_accent).
+       • A destructive/delete action uses the app delete icon (@drawable/ic_delete)
+         tinted RED (@color/rh_danger). See item_ai_memory.xml.
+       • A thin 1dp #2A2A2A divider separates the header + subtext from the list/body.
+     Point other profile dialogs at this block for consistency. -->
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="16dp"
+    app:cardCornerRadius="20dp"
+    app:cardElevation="0dp"
+    app:cardBackgroundColor="@color/rh_surface_elevated">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <ImageView
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:src="@drawable/ic_signup_brain2"
+                app:tint="@color/rh_accent"
+                android:layout_marginEnd="10dp"/>
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="AI Memory"
+                android:textColor="@color/rh_text_primary"
+                android:textSize="18sp"
+                android:fontFamily="sans-serif-medium"/>
+
+            <ImageView
+                android:id="@+id/memory_close"
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:padding="7dp"
+                android:src="@drawable/ic_close"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Close"
+                app:tint="@color/rh_accent"/>
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Facts Richie has picked up from your chats. Remove anything you don't want remembered."
+            android:textColor="@color/rh_text_tertiary"
+            android:textSize="12sp"
+            android:layout_marginTop="6dp"
+            android:layout_marginBottom="12dp"/>
+
+        <!-- Thin divider separating the header + subtext from the memory list
+             (part of the dialog design standard — see header comment). -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginBottom="4dp"
+            android:background="#2A2A2A"/>
+
+        <TextView
+            android:id="@+id/memory_empty"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Nothing remembered yet. As you chat with Richie, key facts will appear here."
+            android:textColor="@color/rh_text_tertiary"
+            android:textSize="13sp"
+            android:gravity="center"
+            android:paddingVertical="24dp"
+            android:visibility="gone"/>
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/memory_recycler"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:maxHeight="360dp"
+            android:overScrollMode="never"/>
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>

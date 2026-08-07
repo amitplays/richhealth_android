@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Richie AI nav icon — FILLED / SELECTED state
+    A 4-point star sparkle (large) + two small satellite sparkles.
+    This is the universal "AI / magic / intelligence" symbol used by
+    Google, Apple, and major health-tech apps. Clean at 26dp nav size.
+    Tint via ColorStateList in MainActivity (teal when selected).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <!-- Large central 4-point sparkle star -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M12,2 L13.6,8.8 L20,10 L13.6,11.2 L12,18 L10.4,11.2 L4,10 L10.4,8.8 Z"/>
+
+    <!-- Small upper-right satellite sparkle -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M19,3 L19.8,5.4 L22,6 L19.8,6.6 L19,9 L18.2,6.6 L16,6 L18.2,5.4 Z"/>
+
+    <!-- Small lower-right satellite sparkle -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M18,15 L18.6,17 L20.5,17.5 L18.6,18 L18,20 L17.4,18 L15.5,17.5 L17.4,17 Z"/>
+</vector>

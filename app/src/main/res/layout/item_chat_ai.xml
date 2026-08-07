@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="8dp">
+
+    <ImageView
+        android:id="@+id/ai_icon"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginTop="4dp"
+        android:src="@drawable/ic_launcher" />
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/bubble_card"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="16dp"
+            app:cardBackgroundColor="#AD3E3C3C"
+            app:cardElevation="0dp">
+
+            <LinearLayout
+                android:id="@+id/message_container"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:paddingTop="10dp"
+                android:paddingBottom="4dp">
+
+                <!-- Collapsible reasoning ("Thinking") — visible only for
+                     thinking-capable models. Collapsed by default; tap to expand. -->
+                <LinearLayout
+                    android:id="@+id/thinking_header"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingTop="2dp"
+                    android:paddingBottom="2dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:background="?attr/selectableItemBackground"
+                    android:visibility="gone">
+
+                    <ImageView
+                        android:id="@+id/thinking_icon"
+                        android:layout_width="13dp"
+                        android:layout_height="13dp"
+                        android:layout_marginEnd="6dp"
+                        android:src="@drawable/ic_cognition"
+                        app:tint="#7FA8A8"/>
+
+                    <TextView
+                        android:id="@+id/thinking_label"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Thinking"
+                        android:textColor="#7FA8A8"
+                        android:textSize="11sp"/>
+
+                    <ImageView
+                        android:id="@+id/thinking_chevron"
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:layout_marginStart="4dp"
+                        android:src="@drawable/ic_chevron_down"
+                        app:tint="#4A6A6A"/>
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/thinking_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="#8AA6A6"
+                    android:textSize="11sp"
+                    android:lineSpacingExtra="1dp"
+                    android:maxWidth="290dp"
+                    android:layout_marginTop="2dp"
+                    android:layout_marginBottom="6dp"
+                    android:visibility="gone"/>
+
+                <!-- Message body -->
+                <TextView
+                    android:id="@+id/message_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/white"
+                    android:textSize="13sp"
+                    android:lineSpacingExtra="2dp"
+                    android:maxWidth="290dp"/>
+
+                <!-- Action row pinned to bottom-end of the bubble:
+                     [ relative time ]   …spacer…   [save] [fork] -->
+                <LinearLayout
+                    android:id="@+id/action_row"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="2dp">
+
+                    <TextView
+                        android:id="@+id/time_ago_text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="#707070"
+                        android:textSize="11sp"
+                        android:fontFamily="sans-serif"
+                        android:paddingStart="2dp"
+                        android:paddingEnd="6dp"
+                        tools:ignore="RtlSymmetry"/>
+
+                    <View
+                        android:layout_width="0dp"
+                        android:layout_height="1dp"
+                        android:layout_weight="1"/>
+
+                    <ImageButton
+                        android:id="@+id/save_button"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:padding="6dp"
+                        android:src="@drawable/ic_bookmark"
+                        app:tint="#808080"
+                        android:scaleType="fitCenter"
+                        android:contentDescription="Save chat" />
+
+                    <ImageButton
+                        android:id="@+id/fork_button"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:layout_marginStart="2dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:padding="6dp"
+                        android:src="@drawable/ic_call_split"
+                        app:tint="#008b8b"
+                        android:scaleType="fitCenter"
+                        android:contentDescription="Fork chat" />
+
+                    <ImageButton
+                        android:id="@+id/memory_button"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:layout_marginStart="2dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:padding="6dp"
+                        android:src="@drawable/ic_signup_brain2"
+                        app:tint="#808080"
+                        android:scaleType="fitCenter"
+                        android:contentDescription="What Richie remembers" />
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Absolute time below bubble — hidden in the new design.
+             Kept for compatibility with existing Java that still calls setText. -->
+        <TextView
+            android:id="@+id/time_text"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:visibility="gone" />
+    </LinearLayout>
+</LinearLayout>

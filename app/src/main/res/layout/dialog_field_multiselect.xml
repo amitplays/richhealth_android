@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Searchable multi-select field: quiet label + autocomplete search that adds
+     picked items as removable chips. A hidden holder carries the comma-separated
+     value so the standard save loop can read it like any other field. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingHorizontal="4dp"
+    android:paddingVertical="5dp">
+
+    <TextView
+        android:id="@+id/input_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="5dp"
+        android:textSize="13sp"
+        android:textColor="@color/rh_text_secondary"/>
+
+    <AutoCompleteTextView
+        android:id="@+id/field_search"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_dialog_input"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="8dp"
+        android:minHeight="42dp"
+        android:gravity="center_vertical|start"
+        android:maxLines="1"
+        android:imeOptions="actionDone"
+        android:inputType="textCapWords"
+        android:completionThreshold="1"
+        android:textSize="14sp"
+        android:textColor="@color/rh_text_primary"
+        android:textColorHint="@color/rh_text_tertiary"
+        android:importantForAutofill="no"/>
+
+    <com.google.android.material.chip.ChipGroup
+        android:id="@+id/field_chips"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"/>
+
+    <!-- Hidden holder read by the save loop; text is the comma-separated value. -->
+    <TextView
+        android:id="@+id/field_value"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone"/>
+</LinearLayout>

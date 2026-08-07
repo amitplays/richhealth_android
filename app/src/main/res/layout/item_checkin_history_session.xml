@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="12dp"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="0dp"
+    app:cardBackgroundColor="#1A1A1E"
+    app:strokeColor="#2A2A2A"
+    app:strokeWidth="1dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- Header: period badge + completed label -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="8dp">
+
+            <TextView
+                android:id="@+id/history_period_badge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="#008b8b"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:background="@drawable/rounded_category_bg"
+                android:backgroundTint="#0A2828"
+                android:paddingHorizontal="10dp"
+                android:paddingVertical="4dp" />
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
+            <TextView
+                android:id="@+id/history_completed_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Completed"
+                android:textColor="#4CAF50"
+                android:textSize="11sp"
+                android:drawablePadding="4dp"
+                android:gravity="center_vertical"
+                app:drawableStartCompat="@drawable/ic_success"
+                app:drawableTint="#4CAF50" />
+        </LinearLayout>
+
+        <!-- Date label -->
+        <TextView
+            android:id="@+id/history_date"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/white"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Responses container: filled programmatically -->
+        <LinearLayout
+            android:id="@+id/responses_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+
+        <!-- Completed at timestamp -->
+        <TextView
+            android:id="@+id/completed_at"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#606060"
+            android:textSize="11sp"
+            android:layout_marginTop="10dp" />
+
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>

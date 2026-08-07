@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Bottom nav RICHIE AI icon — uses the actual RichHealth logo (ic_launcher.png).
+    The ColorStateList in MainActivity applies teal tint when selected, gray when not.
+    Both states use the same logo so the shape is always consistent.
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_checked="true"  android:drawable="@drawable/ic_launcher" />
+    <item                               android:drawable="@drawable/ic_launcher" />
+</selector>

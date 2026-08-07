@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Minimalist "Your Plan" usage sheet. Feature rows are added in Java from the
+     live /api/user/usage payload; this shell holds the header, list and CTA. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_sheet_surface"
+    android:paddingStart="22dp"
+    android:paddingEnd="22dp"
+    android:paddingTop="10dp"
+    android:paddingBottom="22dp">
+
+    <!-- Grabber -->
+    <View
+        android:layout_width="36dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="18dp"
+        android:background="@drawable/bg_dialog_input"
+        android:alpha="0.5"/>
+
+    <!-- Header: title + plan badge -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Your Plan"
+            android:textColor="@color/rh_text_primary"
+            android:textSize="20sp"
+            android:fontFamily="sans-serif-medium"/>
+
+        <TextView
+            android:id="@+id/sheet_plan_badge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
+            android:text="FREE"
+            android:textAllCaps="true"
+            android:textSize="11sp"
+            android:letterSpacing="0.08"
+            android:fontFamily="sans-serif-medium"
+            android:textColor="#0B0B0B"/>
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/sheet_plan_subtitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="Your monthly limits"
+        android:textColor="@color/rh_text_tertiary"
+        android:textSize="13sp"/>
+
+    <!-- Feature rows added in Java -->
+    <LinearLayout
+        android:id="@+id/sheet_usage_rows"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="18dp"/>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/sheet_upgrade_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="22dp"
+        android:text="Upgrade to Pro"
+        android:textAllCaps="false"
+        android:textSize="15sp"
+        android:textColor="@android:color/white"
+        app:backgroundTint="@color/rh_accent"
+        app:cornerRadius="14dp"
+        android:minHeight="50dp"/>
+</LinearLayout>

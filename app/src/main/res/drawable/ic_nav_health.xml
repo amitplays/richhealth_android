@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Bottom nav HEALTH HUB icon — StateListDrawable
+    Replaces the raster vitals.png with a proper vector asset.
+    checked=true  → filled heart + ECG (ic_health_hub)
+    default       → outline heart + ECG (ic_health_hub_outline)
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_checked="true"  android:drawable="@drawable/ic_health_hub" />
+    <item                               android:drawable="@drawable/ic_health_hub_outline" />
+</selector>

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingVertical="12dp">
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/memory_category"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/rounded_category_bg"
+            android:paddingHorizontal="10dp"
+            android:paddingVertical="3dp"
+            android:text="lifestyle"
+            android:textAllCaps="true"
+            android:textColor="@color/white"
+            android:textSize="10sp"
+            android:letterSpacing="0.06"
+            android:layout_marginBottom="6dp"/>
+
+        <TextView
+            android:id="@+id/memory_fact"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Fact about the user"
+            android:textColor="@color/rh_text_primary"
+            android:textSize="14sp"
+            android:lineSpacingExtra="2dp"/>
+    </LinearLayout>
+
+    <!-- Delete action: app delete icon tinted RED (design standard for destructive
+         row actions — see dialog_ai_memory.xml header comment). -->
+    <ImageView
+        android:id="@+id/memory_delete"
+        android:layout_width="34dp"
+        android:layout_height="34dp"
+        android:layout_marginStart="10dp"
+        android:padding="6dp"
+        android:src="@drawable/ic_delete"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="Delete memory"
+        app:tint="@color/rh_danger"/>
+</LinearLayout>

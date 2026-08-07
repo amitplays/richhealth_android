@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Revealed behind a feed card ONLY while it is being swiped away (and during the
+     one-time teaching nudge) — the card surface is ~5% opaque, so this layer stays
+     GONE at rest to avoid bleeding through. Neutral dark panel (matches the elevated
+     surface); the delete icon + label carry the red so "remove" reads as destructive
+     without tinting the whole card. Rounded to match the card's 14dp corners. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/black" />
+    <corners android:radius="14dp" />
+</shape>

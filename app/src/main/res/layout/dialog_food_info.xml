@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_margin="16dp"
+    app:cardCornerRadius="16dp"
+    app:cardBackgroundColor="#1A1A1A"
+    app:cardElevation="5dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <!-- Dialog Title with Loading Indicator -->
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:id="@+id/dialog_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Food Information"
+                android:textColor="#008b8b"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="16dp"/>
+
+            <!-- Loading Icon (initially visible during loading) -->
+            <ImageView
+                android:id="@+id/loading_icon"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:src="@drawable/ic_launcher"
+                android:visibility="visible" />
+        </RelativeLayout>
+
+        <!-- Pill Tabs -->
+        <com.google.android.material.tabs.TabLayout
+            android:id="@+id/dietary_tabs"
+            android:layout_width="match_parent"
+            android:layout_height="36dp"
+            android:minHeight="0dp"
+            android:layout_marginBottom="12dp"
+            android:background="@drawable/pill_tab_container_bg"
+            android:paddingHorizontal="4dp"
+            android:paddingVertical="0dp"
+            app:tabBackground="@drawable/tab_pill_selector"
+            app:tabIndicator="@null"
+            app:tabRippleColor="@android:color/transparent"
+            app:tabTextColor="#808080"
+            app:tabSelectedTextColor="#FFFFFF"
+            app:tabTextAppearance="@style/PillTabText"
+            app:tabMinWidth="0dp"
+            app:tabGravity="fill"
+            app:tabMode="fixed"
+            app:tabPaddingStart="0dp"
+            app:tabPaddingEnd="0dp"
+            app:tabPaddingTop="0dp"
+            app:tabPaddingBottom="0dp">
+
+            <com.google.android.material.tabs.TabItem
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Foods to Eat"/>
+
+            <com.google.android.material.tabs.TabItem
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Foods to Avoid"/>
+        </com.google.android.material.tabs.TabLayout>
+
+        <!-- Table header -->
+        <LinearLayout
+            android:id="@+id/dietary_table_header"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="10dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1.2"
+                android:text="Food"
+                android:textColor="#008b8b"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:paddingEnd="6dp" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1.5"
+                android:text="Components"
+                android:textColor="#008b8b"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:paddingHorizontal="6dp" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="2"
+                android:text="Reason"
+                android:textColor="#008b8b"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:paddingStart="6dp" />
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginHorizontal="8dp"
+            android:background="#1F1F1F" />
+
+        <!-- Scrollable food list -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/food_recycler_view"
+            android:layout_width="match_parent"
+            android:layout_height="350dp"
+            android:scrollbars="vertical"/>
+
+        <!-- Disclaimer -->
+        <TextView
+            android:id="@+id/disclaimer_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="12dp"
+            android:text="Disclaimer: This information is general guidance. Always consult with a healthcare professional for personalized nutrition advice."
+            android:textColor="#757575"
+            android:textSize="11sp"/>
+
+        <!-- OK Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/ok_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="OK"
+            android:textColor="@android:color/white"
+            app:backgroundTint="#008b8b"
+            app:cornerRadius="8dp"/>
+
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>

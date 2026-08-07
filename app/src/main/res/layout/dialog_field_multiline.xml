@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Label-on-top field for longer / comma-separated inputs. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingHorizontal="4dp"
+    android:paddingVertical="5dp">
+
+    <TextView
+        android:id="@+id/input_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="5dp"
+        android:textSize="13sp"
+        android:textColor="@color/rh_text_secondary"/>
+
+    <EditText
+        android:id="@+id/field_input"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_dialog_input"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="8dp"
+        android:minHeight="42dp"
+        android:gravity="top|start"
+        android:textSize="14sp"
+        android:textColor="@color/rh_text_primary"
+        android:textColorHint="@color/rh_text_tertiary"
+        android:importantForAutofill="no"/>
+</LinearLayout>

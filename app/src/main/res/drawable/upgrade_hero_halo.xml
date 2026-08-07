@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Soft teal radial halo. Sits behind the launcher icon on the upgrade
+     dialog so the brand mark gets a premium glow without using a raster image. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <gradient
+        android:type="radial"
+        android:gradientRadius="60dp"
+        android:centerX="0.5"
+        android:centerY="0.5"
+        android:startColor="#33008B8B"
+        android:centerColor="#1A008B8B"
+        android:endColor="#00000000" />
+</shape>

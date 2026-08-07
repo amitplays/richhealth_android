@@ -1,0 +1,13 @@
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
+plugins {
+    // NOTE: These versions target compileSdk 36 (Android 16). The exact AGP/Gradle
+    // matrix must be confirmed on your machine via Android Studio's "AGP Upgrade
+    // Assistant" (Tools > AGP Upgrade Assistant) — it will pin versions that match
+    // your installed Studio/JDK. AGP 8.x requires JDK 17.
+    id 'com.android.application' version '8.9.1' apply false
+    id 'com.android.library' version '8.9.1' apply false
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}

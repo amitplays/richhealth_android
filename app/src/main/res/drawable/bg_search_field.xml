@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Thin search field: 0.5dp border, grey at rest, white on focus.
+     Mirrors the chat input box's focus behaviour. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_focused="true">
+        <shape android:shape="rectangle">
+            <solid android:color="#0D0D0D"/>
+            <corners android:radius="20dp"/>
+            <stroke android:width="0.5dp" android:color="#FFFFFF"/>
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#0D0D0D"/>
+            <corners android:radius="20dp"/>
+            <stroke android:width="0.5dp" android:color="#4D4D4D"/>
+        </shape>
+    </item>
+</selector>

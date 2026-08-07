@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="8dp"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="0dp"
+    app:cardBackgroundColor="@color/rh_surface">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="14dp">
+
+        <!-- Header: food name + delete icon -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/food_name"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textColor="@color/white"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+            <ImageButton
+                android:id="@+id/delete_button"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@drawable/ic_delete"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                app:tint="#808080"
+                android:contentDescription="Delete" />
+        </LinearLayout>
+
+        <!-- Recommendation badge -->
+        <TextView
+            android:id="@+id/recommendation_badge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:layout_marginTop="6dp"
+            android:layout_marginBottom="4dp" />
+
+        <!-- Reason -->
+        <TextView
+            android:id="@+id/reason_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#CCCCCC"
+            android:textSize="12sp"
+            android:lineSpacingMultiplier="1.3" />
+
+        <!-- Data changes since warning -->
+        <TextView
+            android:id="@+id/data_changes_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#FF9800"
+            android:textSize="11sp"
+            android:layout_marginTop="6dp"
+            android:visibility="gone" />
+
+        <!-- Timestamp -->
+        <TextView
+            android:id="@+id/timestamp_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#606060"
+            android:textSize="11sp"
+            android:layout_marginTop="4dp" />
+
+        <!-- Feedback row: was this verdict helpful? -->
+        <LinearLayout
+            android:id="@+id/feedback_row"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="8dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Was this helpful?"
+                android:textColor="#808080"
+                android:textSize="11sp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/thumb_up"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:paddingHorizontal="0dp"
+                app:icon="@drawable/ic_thumb_up"
+                app:iconSize="18dp"
+                app:iconTint="#808080"
+                app:iconPadding="0dp"
+                app:iconGravity="textStart"
+                android:contentDescription="Helpful" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/thumb_down"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:paddingHorizontal="0dp"
+                app:icon="@drawable/ic_thumb_down"
+                app:iconSize="18dp"
+                app:iconTint="#808080"
+                app:iconPadding="0dp"
+                app:iconGravity="textStart"
+                android:contentDescription="Not helpful" />
+        </LinearLayout>
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>

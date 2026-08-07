@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/black">
+
+    <!-- Empty / error state (shown when no personalized data is available) -->
+    <LinearLayout
+        android:id="@+id/dietary_empty_state"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="32dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/dietary_empty_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="No recommendations yet"
+            android:textColor="#555555"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:gravity="center" />
+
+        <TextView
+            android:id="@+id/dietary_empty_subtitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Complete your health profile to get personalized dietary guidance"
+            android:textColor="#404040"
+            android:textSize="12sp"
+            android:gravity="center"
+            android:layout_marginTop="8dp" />
+
+    </LinearLayout>
+
+    <!-- Table header -->
+    <LinearLayout
+        android:id="@+id/dietary_table_header"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingHorizontal="8dp"
+        android:paddingVertical="10dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1.2"
+            android:text="Food"
+            android:textColor="#008b8b"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:paddingEnd="6dp" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1.5"
+            android:text="Components"
+            android:textColor="#008b8b"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:paddingHorizontal="6dp" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="2"
+            android:text="Reason"
+            android:textColor="#008b8b"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:paddingStart="6dp" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginHorizontal="8dp"
+        android:background="#1F1F1F" />
+
+    <!-- Food list -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/food_recycler_view"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:scrollbars="vertical" />
+
+    <!-- Disclaimer -->
+    <TextView
+        android:id="@+id/disclaimer_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="10dp"
+        android:text="Disclaimer: This information is general guidance. Always consult with a healthcare professional for personalized nutrition advice."
+        android:textColor="#757575"
+        android:textSize="11sp" />
+</LinearLayout>

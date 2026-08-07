@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="5dp"
+    android:clickable="true"
+    android:focusable="true"
+    app:cardBackgroundColor="#1E1E1E"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="0dp"
+    app:strokeColor="#2A2A2A"
+    app:strokeWidth="1dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:minHeight="90dp"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <!-- Vector icon (shown when SelectableOption.iconRes is set) -->
+        <ImageView
+            android:id="@+id/iv_card_icon"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:visibility="gone"
+            app:tint="#008b8b"
+            tools:ignore="ContentDescription" />
+
+        <!-- Emoji fallback (shown only when SelectableOption.iconRes is unset — kept for legacy callers) -->
+        <TextView
+            android:id="@+id/tv_card_emoji"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="28sp"
+            android:visibility="gone"
+            tools:text="•" />
+
+        <TextView
+            android:id="@+id/tv_card_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center"
+            android:text="Option"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp"
+            android:textStyle="normal" />
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>

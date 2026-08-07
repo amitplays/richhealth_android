@@ -1,0 +1,282 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Log/Edit Period — APP DIALOG DESIGN STANDARD shell (see dialog_edit_profile.xml
+     and DialogUtils.java). Keeps its date buttons, flow dropdown, pain SeekBar and
+     share switch; all field IDs preserved so the existing Java wiring is unchanged. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_dialog_surface"
+    android:paddingTop="20dp"
+    android:paddingBottom="10dp">
+
+    <!-- Title row: icon + BLUE title -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="22dp">
+
+        <ImageView
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:layout_marginEnd="10dp"
+            android:src="@drawable/ic_gynecology"
+            app:tint="@color/rh_accent" />
+
+        <TextView
+            android:id="@+id/dialog_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Log Period"
+            android:textColor="@color/rh_accent"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="14dp"
+        android:background="#2A2A2A" />
+
+    <ScrollView
+        android:id="@+id/fields_scroll"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:scrollbars="none"
+        android:paddingHorizontal="18dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingVertical="12dp">
+
+            <!-- Start Date + End Date side by side with icons -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:orientation="horizontal">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/start_date_button"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="6dp"
+                    android:text="Start Date"
+                    android:textColor="#808080"
+                    android:textAllCaps="false"
+                    android:textSize="13sp"
+                    app:backgroundTint="#1E1E1E"
+                    app:cornerRadius="10dp"
+                    app:elevation="0dp"
+                    app:icon="@drawable/ic_date"
+                    app:iconTint="@color/rh_accent" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/end_date_button"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="6dp"
+                    android:text="End Date"
+                    android:textColor="#808080"
+                    android:textAllCaps="false"
+                    android:textSize="13sp"
+                    app:backgroundTint="#1E1E1E"
+                    app:cornerRadius="10dp"
+                    app:elevation="0dp"
+                    app:icon="@drawable/ic_date"
+                    app:iconTint="@color/rh_accent" />
+            </LinearLayout>
+
+            <!-- Flow Intensity Dropdown -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="4dp"
+                android:text="Flow Intensity"
+                android:textColor="@color/rh_text_secondary"
+                android:textSize="14sp" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/flow_intensity_layout"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:textColorHint="#757575"
+                app:boxBackgroundColor="#1E1E1E"
+                app:boxStrokeColor="@color/rh_accent"
+                app:boxCornerRadiusTopStart="8dp"
+                app:boxCornerRadiusTopEnd="8dp"
+                app:boxCornerRadiusBottomStart="8dp"
+                app:boxCornerRadiusBottomEnd="8dp"
+                app:boxStrokeWidth="1dp"
+                app:hintTextColor="@color/rh_accent">
+
+                <AutoCompleteTextView
+                    android:id="@+id/flow_intensity_dropdown"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Select flow intensity"
+                    android:inputType="none"
+                    android:textColor="@color/white" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Pain Level SeekBar -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:text="Pain / Discomfort"
+                android:textColor="@color/rh_text_secondary"
+                android:textSize="14sp" />
+
+            <SeekBar
+                android:id="@+id/pain_level_seekbar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="4"
+                android:progress="2"
+                android:progressTint="@color/rh_accent"
+                android:thumbTint="@color/rh_accent" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Very Mild"
+                    android:textColor="@color/rh_text_tertiary"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/pain_level_text"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Moderate"
+                    android:textAlignment="center"
+                    android:textColor="@color/rh_accent"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Very Severe"
+                    android:textAlignment="viewEnd"
+                    android:textColor="@color/rh_text_tertiary"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <!-- Notes -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/notes_layout"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:textColorHint="#757575"
+                app:boxBackgroundColor="#1E1E1E"
+                app:boxCornerRadiusTopStart="8dp"
+                app:boxCornerRadiusTopEnd="8dp"
+                app:boxCornerRadiusBottomStart="8dp"
+                app:boxCornerRadiusBottomEnd="8dp"
+                app:boxStrokeColor="@color/rh_accent"
+                app:boxStrokeWidth="1dp"
+                app:hintTextColor="@color/rh_accent">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/notes_input"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="top|start"
+                    android:hint="Additional Notes (optional)"
+                    android:inputType="textMultiLine"
+                    android:minLines="2"
+                    android:textColor="@color/white" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Share with family toggle -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Share with family"
+                    android:textColor="@color/white"
+                    android:textSize="14sp"/>
+
+                <com.google.android.material.switchmaterial.SwitchMaterial
+                    android:id="@+id/share_with_family_switch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="false"
+                    app:thumbTint="@color/rh_accent"
+                    app:trackTint="#33008b8b"/>
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#2A2A2A" />
+
+    <!-- Footer: Cancel (text) + accent Save -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="18dp"
+        android:paddingTop="12dp">
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/cancel_button"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="6dp"
+            android:text="Cancel"
+            android:textColor="@color/rh_text_secondary"
+            android:textAllCaps="false"
+            android:textSize="14sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/save_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Save"
+            android:textColor="@color/white"
+            android:textAllCaps="false"
+            android:textSize="14sp"
+            android:fontFamily="sans-serif-medium"
+            app:backgroundTint="@color/rh_accent"
+            app:cornerRadius="12dp"
+            app:elevation="0dp" />
+    </LinearLayout>
+</LinearLayout>

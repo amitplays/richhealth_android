@@ -1,0 +1,1068 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/black">
+
+    <!-- Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="8dp">
+
+        <ImageButton
+            android:id="@+id/back_button"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_back"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            app:tint="@color/white"
+            android:contentDescription="Back" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Health Analysis"
+            android:textColor="@color/white"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_marginStart="8dp" />
+
+        <!-- Plan badge (inline) -->
+        <!-- [PLAN-PILL-REVIEW] disabled for review (backend-driven, keep after review):
+        <TextView
+            android:id="@+id/dialog_usage_badge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:textColor="@color/white"
+            android:textSize="11sp"
+            android:background="@drawable/rounded_category_bg"
+            android:backgroundTint="#1A1A1A"
+            android:paddingHorizontal="10dp"
+            android:paddingVertical="4dp" />
+        -->
+    </LinearLayout>
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:overScrollMode="never">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- ═══════ CHART SECTION (teal bg shows through) ═══════ -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingHorizontal="16dp"
+                android:paddingTop="4dp"
+                android:paddingBottom="8dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="4dp">
+
+                    <ImageView
+                        android:layout_width="@dimen/icon_md"
+                        android:layout_height="@dimen/icon_md"
+                        android:tag="section_icon"
+                        android:src="@drawable/ic_health_metrics"
+                        app:tint="#008b8b"
+                        android:layout_marginEnd="8dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Your Health Overview"
+                        android:textColor="@color/white"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="We analyze your reports, symptoms, medications, vitals, and family history to generate personalized health insights."
+                    android:textColor="#999999"
+                    android:textSize="13sp"
+                    android:lineSpacingExtra="2dp"
+                    android:layout_marginBottom="12dp" />
+
+                <com.github.mikephil.charting.charts.PieChart
+                    android:id="@+id/data_overview_pie_chart"
+                    android:layout_width="match_parent"
+                    android:layout_height="200dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Data being analyzed"
+                    android:textColor="#808080"
+                    android:textSize="11sp"
+                    android:gravity="center"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="8dp" />
+
+            </LinearLayout>
+
+            <!-- ═══════ CARDS CONTAINER (dark bg, rounded top) ═══════ -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/rounded_top_dark_bg"
+                android:padding="16dp">
+
+            <!-- ═══════ AI INSIGHT CARD (THE STAR) ═══════ -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:visibility="gone"
+                android:layout_marginBottom="20dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="@android:color/transparent">
+
+                <!-- Gradient Border -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                     />
+
+                <!-- Inner Content -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_margin="1dp"
+                    app:cardCornerRadius="15dp"
+                    app:cardElevation="0dp"
+                    app:cardBackgroundColor="#262626">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="18dp">
+
+                        <!-- Health Score (hero metric) -->
+                        <LinearLayout
+                            android:id="@+id/hero_health_score_section"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:layout_marginBottom="14dp"
+                            android:visibility="gone">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical"
+                                android:layout_marginBottom="8dp">
+
+                                <TextView
+                                    android:id="@+id/hero_health_score_value"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text=""
+                                    android:textColor="#4CAF50"
+                                    android:textSize="36sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text=" / 100"
+                                    android:textColor="#666666"
+                                    android:textSize="16sp" />
+
+                                <View
+                                    android:layout_width="0dp"
+                                    android:layout_height="0dp"
+                                    android:layout_weight="1" />
+
+                                <TextView
+                                    android:id="@+id/hero_health_score_label"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Profile Score"
+                                    android:textColor="#808080"
+                                    android:textSize="12sp" />
+                            </LinearLayout>
+
+                            <ProgressBar
+                                android:id="@+id/hero_health_score_progress"
+                                style="@android:style/Widget.ProgressBar.Horizontal"
+                                android:layout_width="match_parent"
+                                android:layout_height="6dp"
+                                android:max="100"
+                                android:progress="0"
+                                android:progressTint="#4CAF50"
+                                android:progressBackgroundTint="#333333" />
+                        </LinearLayout>
+
+                        <!-- Status line (mapped to meaningful text) -->
+                        <TextView
+                            android:id="@+id/dialog_status_line"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text=""
+                            android:textColor="#808080"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            android:layout_marginBottom="10dp" />
+
+                        <!-- AI Headline -->
+                        <TextView
+                            android:id="@+id/dialog_headline_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text=""
+                            android:textColor="@color/white"
+                            android:textSize="17sp"
+                            android:textStyle="bold"
+                            android:lineSpacingMultiplier="1.3"
+                            android:layout_marginBottom="6dp" />
+
+                        <!-- Reason -->
+                        <TextView
+                            android:id="@+id/dialog_status_reason"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text=""
+                            android:textColor="#999999"
+                            android:textSize="13sp"
+                            android:lineSpacingMultiplier="1.3"
+                            android:layout_marginBottom="14dp" />
+
+                        <!-- Bottom row: Refresh button + loading spinner + timestamp -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/dialog_refresh_button"
+                                style="@style/Widget.MaterialComponents.Button.TextButton"
+                                android:layout_width="wrap_content"
+                                android:layout_height="32dp"
+                                android:text="Refresh"
+                                android:textColor="#008b8b"
+                                android:textSize="12sp"
+                                android:minWidth="0dp"
+                                android:paddingHorizontal="0dp"
+                                app:icon="@drawable/ic_menu_rotate"
+                                app:iconTint="#008b8b"
+                                app:iconSize="14dp"
+                                app:iconPadding="4dp" />
+
+                            <!-- Loading spinner (shown during refresh) -->
+                            <ProgressBar
+                                android:id="@+id/dialog_refresh_progress"
+                                android:layout_width="@dimen/icon_sm"
+                                android:layout_height="@dimen/icon_sm"
+                                android:indeterminate="true"
+                                android:indeterminateTint="#008b8b"
+                                android:visibility="gone" />
+
+                            <View
+                                android:layout_width="0dp"
+                                android:layout_height="0dp"
+                                android:layout_weight="1" />
+
+                            <TextView
+                                android:id="@+id/dialog_last_updated_text"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text=""
+                                android:textColor="#666666"
+                                android:textSize="11sp" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ═══════ CHANGE NOTIFICATION BANNER ═══════ -->
+            <LinearLayout
+                android:id="@+id/dialog_change_banner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/rounded_bg_warning"
+                android:padding="12dp"
+                android:layout_marginBottom="16dp"
+                android:visibility="gone"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/dialog_change_banner_text"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="Data changed since last analysis"
+                    android:textColor="#FF9800"
+                    android:textSize="12sp"
+                    android:lineSpacingMultiplier="1.2" />
+
+                <TextView
+                    android:id="@+id/dialog_change_banner_refresh"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Refresh ›"
+                    android:textColor="#FF9800"
+                    android:textStyle="bold"
+                    android:textSize="12sp"
+                    android:paddingStart="12dp" />
+            </LinearLayout>
+
+            <!-- ═══════ ACTION ITEMS ═══════ -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/dialog_action_items_card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="20dp"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="#262626"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="12dp">
+
+                        <ImageView
+                            android:layout_width="@dimen/icon_sm"
+                            android:layout_height="@dimen/icon_sm"
+                            android:tag="section_icon"
+                            android:src="@drawable/ic_clinical_notes"
+                            app:tint="#008b8b"
+                            android:layout_marginEnd="6dp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Recommended Actions"
+                            android:textColor="#008b8b"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/dialog_action_items_container"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ═══════ DETAILED ANALYSIS CARD ═══════ -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/dialog_analysis_content_card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="20dp"
+                app:cardCornerRadius="18dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="@color/rh_surface">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <!-- Title inside card -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="12dp">
+
+                        <ImageView
+                            android:layout_width="@dimen/icon_sm"
+                            android:layout_height="@dimen/icon_sm"
+                            android:tag="section_icon"
+                            android:src="@drawable/ic_diagnosis"
+                            app:tint="#008b8b"
+                            android:layout_marginEnd="6dp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Detailed Analysis"
+                            android:textColor="#008b8b"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <!-- Pill tabs inside card -->
+                    <HorizontalScrollView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="14dp"
+                        android:scrollbars="none">
+
+                        <LinearLayout
+                            android:id="@+id/dialog_analysis_tabs"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:background="@drawable/pill_tab_container_bg"
+                            android:padding="4dp">
+
+                            <TextView
+                                android:id="@+id/tab_reports"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Reports"
+                                android:textSize="12sp"
+                                android:textColor="#FFFFFF"
+                                android:background="@drawable/pill_tab_selected"
+                                android:paddingHorizontal="16dp"
+                                android:paddingVertical="9dp"
+                                android:clickable="true"
+                                android:focusable="true" />
+
+                            <TextView
+                                android:id="@+id/tab_symptoms"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Symptoms"
+                                android:textSize="12sp"
+                                android:textColor="#AAAAAA"
+                                android:background="@drawable/pill_tab_unselected"
+                                android:paddingHorizontal="16dp"
+                                android:paddingVertical="9dp"
+                                android:clickable="true"
+                                android:focusable="true" />
+
+                            <TextView
+                                android:id="@+id/tab_medications"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Medications"
+                                android:textSize="12sp"
+                                android:textColor="#AAAAAA"
+                                android:background="@drawable/pill_tab_unselected"
+                                android:paddingHorizontal="16dp"
+                                android:paddingVertical="9dp"
+                                android:clickable="true"
+                                android:focusable="true" />
+
+                            <TextView
+                                android:id="@+id/tab_measurements"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Measurements"
+                                android:textSize="12sp"
+                                android:textColor="#AAAAAA"
+                                android:background="@drawable/pill_tab_unselected"
+                                android:paddingHorizontal="16dp"
+                                android:paddingVertical="9dp"
+                                android:clickable="true"
+                                android:focusable="true" />
+
+                            <TextView
+                                android:id="@+id/tab_genetics"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Family Health"
+                                android:textSize="12sp"
+                                android:textColor="#AAAAAA"
+                                android:background="@drawable/pill_tab_unselected"
+                                android:paddingHorizontal="16dp"
+                                android:paddingVertical="9dp"
+                                android:clickable="true"
+                                android:focusable="true" />
+
+                            <TextView
+                                android:id="@+id/tab_diagnostics"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Diagnostics"
+                                android:textSize="12sp"
+                                android:textColor="#AAAAAA"
+                                android:background="@drawable/pill_tab_unselected"
+                                android:paddingHorizontal="16dp"
+                                android:paddingVertical="9dp"
+                                android:clickable="true"
+                                android:focusable="true" />
+                        </LinearLayout>
+                    </HorizontalScrollView>
+
+                    <!-- Shimmer skeleton placeholder -->
+                    <LinearLayout
+                        android:id="@+id/dialog_analysis_shimmer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:visibility="gone">
+
+                        <View
+                            android:layout_width="140dp"
+                            android:layout_height="@dimen/icon_xs"
+                            android:background="@drawable/shimmer_placeholder_bg"
+                            android:layout_marginBottom="12dp" />
+
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="10dp"
+                            android:background="@drawable/shimmer_placeholder_bg"
+                            android:layout_marginBottom="8dp" />
+
+                        <View
+                            android:layout_width="240dp"
+                            android:layout_height="10dp"
+                            android:background="@drawable/shimmer_placeholder_bg"
+                            android:layout_marginBottom="8dp" />
+
+                        <View
+                            android:layout_width="100dp"
+                            android:layout_height="12dp"
+                            android:background="@drawable/shimmer_placeholder_bg"
+                            android:layout_marginTop="8dp"
+                            android:layout_marginBottom="10dp" />
+
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="10dp"
+                            android:background="@drawable/shimmer_placeholder_bg"
+                            android:layout_marginBottom="8dp" />
+
+                        <View
+                            android:layout_width="200dp"
+                            android:layout_height="10dp"
+                            android:background="@drawable/shimmer_placeholder_bg"
+                            android:layout_marginBottom="8dp" />
+
+                        <View
+                            android:layout_width="260dp"
+                            android:layout_height="10dp"
+                            android:background="@drawable/shimmer_placeholder_bg" />
+                    </LinearLayout>
+
+                    <!-- Summary text -->
+                    <TextView
+                        android:id="@+id/dialog_analysis_summary"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textColor="#E0E0E0"
+                        android:textSize="13sp"
+                        android:lineSpacingMultiplier="1.4"
+                        android:visibility="gone" />
+
+                    <!-- Dynamic details container -->
+                    <LinearLayout
+                        android:id="@+id/dialog_analysis_details_container"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_marginTop="8dp"
+                        android:visibility="gone" />
+
+                    <!-- No data / error message -->
+                    <TextView
+                        android:id="@+id/dialog_analysis_no_data"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textColor="#888888"
+                        android:textSize="13sp"
+                        android:gravity="center"
+                        android:padding="20dp"
+                        android:text="Tap Refresh Analysis to generate insights"
+                        android:visibility="visible" />
+
+                    <!-- Generated timestamp -->
+                    <TextView
+                        android:id="@+id/dialog_analysis_generated_at"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textColor="#555555"
+                        android:textSize="11sp"
+                        android:layout_marginTop="8dp"
+                        android:visibility="gone" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ═══════ PROFILE SNAPSHOT ═══════ -->
+            <com.google.android.material.card.MaterialCardView
+                android:visibility="gone"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="20dp"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="#262626">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="14dp">
+
+                        <ImageView
+                            android:layout_width="@dimen/icon_sm"
+                            android:layout_height="@dimen/icon_sm"
+                            android:tag="section_icon"
+                            android:src="@drawable/ic_patient_list"
+                            app:tint="#008b8b"
+                            android:layout_marginEnd="6dp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Your Health Data"
+                            android:textColor="#008b8b"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <!-- Row 1: Age · Gender · Blood Type -->
+                    <LinearLayout
+                        android:id="@+id/dialog_stats_row1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="8dp">
+
+                        <!-- Age cell -->
+                        <LinearLayout
+                            android:id="@+id/dialog_cell_age"
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="wrap_content"
+                            android:minHeight="56dp"
+                            android:orientation="vertical"
+                            android:background="@drawable/profile_pill_bg"
+                            android:backgroundTint="#1E1E1E"
+                            android:padding="10dp"
+                            android:layout_marginEnd="6dp">
+
+                            <TextView
+                                android:id="@+id/dialog_pill_age"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="–"
+                                android:textColor="#808080"
+                                android:textSize="20sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Age"
+                                android:textColor="#666666"
+                                android:textSize="11sp"
+                                android:layout_marginTop="2dp" />
+                        </LinearLayout>
+
+                        <!-- Gender cell -->
+                        <LinearLayout
+                            android:id="@+id/dialog_cell_gender"
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="wrap_content"
+                            android:minHeight="56dp"
+                            android:orientation="vertical"
+                            android:background="@drawable/profile_pill_bg"
+                            android:backgroundTint="#1E1E1E"
+                            android:padding="10dp"
+                            android:layout_marginEnd="6dp">
+
+                            <TextView
+                                android:id="@+id/dialog_pill_gender"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="–"
+                                android:textColor="#808080"
+                                android:textSize="20sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Gender"
+                                android:textColor="#666666"
+                                android:textSize="11sp"
+                                android:layout_marginTop="2dp" />
+                        </LinearLayout>
+
+                        <!-- Blood Type cell -->
+                        <LinearLayout
+                            android:id="@+id/dialog_cell_blood"
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="wrap_content"
+                            android:minHeight="56dp"
+                            android:orientation="vertical"
+                            android:background="@drawable/profile_pill_bg"
+                            android:backgroundTint="#1E1E1E"
+                            android:padding="10dp">
+
+                            <TextView
+                                android:id="@+id/dialog_pill_blood"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="–"
+                                android:textColor="#808080"
+                                android:textSize="20sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Blood"
+                                android:textColor="#666666"
+                                android:textSize="11sp"
+                                android:layout_marginTop="2dp" />
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <!-- Row 2: Weight · BMI · Sleep -->
+                    <LinearLayout
+                        android:id="@+id/dialog_stats_row2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="12dp">
+
+                        <!-- Weight cell -->
+                        <LinearLayout
+                            android:id="@+id/dialog_cell_weight"
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="wrap_content"
+                            android:minHeight="56dp"
+                            android:orientation="vertical"
+                            android:background="@drawable/profile_pill_bg"
+                            android:backgroundTint="#1E1E1E"
+                            android:padding="10dp"
+                            android:layout_marginEnd="6dp">
+
+                            <TextView
+                                android:id="@+id/dialog_pill_weight"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="–"
+                                android:textColor="#808080"
+                                android:textSize="20sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Weight"
+                                android:textColor="#666666"
+                                android:textSize="11sp"
+                                android:layout_marginTop="2dp" />
+                        </LinearLayout>
+
+                        <!-- BMI cell -->
+                        <LinearLayout
+                            android:id="@+id/dialog_cell_bmi"
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="wrap_content"
+                            android:minHeight="56dp"
+                            android:orientation="vertical"
+                            android:background="@drawable/profile_pill_bg"
+                            android:backgroundTint="#1E1E1E"
+                            android:padding="10dp"
+                            android:layout_marginEnd="6dp">
+
+                            <TextView
+                                android:id="@+id/dialog_pill_bmi"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="–"
+                                android:textColor="#808080"
+                                android:textSize="20sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/dialog_pill_bmi_label"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="BMI"
+                                android:textColor="#666666"
+                                android:textSize="11sp"
+                                android:layout_marginTop="2dp" />
+                        </LinearLayout>
+
+                        <!-- Sleep cell -->
+                        <LinearLayout
+                            android:id="@+id/dialog_cell_sleep"
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="wrap_content"
+                            android:minHeight="56dp"
+                            android:orientation="vertical"
+                            android:background="@drawable/profile_pill_bg"
+                            android:backgroundTint="#1E1E1E"
+                            android:padding="10dp">
+
+                            <TextView
+                                android:id="@+id/dialog_pill_sleep"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="–"
+                                android:textColor="#808080"
+                                android:textSize="20sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Avg Sleep"
+                                android:textColor="#666666"
+                                android:textSize="11sp"
+                                android:layout_marginTop="2dp" />
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <!-- Complete profile CTA (shown when health data pills have "Not set" values) -->
+                    <TextView
+                        android:id="@+id/dialog_complete_profile_cta"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Complete your profile for better insights ›"
+                        android:textColor="#008b8b"
+                        android:textSize="12sp"
+                        android:gravity="center"
+                        android:paddingVertical="8dp"
+                        android:layout_marginBottom="8dp"
+                        android:visibility="gone"
+                        android:clickable="true"
+                        android:focusable="true" />
+
+                    <!-- Data on File summary -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Records on File"
+                        android:textColor="#808080"
+                        android:textSize="12sp"
+                        android:layout_marginBottom="6dp" />
+
+                    <TextView
+                        android:id="@+id/dialog_data_on_file_summary"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="–"
+                        android:textColor="#AAAAAA"
+                        android:textSize="13sp"
+                        android:lineSpacingExtra="3dp"
+                        android:layout_marginBottom="14dp" />
+
+                    <!-- Profile completion (conditional) -->
+                    <LinearLayout
+                        android:id="@+id/dialog_profile_section"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:visibility="gone">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:layout_marginBottom="6dp">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Profile Completion"
+                                android:textColor="#808080"
+                                android:textSize="12sp" />
+
+                            <TextView
+                                android:id="@+id/dialog_profile_percent_text"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text=""
+                                android:textColor="#008b8b"
+                                android:textSize="12sp" />
+                        </LinearLayout>
+
+                        <ProgressBar
+                            android:id="@+id/dialog_profile_progress"
+                            style="@android:style/Widget.ProgressBar.Horizontal"
+                            android:layout_width="match_parent"
+                            android:layout_height="4dp"
+                            android:max="100"
+                            android:progress="0"
+                            android:progressTint="#008b8b"
+                            android:progressBackgroundTint="#333333" />
+
+                        <TextView
+                            android:id="@+id/dialog_missing_fields_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text=""
+                            android:textColor="#808080"
+                            android:textSize="11sp"
+                            android:layout_marginTop="6dp"
+                            android:visibility="gone" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ═══════ AIR QUALITY ═══════ -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/dialog_aqi_card"
+                android:visibility="gone"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="20dp"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="#262626"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?android:attr/selectableItemBackground">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="14dp">
+
+                    <!-- Top row: Status + AQI value badge -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="6dp">
+
+                        <TextView
+                            android:id="@+id/dialog_aqi_quality"
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="wrap_content"
+                            android:text="Moderate"
+                            android:textColor="#FFFF00"
+                            android:textSize="18sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/dialog_aqi_value"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="AQI 142"
+                            android:textColor="@color/white"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:background="@drawable/profile_pill_bg"
+                            android:backgroundTint="#333333" />
+                    </LinearLayout>
+
+                    <!-- Location row -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="8dp">
+
+                        <ImageView
+                            android:layout_width="@dimen/icon_xs"
+                            android:layout_height="@dimen/icon_xs"
+                            android:tag="section_icon"
+                            android:src="@drawable/ic_location"
+                            app:tint="#808080"
+                            android:layout_marginEnd="6dp" />
+
+                        <TextView
+                            android:id="@+id/dialog_aqi_location"
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="wrap_content"
+                            android:text="Location"
+                            android:textColor="#AAAAAA"
+                            android:textSize="12sp" />
+
+                        <TextView
+                            android:id="@+id/dialog_aqi_records"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text=""
+                            android:textColor="#808080"
+                            android:textSize="11sp" />
+                    </LinearLayout>
+
+                    <!-- Analysis summary line -->
+                    <TextView
+                        android:id="@+id/dialog_aqi_analysis"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text=""
+                        android:textColor="#999999"
+                        android:textSize="11sp"
+                        android:lineSpacingMultiplier="1.2"
+                        android:visibility="gone" />
+
+                    <TextView
+                        android:id="@+id/dialog_aqi_tap_details"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Tap for details ›"
+                        android:textColor="#008b8b"
+                        android:textSize="11sp"
+                        android:layout_marginTop="6dp"
+                        android:gravity="end" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ═══════ BOTTOM REFRESH BUTTON ═══════ -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/dialog_bottom_refresh_button"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:text="Refresh Analysis"
+                android:textColor="@color/white"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.02"
+                app:backgroundTint="#008B8B"
+                app:cornerRadius="12dp" />
+
+            </LinearLayout> <!-- closes cards container -->
+        </LinearLayout> <!-- closes scroll root -->
+    </androidx.core.widget.NestedScrollView>
+
+</LinearLayout>

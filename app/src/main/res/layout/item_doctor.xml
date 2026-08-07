@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="5dp"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="2dp"
+    app:cardBackgroundColor="@color/rh_surface"
+    app:strokeWidth="1dp"
+    app:strokeColor="#333333">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <!-- Doctor Name -->
+        <TextView
+            android:id="@+id/doctor_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Dr. Jane Smith"
+            android:textColor="@color/white"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:maxLines="1"
+            android:ellipsize="end"/>
+
+        <!-- Doctor Specialty -->
+        <TextView
+            android:id="@+id/doctor_specialty"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Cardiologist"
+            android:textColor="#008b8b"
+            android:textSize="14sp"
+            android:layout_marginTop="2dp"
+            android:maxLines="1"
+            android:ellipsize="end"/>
+
+        <!-- Doctor Email -->
+        <TextView
+            android:id="@+id/doctor_email"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="doctor@hospital.com"
+            android:textColor="#808080"
+            android:textSize="13sp"
+            android:layout_marginTop="2dp"
+            android:maxLines="1"
+            android:ellipsize="end"/>
+
+        <!-- Action button -->
+        <Button
+            android:id="@+id/action_button"
+            android:layout_width="match_parent"
+            android:layout_height="36dp"
+            android:layout_marginTop="8dp"
+            android:text="Send Request"
+            android:textSize="13sp"
+            android:backgroundTint="#008b8b"
+            android:textColor="@color/white"
+            app:cornerRadius="6dp"/>
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>

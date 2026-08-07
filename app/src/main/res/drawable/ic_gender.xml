@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Gender / Identity icon — combined male+female symbol.
+    The glyph only occupied the middle of its 24x24 viewport (bounds x[8..17],
+    y[5..16]), so at a 20dp row-icon box it rendered ~half the size of the
+    Material (960-viewport) neighbours. Wrapped in a scaling group so it fills
+    the viewport and visually matches the other profile row icons. Glyph unchanged.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <group
+        android:pivotX="12.5"
+        android:pivotY="10.5"
+        android:scaleX="1.85"
+        android:scaleY="1.85"
+        android:translateX="-0.5"
+        android:translateY="1.5">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M9,9c0,-2.21 1.79,-4 4,-4s4,1.79 4,4 -1.79,4 -4,4c-0.34,0 -0.67,-0.05 -0.99,-0.12L11,14h-1v2h-1v-2H8v-1h1v-1H8v-1h1L9,9zm7,0c0,-1.66 -1.34,-3 -3,-3S10,7.34 10,9s1.34,3 3,3 3,-1.34 3,-3z"/>
+    </group>
+</vector>

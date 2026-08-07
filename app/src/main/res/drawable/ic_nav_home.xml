@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Bottom nav SERVICES icon (id kept as navigation_home for compatibility).
+    Uses the Material "apps" grid icon.
+    checked=true  → teal  (ic_apps)
+    default       → white (ic_apps_outline)
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_checked="true"  android:drawable="@drawable/ic_apps" />
+    <item                               android:drawable="@drawable/ic_apps_outline" />
+</selector>

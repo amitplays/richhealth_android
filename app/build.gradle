@@ -1,0 +1,59 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    // AGP 8+/9+ requires the namespace here instead of package="" in AndroidManifest.xml.
+    namespace 'com.example.richhealth'
+    compileSdk 36
+
+    defaultConfig {
+        applicationId "com.richhealth.app"
+        minSdk 29
+        targetSdk 36
+        versionCode 3
+        versionName "1.0.2"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'com.razorpay:checkout:1.6.33'
+    implementation 'androidx.appcompat:appcompat:1.5.1'
+    implementation 'androidx.core:core:1.8.0'
+    implementation 'androidx.activity:activity:1.5.1'
+    implementation 'androidx.annotation:annotation:1.3.0'
+    implementation 'com.google.android.material:material:1.12.0'
+    implementation 'com.auth0.android:jwtdecode:2.0.0'
+    implementation 'androidx.recyclerview:recyclerview:1.2.1'
+    implementation 'com.google.android.gms:play-services-location:18.0.0'
+    testImplementation 'junit:junit:4.13.2'
+    implementation 'com.bugsee:bugsee-android:+'
+    implementation 'com.android.volley:volley:1.2.1'
+    implementation 'com.squareup.okhttp3:okhttp:4.10.0'
+    implementation 'com.squareup.okhttp3:logging-interceptor:4.10.0'
+    implementation 'com.github.PhilJay:MPAndroidChart:v3.1.0'
+    implementation 'com.google.android.gms:play-services-mlkit-text-recognition:19.0.0'
+    implementation 'androidx.exifinterface:exifinterface:1.3.6'
+    implementation 'androidx.biometric:biometric:1.1.0'
+
+    // ── Wearable / fitness data (pure Java, no Kotlin) ──
+    // Google Fit History API aggregates data that Wear OS / Fitbit / other watches sync.
+    implementation 'com.google.android.gms:play-services-fitness:21.2.0'
+    implementation 'com.google.android.gms:play-services-auth:20.7.0'
+
+    androidTestImplementation 'androidx.test.ext:junit:1.1.3'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
+}

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Bottom navigation menu.
+    Order: Richie (default) → Health Hub → Services → Profile
+    Each icon references a StateListDrawable selector:
+      state_checked=true  → filled icon  (selected)
+      default             → outline icon (unselected)
+    Icon tinting is disabled globally in MainActivity so the Richie
+    launcher logo renders in its real colours; the vector outline
+    icons bake their own selected/unselected colours via fillColor.
+-->
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/navigation_ai"
+        android:icon="@drawable/ic_nav_richie"
+        android:title="Richie"/>
+    <item
+        android:id="@+id/navigation_tools"
+        android:icon="@drawable/ic_nav_health"
+        android:title="Health Hub"/>
+    <item
+        android:id="@+id/navigation_home"
+        android:icon="@drawable/ic_nav_home"
+        android:title="Services"/>
+    <item
+        android:id="@+id/navigation_profile"
+        android:icon="@drawable/ic_nav_profile"
+        android:title="User"/>
+</menu>

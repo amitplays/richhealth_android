@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Feed card — compact & source-led. Actions (why / open / play) live in the header
+     row so they don't waste a whole row; the title + description get the space. The
+     "why we suggested" is a small Richie-brain icon that opens a designed dialog; the
+     open action uses an external-link glyph since it launches the browser. -->
+<!-- Root wraps the card so a "Slide to remove" hint can sit BEHIND it. Swipe moves
+     only the foreground card (ItemTouchHelper.getDefaultUIUtil), revealing this hint;
+     the same layer shows during the one-time teaching nudge. -->
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="14dp"
+    android:layout_marginBottom="6dp">
+
+    <!-- Swipe hint (behind the card). GONE at rest — shown only during an active
+         swipe/teach, because the card surface is ~5% opaque and would otherwise let
+         this bleed through on every card. -->
+    <LinearLayout
+        android:id="@+id/feed_swipe_hint"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/bg_feed_swipe_hint"
+        android:orientation="horizontal"
+        android:gravity="end|center_vertical"
+        android:paddingHorizontal="20dp"
+        android:visibility="gone">
+
+        <ImageView
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:layout_marginEnd="8dp"
+            android:src="@drawable/ic_delete"
+            app:tint="#E57373"
+            android:contentDescription="Remove" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Slide to remove"
+            android:textColor="#E57373"
+            android:textSize="13sp"
+            android:fontFamily="sans-serif-medium" />
+    </LinearLayout>
+
+    <!-- Foreground card -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/feed_foreground"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:clickable="true"
+        android:focusable="true"
+        android:foreground="?attr/selectableItemBackground"
+        app:cardCornerRadius="14dp"
+        app:cardElevation="0dp"
+        app:cardBackgroundColor="@color/rh_surface_opaque">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="11dp">
+
+        <!-- ── Header: source · category · date · actions ── -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <ImageView
+                android:id="@+id/feed_source_icon"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:layout_marginEnd="7dp"
+                android:src="@drawable/ic_public"
+                app:tint="@color/rh_text_tertiary"
+                android:contentDescription="Source" />
+
+            <TextView
+                android:id="@+id/feed_source_name"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Source"
+                android:textColor="@color/rh_text_secondary"
+                android:textSize="12sp"
+                android:fontFamily="sans-serif-medium"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:maxWidth="150dp" />
+
+            <TextView
+                android:id="@+id/feed_category"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/rounded_category_bg"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="2dp"
+                android:text="Wellness"
+                android:textColor="@color/rh_text_secondary"
+                android:textSize="9.5sp"
+                android:maxLines="1"
+                android:visibility="gone" />
+
+            <!-- flexible gap -->
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
+            <!-- [PLAN-PILL-REVIEW] removed (hardcoded/dead plan pill) -->
+
+            <TextView
+                android:id="@+id/feed_date"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="#5A5A5A"
+                android:textSize="10.5sp"
+                android:maxLines="1" />
+
+            <!-- Why we suggested this -->
+            <ImageButton
+                android:id="@+id/feed_why_button"
+                android:layout_width="26dp"
+                android:layout_height="26dp"
+                android:layout_marginStart="4dp"
+                android:src="@drawable/ic_richie_ai"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:padding="4dp"
+                android:scaleType="fitCenter"
+                android:contentDescription="Why you're seeing this"
+                android:visibility="gone" />
+
+            <!-- Sources (podcasts: research links) -->
+            <ImageButton
+                android:id="@+id/feed_source_button"
+                android:layout_width="26dp"
+                android:layout_height="26dp"
+                android:layout_marginStart="2dp"
+                android:src="@drawable/ic_link"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:padding="5dp"
+                android:scaleType="fitCenter"
+                app:tint="@color/rh_text_secondary"
+                android:contentDescription="Sources"
+                android:visibility="gone" />
+
+            <!-- Open in browser -->
+            <ImageButton
+                android:id="@+id/feed_read_button"
+                android:layout_width="26dp"
+                android:layout_height="26dp"
+                android:layout_marginStart="2dp"
+                android:src="@drawable/ic_open_in_new"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:padding="5dp"
+                android:scaleType="fitCenter"
+                app:tint="@color/rh_accent"
+                android:contentDescription="Open"
+                android:visibility="gone" />
+
+            <!-- Podcast play -->
+            <ImageButton
+                android:id="@+id/feed_play_button"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:layout_marginStart="2dp"
+                android:src="@drawable/ic_play"
+                android:background="@drawable/bg_feed_play"
+                android:padding="7dp"
+                app:tint="@color/white"
+                android:contentDescription="Play"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <!-- Title (roomier now that actions are in the header) -->
+        <TextView
+            android:id="@+id/feed_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/white"
+            android:textSize="14.5sp"
+            android:fontFamily="sans-serif-medium"
+            android:lineSpacingExtra="1dp"
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:layout_marginTop="8dp" />
+
+        <!-- Description -->
+        <TextView
+            android:id="@+id/feed_description"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#9AA0A6"
+            android:textSize="12sp"
+            android:lineSpacingExtra="1dp"
+            android:maxLines="3"
+            android:ellipsize="end"
+            android:layout_marginTop="4dp" />
+    </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+</FrameLayout>

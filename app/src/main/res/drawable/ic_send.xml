@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Send icon — paper-plane / send diagonal arrow
+    Replaces ic_send_arrow (which was pointing straight UP — confusing).
+    This is the universally understood "send message" icon.
+    Size: @dimen/icon_send (24dp) inside the chat send button.
+    Tint: #008b8b (teal, same as all primary actions) or white when on a
+          teal background.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M2.01,21L23,12 2.01,3 2,10l15,2 -15,2z"/>
+</vector>

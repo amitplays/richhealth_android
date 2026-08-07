@@ -1,0 +1,1092 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/black">
+
+    <!-- ═══════════════════ FIXED HEADER ═══════════════════ -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="@dimen/rh_screen_margin"
+        android:paddingTop="18dp"
+        android:paddingBottom="14dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <!-- Avatar -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="58dp"
+                android:layout_height="58dp"
+                app:cardCornerRadius="29dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="@color/rh_surface">
+
+                <ImageView
+                    android:layout_width="@dimen/icon_avatar"
+                    android:layout_height="@dimen/icon_avatar"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_personf"
+                    android:contentDescription="Profile"
+                    app:tint="@color/rh_accent"/>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Name / email / plan badge -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:layout_marginStart="14dp">
+
+                <TextView
+                    android:id="@+id/profile_name"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="John Doe"
+                    android:textColor="@color/white"
+                    android:textSize="22sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:maxLines="1"
+                    android:ellipsize="end"/>
+
+                <!-- [PLAN-PILL-REVIEW] disabled for review (backend-driven, keep after review):
+                <TextView
+                    android:id="@+id/profile_plan_badge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Free Plan"
+                    android:textColor="@color/white"
+                    android:textSize="10sp"
+                    android:textAllCaps="true"
+                    android:letterSpacing="0.06"
+                    android:background="@drawable/rounded_category_bg"
+                    android:backgroundTint="#1A1A1A"
+                    android:paddingHorizontal="9dp"
+                    android:paddingVertical="3dp"
+                    android:layout_marginTop="7dp"/>
+                -->
+            </LinearLayout>
+
+            <!-- Edit Profile Button -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/edit_profile_button"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="0dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:layout_marginStart="8dp"
+                android:foreground="?attr/selectableItemBackgroundBorderless"
+                app:cardBackgroundColor="@color/rh_surface">
+
+                <ImageView
+                    android:layout_width="@dimen/icon_edit_profile"
+                    android:layout_height="@dimen/icon_edit_profile"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_edit"
+                    android:contentDescription="Edit profile"
+                    app:tint="@color/rh_accent"/>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Logout Button (moved from Settings tab; danger-tinted) -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/logout_button"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="0dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:layout_marginStart="8dp"
+                android:foreground="?attr/selectableItemBackgroundBorderless"
+                app:cardBackgroundColor="@color/rh_surface">
+
+                <ImageView
+                    android:layout_width="@dimen/icon_edit_profile"
+                    android:layout_height="@dimen/icon_edit_profile"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_logout"
+                    android:contentDescription="Log out"
+                    app:tint="@color/rh_danger"/>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- ═══════════════════ PILL TABS ═══════════════════ -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="@drawable/pill_tab_container_bg"
+        android:padding="4dp"
+        android:layout_marginHorizontal="@dimen/rh_screen_margin"
+        android:layout_marginBottom="8dp">
+
+        <LinearLayout
+            android:id="@+id/tab_btn_profile"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:background="@drawable/pill_tab_selected"
+            android:paddingVertical="9dp"
+            android:clickable="true"
+            android:focusable="true">
+            <ImageView
+                android:id="@+id/tab_icon_profile"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:layout_marginEnd="6dp"
+                android:src="@drawable/ic_nav_profile"
+                app:tint="@color/white"/>
+            <TextView
+                android:id="@+id/tab_label_profile"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Profile"
+                android:textSize="13sp"
+                android:textColor="@color/white"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/tab_btn_settings"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:background="@drawable/pill_tab_unselected"
+            android:paddingVertical="9dp"
+            android:clickable="true"
+            android:focusable="true">
+            <ImageView
+                android:id="@+id/tab_icon_settings"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:layout_marginEnd="6dp"
+                android:src="@drawable/ic_settings"
+                app:tint="#AAAAAA"/>
+            <TextView
+                android:id="@+id/tab_label_settings"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Settings"
+                android:textSize="13sp"
+                android:textColor="#AAAAAA"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/tab_btn_plan"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:background="@drawable/pill_tab_unselected"
+            android:paddingVertical="9dp"
+            android:clickable="true"
+            android:focusable="true">
+            <ImageView
+                android:id="@+id/tab_icon_plan"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:layout_marginEnd="6dp"
+                android:src="@drawable/ic_premium"
+                app:tint="#AAAAAA"/>
+            <TextView
+                android:id="@+id/tab_label_plan"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Plan"
+                android:textSize="13sp"
+                android:textColor="#AAAAAA"/>
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- ═══════════════════ TAB CONTENT ═══════════════════ -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <!-- ─────────── TAB: PROFILE ─────────── -->
+        <ScrollView
+            android:id="@+id/tab_profile"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:id="@+id/profile_content_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingHorizontal="@dimen/rh_screen_margin"
+                android:paddingTop="4dp"
+                android:paddingBottom="24dp">
+
+                <!-- ═══ AT A GLANCE (snapshot) ═══ -->
+                <TextView style="@style/Widget.RH.SectionLabel" android:text="At a Glance"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+
+                <com.google.android.material.card.MaterialCardView style="@style/Widget.RH.Card"
+                    android:layout_width="match_parent" android:layout_height="wrap_content">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:paddingVertical="16dp"
+                        android:baselineAligned="false">
+
+                        <!-- Air Quality (AQI) — dynamic, from the user's location data -->
+                        <LinearLayout
+                            android:layout_width="0dp" android:layout_height="wrap_content"
+                            android:layout_weight="1" android:orientation="vertical"
+                            android:gravity="center_horizontal">
+                            <ImageView android:layout_width="@dimen/icon_sm" android:layout_height="@dimen/icon_sm"
+                                android:src="@drawable/ic_air" app:tint="@color/rh_accent" android:layout_marginBottom="7dp"/>
+                            <TextView android:id="@+id/aqi_value" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                android:text="—" android:textColor="@color/white" android:textSize="18sp" android:fontFamily="sans-serif-medium"/>
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                android:text="Air Quality" android:textColor="@color/rh_text_tertiary" android:textSize="10sp" android:layout_marginTop="4dp"/>
+                        </LinearLayout>
+
+                        <View android:layout_width="1dp" android:layout_height="match_parent"
+                            android:background="@color/rh_divider" android:layout_marginVertical="4dp"/>
+
+                        <!-- Weight -->
+                        <LinearLayout
+                            android:layout_width="0dp" android:layout_height="wrap_content"
+                            android:layout_weight="1" android:orientation="vertical"
+                            android:gravity="center_horizontal">
+                            <ImageView android:layout_width="@dimen/icon_sm" android:layout_height="@dimen/icon_sm"
+                                android:src="@drawable/ic_weight" app:tint="@color/rh_accent" android:layout_marginBottom="7dp"/>
+                            <TextView android:id="@+id/weight_value" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                android:text="—" android:textColor="@color/white" android:textSize="18sp" android:fontFamily="sans-serif-medium"/>
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                android:text="Weight" android:textColor="@color/rh_text_tertiary" android:textSize="10sp" android:layout_marginTop="4dp"/>
+                        </LinearLayout>
+
+                        <View android:layout_width="1dp" android:layout_height="match_parent"
+                            android:background="@color/rh_divider" android:layout_marginVertical="4dp"/>
+
+                        <!-- Sleep -->
+                        <LinearLayout
+                            android:layout_width="0dp" android:layout_height="wrap_content"
+                            android:layout_weight="1" android:orientation="vertical"
+                            android:gravity="center_horizontal">
+                            <ImageView android:layout_width="@dimen/icon_sm" android:layout_height="@dimen/icon_sm"
+                                android:src="@drawable/ic_sleep" app:tint="@color/rh_accent" android:layout_marginBottom="7dp"/>
+                            <TextView android:id="@+id/sleep_value" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                android:text="—" android:textColor="@color/white" android:textSize="18sp" android:fontFamily="sans-serif-medium"/>
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                android:text="Sleep" android:textColor="@color/rh_text_tertiary" android:textSize="10sp" android:layout_marginTop="4dp"/>
+                        </LinearLayout>
+
+                        <View android:layout_width="1dp" android:layout_height="match_parent"
+                            android:background="@color/rh_divider" android:layout_marginVertical="4dp"/>
+
+                        <!-- Water -->
+                        <LinearLayout
+                            android:layout_width="0dp" android:layout_height="wrap_content"
+                            android:layout_weight="1" android:orientation="vertical"
+                            android:gravity="center_horizontal">
+                            <ImageView android:layout_width="@dimen/icon_sm" android:layout_height="@dimen/icon_sm"
+                                android:src="@drawable/ic_water_full" app:tint="@color/rh_accent" android:layout_marginBottom="7dp"/>
+                            <TextView android:id="@+id/water_value" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                android:text="—" android:textColor="@color/white" android:textSize="18sp" android:fontFamily="sans-serif-medium"/>
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                android:text="Water" android:textColor="@color/rh_text_tertiary" android:textSize="10sp" android:layout_marginTop="4dp"/>
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- ═══ PERSONAL INFO ═══ -->
+                <TextView style="@style/Widget.RH.SectionLabel" android:text="Personal Info"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+
+                <com.google.android.material.card.MaterialCardView style="@style/Widget.RH.Card"
+                    android:layout_width="match_parent" android:layout_height="wrap_content">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+
+                        <LinearLayout style="@style/Widget.RH.Row" android:layout_width="match_parent" android:layout_height="wrap_content">
+                            <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_email"/>
+                            <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Email"/>
+                            <TextView android:id="@+id/email_value" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                android:maxLines="1" android:ellipsize="end" android:text="@string/empty_value"/>
+                        </LinearLayout>
+                        <View style="@style/Widget.RH.Divider"/>
+                        <LinearLayout style="@style/Widget.RH.Row" android:layout_width="match_parent" android:layout_height="wrap_content">
+                            <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_cake"/>
+                            <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Age"/>
+                            <TextView android:id="@+id/age_value" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/empty_value"/>
+                        </LinearLayout>
+                        <View style="@style/Widget.RH.Divider"/>
+                        <LinearLayout style="@style/Widget.RH.Row" android:layout_width="match_parent" android:layout_height="wrap_content">
+                            <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_gender"/>
+                            <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Gender"/>
+                            <TextView android:id="@+id/gender_value" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/empty_value"/>
+                        </LinearLayout>
+                        <View style="@style/Widget.RH.Divider"/>
+                        <LinearLayout style="@style/Widget.RH.Row" android:layout_width="match_parent" android:layout_height="wrap_content">
+                            <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_phone"/>
+                            <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Phone"/>
+                            <TextView android:id="@+id/phone_value" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/empty_value"/>
+                        </LinearLayout>
+                        <View style="@style/Widget.RH.Divider"/>
+                        <LinearLayout style="@style/Widget.RH.Row" android:layout_width="match_parent" android:layout_height="wrap_content">
+                            <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_location"/>
+                            <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Location"/>
+                            <TextView android:id="@+id/location_value" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/empty_value"/>
+                        </LinearLayout>
+                        <View style="@style/Widget.RH.Divider"/>
+                        <LinearLayout style="@style/Widget.RH.Row" android:layout_width="match_parent" android:layout_height="wrap_content">
+                            <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_work_outline"/>
+                            <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Occupation"/>
+                            <TextView android:id="@+id/occupation_value" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/empty_value"/>
+                        </LinearLayout>
+                        <View style="@style/Widget.RH.Divider"/>
+                        <LinearLayout style="@style/Widget.RH.Row" android:layout_width="match_parent" android:layout_height="wrap_content">
+                            <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_person_outline"/>
+                            <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Ancestry"/>
+                            <TextView android:id="@+id/ancestry_value" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/empty_value"/>
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- ═══ FITNESS GOALS ═══ -->
+                <TextView style="@style/Widget.RH.SectionLabel" android:text="Fitness Goals"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+
+                <com.google.android.material.card.MaterialCardView style="@style/Widget.RH.Card"
+                    android:layout_width="match_parent" android:layout_height="wrap_content">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+                        <LinearLayout style="@style/Widget.RH.Row" android:layout_width="match_parent" android:layout_height="wrap_content">
+                            <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_lifestyle"/>
+                            <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Primary Goal"/>
+                            <TextView android:id="@+id/primary_goal" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Weight Loss"/>
+                        </LinearLayout>
+                        <View style="@style/Widget.RH.Divider"/>
+                        <LinearLayout style="@style/Widget.RH.Row" android:layout_width="match_parent" android:layout_height="wrap_content">
+                            <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_date"/>
+                            <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Weekly Goal"/>
+                            <TextView android:id="@+id/weekly_goal" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="3 workouts"/>
+                        </LinearLayout>
+                        <View style="@style/Widget.RH.Divider"/>
+                        <!-- Exercise Preferences: no data source yet (was showing a hard-coded
+                             placeholder). Hidden until a real field backs it. -->
+                        <LinearLayout style="@style/Widget.RH.Row" android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:visibility="gone">
+                            <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_exercise"/>
+                            <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Exercise Preferences"/>
+                            <TextView android:id="@+id/exercise_preferences" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Running, Yoga"/>
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- ═══ HEALTH & LIFESTYLE ═══ -->
+                <TextView style="@style/Widget.RH.SectionLabel" android:text="Health &amp; Lifestyle"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+
+                <com.google.android.material.card.MaterialCardView style="@style/Widget.RH.Card"
+                    android:layout_width="match_parent" android:layout_height="wrap_content">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+                        <LinearLayout style="@style/Widget.RH.Row" android:layout_width="match_parent" android:layout_height="wrap_content">
+                            <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_height"/>
+                            <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Height"/>
+                            <TextView android:id="@+id/height_value" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/empty_value"/>
+                        </LinearLayout>
+                        <View style="@style/Widget.RH.Divider"/>
+                        <LinearLayout style="@style/Widget.RH.Row" android:layout_width="match_parent" android:layout_height="wrap_content">
+                            <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_ruler"/>
+                            <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Waist"/>
+                            <TextView android:id="@+id/waist_value" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/empty_value"/>
+                        </LinearLayout>
+                        <View style="@style/Widget.RH.Divider"/>
+                        <LinearLayout style="@style/Widget.RH.Row" android:layout_width="match_parent" android:layout_height="wrap_content">
+                            <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_activity"/>
+                            <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Activity Level"/>
+                            <TextView android:id="@+id/activity_level" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Moderately Active"/>
+                        </LinearLayout>
+                        <View style="@style/Widget.RH.Divider"/>
+                        <LinearLayout style="@style/Widget.RH.Row" android:layout_width="match_parent" android:layout_height="wrap_content">
+                            <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_sleep"/>
+                            <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Sleep Hours"/>
+                            <TextView android:id="@+id/sleep_hours" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="7-8 hours"/>
+                        </LinearLayout>
+                        <View style="@style/Widget.RH.Divider"/>
+                        <LinearLayout style="@style/Widget.RH.Row" android:layout_width="match_parent" android:layout_height="wrap_content">
+                            <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_food"/>
+                            <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Diet Type"/>
+                            <TextView android:id="@+id/diet_type" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Balanced"/>
+                        </LinearLayout>
+                        <View style="@style/Widget.RH.Divider"/>
+                        <LinearLayout style="@style/Widget.RH.Row" android:layout_width="match_parent" android:layout_height="wrap_content">
+                            <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_blood"/>
+                            <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Blood Type"/>
+                            <TextView android:id="@+id/blood_type" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Not Set"/>
+                        </LinearLayout>
+                        <View style="@style/Widget.RH.Divider"/>
+                        <LinearLayout style="@style/Widget.RH.Row" android:layout_width="match_parent" android:layout_height="wrap_content">
+                            <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_monitor_weight_loss"/>
+                            <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Recent Weight Change"/>
+                            <TextView android:id="@+id/recent_weight_change_value" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/empty_value"/>
+                        </LinearLayout>
+                        <View style="@style/Widget.RH.Divider"/>
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical"
+                            android:paddingHorizontal="16dp" android:paddingVertical="11dp">
+                            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+                                <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_medical_reports"/>
+                                <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Medical Conditions"/>
+                                <TextView android:id="@+id/medical_conditions_empty" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/empty_value"/>
+                            </LinearLayout>
+                            <com.google.android.material.chip.ChipGroup android:id="@+id/medical_conditions_group"
+                                android:layout_width="match_parent" android:layout_height="wrap_content"
+                                android:layout_marginStart="36dp" android:layout_marginTop="8dp" android:visibility="gone"/>
+                        </LinearLayout>
+                        <View style="@style/Widget.RH.Divider"/>
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical"
+                            android:paddingHorizontal="16dp" android:paddingVertical="11dp">
+                            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+                                <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_allergy"/>
+                                <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Allergies"/>
+                                <TextView android:id="@+id/allergies_empty" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/empty_value"/>
+                            </LinearLayout>
+                            <com.google.android.material.chip.ChipGroup android:id="@+id/allergies_group"
+                                android:layout_width="match_parent" android:layout_height="wrap_content"
+                                android:layout_marginStart="36dp" android:layout_marginTop="8dp" android:visibility="gone"/>
+                        </LinearLayout>
+                        <View style="@style/Widget.RH.Divider"/>
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical"
+                            android:paddingHorizontal="16dp" android:paddingVertical="11dp">
+                            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+                                <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_medication"/>
+                                <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Medication Types"/>
+                                <TextView android:id="@+id/medication_categories_empty" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/empty_value"/>
+                            </LinearLayout>
+                            <com.google.android.material.chip.ChipGroup android:id="@+id/medication_categories_group"
+                                android:layout_width="match_parent" android:layout_height="wrap_content"
+                                android:layout_marginStart="36dp" android:layout_marginTop="8dp" android:visibility="gone"/>
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- ═══ LIFESTYLE ═══ -->
+                <TextView style="@style/Widget.RH.SectionLabel" android:text="Lifestyle"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+
+                <com.google.android.material.card.MaterialCardView style="@style/Widget.RH.Card"
+                    android:layout_width="match_parent" android:layout_height="wrap_content">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+                        <LinearLayout style="@style/Widget.RH.Row" android:layout_width="match_parent" android:layout_height="wrap_content">
+                            <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_stress"/>
+                            <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Stress Level"/>
+                            <TextView android:id="@+id/stress_level_value" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/empty_value"/>
+                        </LinearLayout>
+                        <View style="@style/Widget.RH.Divider"/>
+                        <LinearLayout style="@style/Widget.RH.Row" android:layout_width="match_parent" android:layout_height="wrap_content">
+                            <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_water_drops"/>
+                            <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Water Intake"/>
+                            <TextView android:id="@+id/water_intake_value" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/empty_value"/>
+                        </LinearLayout>
+                        <View style="@style/Widget.RH.Divider"/>
+                        <LinearLayout style="@style/Widget.RH.Row" android:layout_width="match_parent" android:layout_height="wrap_content">
+                            <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_food"/>
+                            <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Meals / Day"/>
+                            <TextView android:id="@+id/meals_per_day_value" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/empty_value"/>
+                        </LinearLayout>
+                        <View style="@style/Widget.RH.Divider"/>
+                        <LinearLayout style="@style/Widget.RH.Row" android:layout_width="match_parent" android:layout_height="wrap_content">
+                            <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_screen_time"/>
+                            <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Screen Time Before Bed"/>
+                            <TextView android:id="@+id/screen_time_value" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/empty_value"/>
+                        </LinearLayout>
+                        <View style="@style/Widget.RH.Divider"/>
+                        <LinearLayout style="@style/Widget.RH.Row" android:layout_width="match_parent" android:layout_height="wrap_content">
+                            <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_sun"/>
+                            <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Sun Exposure"/>
+                            <TextView android:id="@+id/sun_exposure_value" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/empty_value"/>
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- ═══ HABITS ═══ -->
+                <TextView style="@style/Widget.RH.SectionLabel" android:text="Habits"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+
+                <com.google.android.material.card.MaterialCardView style="@style/Widget.RH.Card"
+                    android:layout_width="match_parent" android:layout_height="wrap_content">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+                        <LinearLayout style="@style/Widget.RH.Row" android:layout_width="match_parent" android:layout_height="wrap_content">
+                            <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_smoking"/>
+                            <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Smoking"/>
+                            <TextView android:id="@+id/smoking_value" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/empty_value"/>
+                        </LinearLayout>
+                        <View style="@style/Widget.RH.Divider"/>
+                        <LinearLayout style="@style/Widget.RH.Row" android:layout_width="match_parent" android:layout_height="wrap_content">
+                            <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_alcohol"/>
+                            <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Alcohol"/>
+                            <TextView android:id="@+id/alcohol_value" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/empty_value"/>
+                        </LinearLayout>
+                        <View style="@style/Widget.RH.Divider"/>
+                        <LinearLayout style="@style/Widget.RH.Row" android:layout_width="match_parent" android:layout_height="wrap_content">
+                            <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_coffee"/>
+                            <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Caffeine"/>
+                            <TextView android:id="@+id/caffeine_value" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/empty_value"/>
+                        </LinearLayout>
+
+                        <!-- Conditional habit / condition follow-ups. Each wrapper (divider + row)
+                             is hidden when the value is empty, keeping the card minimal. -->
+                        <LinearLayout android:id="@+id/row_smoking_duration" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
+                            <View style="@style/Widget.RH.Divider"/>
+                            <LinearLayout style="@style/Widget.RH.Row" android:layout_width="match_parent" android:layout_height="wrap_content">
+                                <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_smoking"/>
+                                <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Years Smoked"/>
+                                <TextView android:id="@+id/smoking_duration_value" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/empty_value"/>
+                            </LinearLayout>
+                        </LinearLayout>
+                        <LinearLayout android:id="@+id/row_cigarettes_per_day" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
+                            <View style="@style/Widget.RH.Divider"/>
+                            <LinearLayout style="@style/Widget.RH.Row" android:layout_width="match_parent" android:layout_height="wrap_content">
+                                <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_smoking"/>
+                                <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Cigarettes / day"/>
+                                <TextView android:id="@+id/cigarettes_per_day_value" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/empty_value"/>
+                            </LinearLayout>
+                        </LinearLayout>
+                        <LinearLayout android:id="@+id/row_last_smoked" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
+                            <View style="@style/Widget.RH.Divider"/>
+                            <LinearLayout style="@style/Widget.RH.Row" android:layout_width="match_parent" android:layout_height="wrap_content">
+                                <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_history"/>
+                                <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Last Smoked"/>
+                                <TextView android:id="@+id/last_smoked_value" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/empty_value"/>
+                            </LinearLayout>
+                        </LinearLayout>
+                        <LinearLayout android:id="@+id/row_drinks_per_week" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
+                            <View style="@style/Widget.RH.Divider"/>
+                            <LinearLayout style="@style/Widget.RH.Row" android:layout_width="match_parent" android:layout_height="wrap_content">
+                                <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_alcohol"/>
+                                <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Drinks / week"/>
+                                <TextView android:id="@+id/drinks_per_week_value" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/empty_value"/>
+                            </LinearLayout>
+                        </LinearLayout>
+                        <LinearLayout android:id="@+id/row_conditions_diagnosed" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
+                            <View style="@style/Widget.RH.Divider"/>
+                            <LinearLayout style="@style/Widget.RH.Row" android:layout_width="match_parent" android:layout_height="wrap_content">
+                                <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_medical_reports"/>
+                                <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Condition Diagnosed"/>
+                                <TextView android:id="@+id/conditions_diagnosed_value" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/empty_value"/>
+                            </LinearLayout>
+                        </LinearLayout>
+                        <LinearLayout android:id="@+id/row_conditions_medicated" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
+                            <View style="@style/Widget.RH.Divider"/>
+                            <LinearLayout style="@style/Widget.RH.Row" android:layout_width="match_parent" android:layout_height="wrap_content">
+                                <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_medication"/>
+                                <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="On Medication For It"/>
+                                <TextView android:id="@+id/conditions_medicated_value" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/empty_value"/>
+                            </LinearLayout>
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- ═══ FAMILY HISTORY ═══ -->
+                <TextView style="@style/Widget.RH.SectionLabel" android:text="Family History"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+
+                <com.google.android.material.card.MaterialCardView style="@style/Widget.RH.Card"
+                    android:layout_width="match_parent" android:layout_height="wrap_content">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="vertical">
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:orientation="vertical" android:padding="16dp">
+                            <TextView android:id="@+id/family_history_empty" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                android:text="@string/empty_value" android:textColor="@color/rh_text_tertiary" android:textSize="14sp" android:visibility="gone"/>
+                            <com.google.android.material.chip.ChipGroup android:id="@+id/family_history_group"
+                                android:layout_width="match_parent" android:layout_height="wrap_content"/>
+                        </LinearLayout>
+                        <View style="@style/Widget.RH.Divider"/>
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical"
+                            android:paddingHorizontal="16dp" android:paddingVertical="11dp">
+                            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+                                <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_family_group"/>
+                                <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Affected Relatives"/>
+                                <TextView android:id="@+id/family_relatives_empty" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/empty_value"/>
+                            </LinearLayout>
+                            <com.google.android.material.chip.ChipGroup android:id="@+id/family_relatives_group"
+                                android:layout_width="match_parent" android:layout_height="wrap_content"
+                                android:layout_marginStart="36dp" android:layout_marginTop="8dp" android:visibility="gone"/>
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- ═══ REPRODUCTIVE HEALTH (conditional) ═══ -->
+                <LinearLayout android:id="@+id/menstrual_card" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="vertical" android:visibility="gone">
+
+                    <TextView style="@style/Widget.RH.SectionLabel" android:text="Reproductive Health"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+
+                    <com.google.android.material.card.MaterialCardView style="@style/Widget.RH.Card"
+                        android:layout_width="match_parent" android:layout_height="wrap_content">
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+                            <LinearLayout style="@style/Widget.RH.Row" android:layout_width="match_parent" android:layout_height="wrap_content">
+                                <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_menstrual_health"/>
+                                <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Cycle Status"/>
+                                <TextView android:id="@+id/menstrual_status_value" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Regular"/>
+                            </LinearLayout>
+                            <View style="@style/Widget.RH.Divider"/>
+                            <LinearLayout style="@style/Widget.RH.Row" android:layout_width="match_parent" android:layout_height="wrap_content">
+                                <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_calendar_month"/>
+                                <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Cycle Length"/>
+                                <TextView android:id="@+id/cycle_length_value" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="28 days"/>
+                            </LinearLayout>
+                            <View style="@style/Widget.RH.Divider"/>
+                            <LinearLayout style="@style/Widget.RH.Row" android:layout_width="match_parent" android:layout_height="wrap_content">
+                                <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_calendar_check"/>
+                                <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Period Length"/>
+                                <TextView android:id="@+id/period_length_value" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="5 days"/>
+                            </LinearLayout>
+                            <View style="@style/Widget.RH.Divider"/>
+                            <LinearLayout style="@style/Widget.RH.Row" android:layout_width="match_parent" android:layout_height="wrap_content">
+                                <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_child_care"/>
+                                <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Pregnancy Status"/>
+                                <TextView android:id="@+id/pregnancy_status_value" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Not Pregnant"/>
+                            </LinearLayout>
+                            <View style="@style/Widget.RH.Divider"/>
+                            <LinearLayout style="@style/Widget.RH.Row" android:layout_width="match_parent" android:layout_height="wrap_content">
+                                <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_pill"/>
+                                <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Contraception"/>
+                                <TextView android:id="@+id/contraception_value" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/empty_value"/>
+                            </LinearLayout>
+                            <View style="@style/Widget.RH.Divider"/>
+                            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical"
+                                android:paddingHorizontal="16dp" android:paddingVertical="11dp">
+                                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal"
+                                    android:gravity="center_vertical" android:layout_marginBottom="8dp">
+                                    <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_symptoms"/>
+                                    <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Cycle Symptoms"/>
+                                </LinearLayout>
+                                <com.google.android.material.chip.ChipGroup android:id="@+id/menstrual_symptoms_group"
+                                    android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginStart="36dp"/>
+                            </LinearLayout>
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+                </LinearLayout>
+            </LinearLayout>
+        </ScrollView>
+
+        <!-- ─────────── TAB: SETTINGS ─────────── -->
+        <ScrollView
+            android:id="@+id/tab_settings"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scrollbars="none"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingHorizontal="@dimen/rh_screen_margin"
+                android:paddingTop="4dp"
+                android:paddingBottom="24dp">
+
+                <!-- ═══ AI & CHAT ═══ -->
+                <TextView style="@style/Widget.RH.SectionLabel" android:text="AI &amp; Chat"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+
+                <com.google.android.material.card.MaterialCardView style="@style/Widget.RH.Card"
+                    android:layout_width="match_parent" android:layout_height="wrap_content">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+
+                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:paddingHorizontal="16dp" android:paddingTop="15dp" android:paddingBottom="4dp"
+                            android:text="Tune how Richie talks with you." android:textColor="@color/rh_text_tertiary" android:textSize="12sp"/>
+
+                        <!-- Response Tone — row opens a chooser (consistent with other settings rows) -->
+                        <LinearLayout android:id="@+id/ai_tone_item" android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:orientation="horizontal" android:gravity="center_vertical" android:paddingHorizontal="16dp" android:paddingVertical="11dp"
+                            android:clickable="true" android:focusable="true" android:background="?attr/selectableItemBackground">
+                            <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_chat"/>
+                            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Response Tone"
+                                    android:textColor="@color/rh_text_secondary" android:textSize="15sp"/>
+                                <TextView android:id="@+id/ai_tone_value" android:layout_width="match_parent" android:layout_height="wrap_content"
+                                    android:text="Balanced" android:textColor="@color/rh_text_tertiary" android:textSize="12sp" android:layout_marginTop="2dp"/>
+                            </LinearLayout>
+                            <ImageView android:layout_width="16dp" android:layout_height="16dp" android:layout_marginStart="8dp"
+                                android:src="@drawable/ic_arrow_forward_ios" app:tint="@color/rh_text_tertiary"/>
+                        </LinearLayout>
+                        <View style="@style/Widget.RH.Divider"/>
+
+                        <!-- Reply Length — row opens a chooser -->
+                        <LinearLayout android:id="@+id/ai_length_item" android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:orientation="horizontal" android:gravity="center_vertical" android:paddingHorizontal="16dp" android:paddingVertical="11dp"
+                            android:clickable="true" android:focusable="true" android:background="?attr/selectableItemBackground">
+                            <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_text_size"/>
+                            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Reply Length"
+                                    android:textColor="@color/rh_text_secondary" android:textSize="15sp"/>
+                                <TextView android:id="@+id/ai_length_value" android:layout_width="match_parent" android:layout_height="wrap_content"
+                                    android:text="Balanced" android:textColor="@color/rh_text_tertiary" android:textSize="12sp" android:layout_marginTop="2dp"/>
+                            </LinearLayout>
+                            <ImageView android:layout_width="16dp" android:layout_height="16dp" android:layout_marginStart="8dp"
+                                android:src="@drawable/ic_arrow_forward_ios" app:tint="@color/rh_text_tertiary"/>
+                        </LinearLayout>
+                        <View style="@style/Widget.RH.Divider"/>
+                        <LinearLayout android:id="@+id/ai_custom_item" android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:orientation="horizontal" android:gravity="center_vertical" android:paddingHorizontal="16dp" android:paddingVertical="11dp"
+                            android:clickable="true" android:focusable="true" android:background="?attr/selectableItemBackground">
+                            <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_lightbulb"/>
+                            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Custom Instructions"
+                                    android:textColor="@color/rh_text_secondary" android:textSize="15sp"/>
+                                <TextView android:id="@+id/ai_custom_value" android:layout_width="match_parent" android:layout_height="wrap_content"
+                                    android:text="Anything Richie should always keep in mind" android:textColor="@color/rh_text_tertiary" android:textSize="12sp"
+                                    android:maxLines="1" android:ellipsize="end" android:layout_marginTop="2dp"/>
+                            </LinearLayout>
+                            <ImageView android:layout_width="16dp" android:layout_height="16dp" android:layout_marginStart="8dp"
+                                android:src="@drawable/ic_arrow_forward_ios" app:tint="@color/rh_text_tertiary"/>
+                        </LinearLayout>
+                        <View style="@style/Widget.RH.Divider"/>
+                        <LinearLayout android:id="@+id/ai_memory_item" android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:orientation="horizontal" android:gravity="center_vertical" android:paddingHorizontal="16dp" android:paddingVertical="11dp"
+                            android:clickable="true" android:focusable="true" android:background="?attr/selectableItemBackground">
+                            <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_signup_brain2"/>
+                            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="AI Memory"
+                                    android:textColor="@color/rh_text_secondary" android:textSize="15sp"/>
+                                <TextView android:id="@+id/ai_memory_subtitle" android:layout_width="match_parent" android:layout_height="wrap_content"
+                                    android:text="What Richie remembers about you" android:textColor="@color/rh_text_tertiary" android:textSize="12sp" android:layout_marginTop="2dp"/>
+                            </LinearLayout>
+                            <ImageView android:layout_width="16dp" android:layout_height="16dp" android:layout_marginStart="8dp"
+                                android:src="@drawable/ic_arrow_forward_ios" app:tint="@color/rh_text_tertiary"/>
+                        </LinearLayout>
+                        <View style="@style/Widget.RH.Divider"/>
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:orientation="horizontal" android:gravity="center_vertical" android:paddingHorizontal="16dp" android:paddingVertical="11dp">
+                            <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_richie_ai_outline"/>
+                            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Save chat memories"
+                                    android:textColor="@color/rh_text_secondary" android:textSize="15sp"/>
+                                <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                                    android:text="Let Richie remember facts to personalize replies" android:textColor="@color/rh_text_tertiary" android:textSize="12sp" android:layout_marginTop="1dp"/>
+                            </LinearLayout>
+                            <com.google.android.material.switchmaterial.SwitchMaterial android:id="@+id/ai_save_memories_switch"
+                                android:layout_width="wrap_content" android:layout_height="wrap_content" app:thumbTint="@color/rh_accent" app:trackTint="#44008b8b"/>
+                        </LinearLayout>
+                        <View style="@style/Widget.RH.Divider"/>
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:orientation="horizontal" android:gravity="center_vertical" android:paddingHorizontal="16dp" android:paddingVertical="11dp">
+                            <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_model_training"/>
+                            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Help improve RichHealth"
+                                    android:textColor="@color/rh_text_secondary" android:textSize="15sp"/>
+                                <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                                    android:text="Share anonymized usage to improve the AI" android:textColor="@color/rh_text_tertiary" android:textSize="12sp" android:layout_marginTop="1dp"/>
+                            </LinearLayout>
+                            <com.google.android.material.switchmaterial.SwitchMaterial android:id="@+id/ai_improve_model_switch"
+                                android:layout_width="wrap_content" android:layout_height="wrap_content" app:thumbTint="@color/rh_accent" app:trackTint="#44008b8b"/>
+                        </LinearLayout>
+                        <View style="@style/Widget.RH.Divider"/>
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:orientation="horizontal" android:gravity="center_vertical" android:paddingHorizontal="16dp" android:paddingVertical="11dp">
+                            <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_add_comment"/>
+                            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Quick-log cards"
+                                    android:textColor="@color/rh_text_secondary" android:textSize="15sp"/>
+                                <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                                    android:text="Let Richie offer prefilled cards to log symptoms, vitals and meds from chat" android:textColor="@color/rh_text_tertiary" android:textSize="12sp" android:layout_marginTop="1dp"/>
+                            </LinearLayout>
+                            <com.google.android.material.switchmaterial.SwitchMaterial android:id="@+id/ai_autofill_cards_switch"
+                                android:layout_width="wrap_content" android:layout_height="wrap_content" app:thumbTint="@color/rh_accent" app:trackTint="#44008b8b"/>
+                        </LinearLayout>
+                        <View style="@style/Widget.RH.Divider"/>
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:orientation="horizontal" android:gravity="center_vertical" android:paddingHorizontal="16dp" android:paddingVertical="11dp">
+                            <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_cognition"/>
+                            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Show AI thinking"
+                                    android:textColor="@color/rh_text_secondary" android:textSize="15sp"/>
+                                <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                                    android:text="See Richie's reasoning in a collapsible row. Replies are a bit slower." android:textColor="@color/rh_text_tertiary" android:textSize="12sp" android:layout_marginTop="1dp"/>
+                            </LinearLayout>
+                            <com.google.android.material.switchmaterial.SwitchMaterial android:id="@+id/ai_show_thinking_switch"
+                                android:layout_width="wrap_content" android:layout_height="wrap_content" app:thumbTint="@color/rh_accent" app:trackTint="#44008b8b"/>
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- ═══ GENERAL ═══ -->
+                <TextView style="@style/Widget.RH.SectionLabel" android:text="General"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+
+                <com.google.android.material.card.MaterialCardView style="@style/Widget.RH.Card"
+                    android:layout_width="match_parent" android:layout_height="wrap_content">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+
+                        <LinearLayout android:id="@+id/notification_item" style="@style/Widget.RH.Row"
+                            android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:clickable="true" android:focusable="true" android:background="?attr/selectableItemBackground">
+                            <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_notification"/>
+                            <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Notifications"/>
+                            <ImageView android:layout_width="16dp" android:layout_height="16dp" android:src="@drawable/ic_arrow_forward_ios" app:tint="@color/rh_text_tertiary"/>
+                        </LinearLayout>
+                        <View style="@style/Widget.RH.Divider"/>
+
+                        <LinearLayout style="@style/Widget.RH.Row" android:layout_width="match_parent" android:layout_height="wrap_content">
+                            <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_ruler"/>
+                            <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Units"/>
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Metric"
+                                android:textColor="@color/rh_text_tertiary" android:textSize="13sp" android:layout_marginEnd="10dp"/>
+                            <com.google.android.material.switchmaterial.SwitchMaterial android:id="@+id/metric_switch"
+                                android:layout_width="wrap_content" android:layout_height="wrap_content" app:thumbTint="@color/rh_accent" app:trackTint="#44008b8b"/>
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- ═══ SECURITY & PRIVACY ═══ -->
+                <TextView style="@style/Widget.RH.SectionLabel" android:text="Security &amp; Privacy"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+
+                <com.google.android.material.card.MaterialCardView style="@style/Widget.RH.Card"
+                    android:layout_width="match_parent" android:layout_height="wrap_content">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+
+                        <LinearLayout android:id="@+id/biometric_item" android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:orientation="horizontal" android:gravity="center_vertical" android:paddingHorizontal="16dp" android:paddingVertical="14dp">
+                            <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_fingerprint"/>
+                            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Biometric Lock"
+                                    android:textColor="@color/rh_text_primary" android:textSize="15sp"/>
+                                <TextView android:id="@+id/biometric_subtitle" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                    android:text="Require fingerprint to open app" android:textColor="@color/rh_text_tertiary" android:textSize="12sp" android:layout_marginTop="2dp"/>
+                            </LinearLayout>
+                            <com.google.android.material.switchmaterial.SwitchMaterial android:id="@+id/biometric_switch"
+                                android:layout_width="wrap_content" android:layout_height="wrap_content" app:thumbTint="@color/rh_accent" app:trackTint="#44008b8b"/>
+                        </LinearLayout>
+                        <View style="@style/Widget.RH.Divider"/>
+
+                        <LinearLayout android:id="@+id/change_password_item" style="@style/Widget.RH.Row"
+                            android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:clickable="true" android:focusable="true" android:background="?attr/selectableItemBackground">
+                            <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_lock"/>
+                            <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Change Password"/>
+                            <ImageView android:layout_width="16dp" android:layout_height="16dp" android:src="@drawable/ic_arrow_forward_ios" app:tint="@color/rh_text_tertiary"/>
+                        </LinearLayout>
+                        <View style="@style/Widget.RH.Divider"/>
+
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:orientation="horizontal" android:gravity="center_vertical" android:paddingHorizontal="16dp" android:paddingVertical="14dp">
+                            <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_share"/>
+                            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Share Progress"
+                                    android:textColor="@color/rh_text_primary" android:textSize="15sp"/>
+                                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Send a summary of your health stats"
+                                    android:textColor="@color/rh_text_tertiary" android:textSize="12sp" android:layout_marginTop="2dp"/>
+                            </LinearLayout>
+                            <com.google.android.material.button.MaterialButton android:id="@+id/share_progress_button"
+                                style="@style/Widget.MaterialComponents.Button.TextButton"
+                                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                android:text="Share ›" android:textColor="@color/rh_accent" android:textSize="13sp" android:textAllCaps="false"
+                                android:minHeight="0dp" android:minWidth="0dp" android:paddingHorizontal="0dp" android:paddingVertical="4dp"
+                                android:insetTop="0dp" android:insetBottom="0dp"
+                                app:backgroundTint="@android:color/transparent" app:rippleColor="@android:color/transparent"/>
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+        </ScrollView>
+
+        <!-- ─────────── TAB: PLAN ─────────── -->
+        <ScrollView
+            android:id="@+id/tab_plan"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scrollbars="none"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingHorizontal="@dimen/rh_screen_margin"
+                android:paddingTop="4dp"
+                android:paddingBottom="24dp">
+
+                <!-- ═══ CURRENT PLAN ═══ -->
+                <TextView style="@style/Widget.RH.SectionLabel" android:text="Your Plan"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+
+                <com.google.android.material.card.MaterialCardView style="@style/Widget.RH.Card"
+                    android:layout_width="match_parent" android:layout_height="wrap_content">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="18dp">
+                            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                                android:orientation="horizontal" android:gravity="center_vertical">
+                                <TextView android:id="@+id/plan_current_name" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                                    android:text="Free Plan" android:textColor="@color/rh_text_primary" android:textSize="18sp" android:fontFamily="sans-serif-medium"/>
+                                <TextView android:id="@+id/plan_status_chip" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                    android:text="FREE" android:textColor="@color/white" android:textSize="10sp" android:textStyle="bold"
+                                    android:letterSpacing="0.06" android:paddingHorizontal="9dp" android:paddingVertical="3dp"
+                                    android:background="@drawable/rounded_category_bg" android:backgroundTint="#1A1A1A"/>
+                            </LinearLayout>
+                            <TextView android:id="@+id/plan_current_desc" android:layout_width="match_parent" android:layout_height="wrap_content"
+                                android:text="Track your limits across chat, reports and analysis." android:textColor="@color/rh_text_secondary"
+                                android:textSize="13sp" android:lineSpacingExtra="2dp" android:layout_marginTop="4dp"/>
+                        </LinearLayout>
+
+                        <View style="@style/Widget.RH.Divider"/>
+
+                        <!-- View full usage — settings-style row (opens UsageStatusActivity) -->
+                        <LinearLayout android:id="@+id/btn_view_full_plan" android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:orientation="horizontal" android:gravity="center_vertical" android:paddingHorizontal="16dp" android:paddingVertical="13dp"
+                            android:clickable="true" android:focusable="true" android:background="?attr/selectableItemBackground">
+                            <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_bar_chart_4_bars"/>
+                            <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="View full usage"/>
+                            <ImageView android:layout_width="16dp" android:layout_height="16dp" android:layout_marginStart="8dp"
+                                android:src="@drawable/ic_arrow_forward_ios" app:tint="@color/rh_text_tertiary"/>
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- ═══ THIS MONTH'S USAGE (live rings) ═══ -->
+                <TextView style="@style/Widget.RH.SectionLabel" android:text="This Month"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+
+                <com.google.android.material.card.MaterialCardView style="@style/Widget.RH.Card"
+                    android:layout_width="match_parent" android:layout_height="wrap_content">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+
+                        <!-- Chat -->
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal"
+                            android:gravity="center_vertical" android:paddingHorizontal="16dp" android:paddingVertical="13dp">
+                            <Utils.UsageRing android:id="@+id/usage_ring_chat" android:layout_width="26dp" android:layout_height="26dp" android:layout_marginEnd="14dp"/>
+                            <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Chat / session"/>
+                            <TextView android:id="@+id/usage_count_chat" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="—"/>
+                        </LinearLayout>
+                        <View style="@style/Widget.RH.Divider"/>
+
+                        <!-- Health analysis -->
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal"
+                            android:gravity="center_vertical" android:paddingHorizontal="16dp" android:paddingVertical="13dp">
+                            <Utils.UsageRing android:id="@+id/usage_ring_analysis" android:layout_width="26dp" android:layout_height="26dp" android:layout_marginEnd="14dp"/>
+                            <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Health analysis"/>
+                            <TextView android:id="@+id/usage_count_analysis" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="—"/>
+                        </LinearLayout>
+                        <View style="@style/Widget.RH.Divider"/>
+
+                        <!-- Medical reports -->
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal"
+                            android:gravity="center_vertical" android:paddingHorizontal="16dp" android:paddingVertical="13dp">
+                            <Utils.UsageRing android:id="@+id/usage_ring_reports" android:layout_width="26dp" android:layout_height="26dp" android:layout_marginEnd="14dp"/>
+                            <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Medical reports"/>
+                            <TextView android:id="@+id/usage_count_reports" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="—"/>
+                        </LinearLayout>
+                        <View style="@style/Widget.RH.Divider"/>
+
+                        <!-- NutriCheck -->
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal"
+                            android:gravity="center_vertical" android:paddingHorizontal="16dp" android:paddingVertical="13dp">
+                            <Utils.UsageRing android:id="@+id/usage_ring_nutri" android:layout_width="26dp" android:layout_height="26dp" android:layout_marginEnd="14dp"/>
+                            <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="NutriCheck"/>
+                            <TextView android:id="@+id/usage_count_nutri" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="—"/>
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <TextView style="@style/Widget.RH.SectionLabel" android:text="Membership"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+
+                <!-- Membership — state-aware. Summary line for everyone, plus one of:
+                     · Free / upgradeable → Upgrade button (opens the purchase dialog)
+                     · Covered family member → "shared via family plan" note
+                     · Family-plan owner → inline family management (covered count,
+                       member rows, Add / Remove to Pro with confirm dialogs).
+                     Retires the standalone "Your Subscription" popup for owners. -->
+                <com.google.android.material.card.MaterialCardView style="@style/Widget.RH.Card"
+                    android:layout_width="match_parent" android:layout_height="wrap_content">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+
+                        <!-- Summary row (always) -->
+                        <LinearLayout android:id="@+id/membership_row" android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:orientation="horizontal" android:gravity="center_vertical" android:paddingHorizontal="16dp" android:paddingVertical="14dp">
+                            <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_premium"/>
+                            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Subscription"
+                                    android:textColor="@color/rh_text_secondary" android:textSize="15sp"/>
+                                <TextView android:id="@+id/membership_subtitle" android:layout_width="match_parent" android:layout_height="wrap_content"
+                                    android:text="Free plan · Upgrade for more" android:textColor="@color/rh_text_tertiary" android:textSize="12sp"
+                                    android:maxLines="1" android:ellipsize="end" android:layout_marginTop="2dp"/>
+                            </LinearLayout>
+                        </LinearLayout>
+
+                        <!-- Upgrade CTA — free & upgradeable users (opens purchase dialog) -->
+                        <com.google.android.material.button.MaterialButton android:id="@+id/membership_upgrade_button"
+                            android:layout_width="match_parent" android:layout_height="46dp"
+                            android:layout_marginHorizontal="16dp" android:layout_marginTop="4dp" android:layout_marginBottom="14dp"
+                            android:text="Upgrade" android:textColor="@color/rh_text_primary" android:textSize="14sp" android:textAllCaps="false"
+                            android:fontFamily="sans-serif-medium" app:backgroundTint="@color/rh_accent" app:cornerRadius="12dp" app:elevation="0dp"
+                            android:visibility="gone"/>
+
+                        <!-- Covered member note -->
+                        <TextView android:id="@+id/membership_granted_note" android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:paddingHorizontal="16dp" android:paddingBottom="14dp"
+                            android:text="Pro shared via family plan" android:textColor="@color/rh_text_tertiary" android:textSize="12sp"
+                            android:visibility="gone"/>
+
+                        <!-- Family management (owner) -->
+                        <LinearLayout android:id="@+id/membership_family_section" android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:orientation="vertical" android:visibility="gone">
+
+                            <View style="@style/Widget.RH.Divider"/>
+
+                            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                                android:orientation="horizontal" android:gravity="center_vertical" android:paddingHorizontal="16dp" android:paddingTop="12dp" android:paddingBottom="4dp">
+                                <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_family"/>
+                                <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Family Members"
+                                    android:textColor="@color/rh_text_secondary" android:textSize="15sp"/>
+                                <TextView android:id="@+id/family_covered_chip" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                    android:text="0/5 covered" android:textColor="@color/rh_accent" android:textSize="11sp" android:textStyle="bold"/>
+                            </LinearLayout>
+
+                            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                                android:paddingHorizontal="16dp" android:layout_marginStart="36dp" android:paddingBottom="6dp"
+                                android:text="Add connected relatives to your plan" android:textColor="@color/rh_text_tertiary" android:textSize="12sp"/>
+
+                            <!-- Loading -->
+                            <LinearLayout android:id="@+id/family_loading" android:layout_width="match_parent" android:layout_height="wrap_content"
+                                android:orientation="horizontal" android:gravity="center" android:padding="16dp" android:visibility="gone">
+                                <ProgressBar android:layout_width="18dp" android:layout_height="18dp" android:indeterminateTint="@color/rh_accent" android:layout_marginEnd="10dp"/>
+                                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Loading family…"
+                                    android:textColor="@color/rh_text_tertiary" android:textSize="13sp"/>
+                            </LinearLayout>
+
+                            <!-- Empty -->
+                            <TextView android:id="@+id/family_empty" android:layout_width="match_parent" android:layout_height="wrap_content"
+                                android:paddingHorizontal="16dp" android:paddingVertical="14dp"
+                                android:text="No connected relatives yet. Connect family from Health Hub → Family Members."
+                                android:textColor="@color/rh_text_tertiary" android:textSize="12sp" android:visibility="gone"/>
+
+                            <!-- Member rows (inflated at runtime) -->
+                            <LinearLayout android:id="@+id/family_members_container" android:layout_width="match_parent" android:layout_height="wrap_content"
+                                android:orientation="vertical" android:paddingBottom="6dp"/>
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+        </ScrollView>
+    </FrameLayout>
+</LinearLayout>
