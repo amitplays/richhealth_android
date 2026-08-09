@@ -39,6 +39,9 @@ public class HealthCard {
     private int painLevel = 3;         // 1-5
     private String notes = "";
 
+    // When it happened (symptom / measurement / medication). ISO 8601 UTC or "yyyy-MM-dd"; "" = now.
+    private String dateTime = "";
+
     // Transient UI state
     private boolean added = false;
     private boolean dismissed = false;
@@ -88,6 +91,9 @@ public class HealthCard {
 
     public String getNotes() { return notes; }
     public void setNotes(String notes) { this.notes = notes; }
+
+    public String getDateTime() { return dateTime; }
+    public void setDateTime(String dateTime) { this.dateTime = dateTime; }
 
     public boolean isAdded() { return added; }
     public void setAdded(boolean added) { this.added = added; }

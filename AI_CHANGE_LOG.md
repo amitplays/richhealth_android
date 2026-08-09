@@ -5,6 +5,69 @@
 
 ---
 
+## [2026-08-09] Services → Tools: ONE reusable card component + status chevron + missing cards — 6 files
+
+### WHY
+Every Tools card was hand-inlined in fragment_home.xml (no shared component), and the
+card set lagged iOS. Consolidated all primary tool cards onto one reusable component,
+added an iOS-style status-coloured chevron, and added the cards Android was missing so
+the set matches iOS (Briefing, Health Insights, Connect-a-Device, Check-In, Daily
+Advisory, AQI, Dietary Insights, NutriCheck, Health Feed).
+
+### NEW: app/src/main/java/Utils/ServiceCardView.java
+- Custom compound view extending MaterialCardView; inflates view_service_card.xml (<merge>).
+- Implements the TOOLS CARD STANDARD (icon 30dp · teal title + top-right pill · subtitle ·
+  meta date · trailing chevron). Whole card surface is the click target.
+- Public API: setIcon, setTitle, setSubtitle, setPill(StatusPill.Intent,text), hidePill,
+  setDate, hideDate, setChevronStatus(ChevronStatus{NORMAL,ATTENTION,URGENT}); getters
+  getPillView/getMetaView/getSubtitleView (escape hatch used to keep existing wiring intact).
+- Card chrome (corner 18dp, elevation 0, bg @color/rh_surface) set in code. Chevron tint:
+  NORMAL=@color/rh_text_tertiary, ATTENTION=@color/rh_warning, URGENT=@color/rh_danger.
+- Optional XML attrs serviceIcon/serviceTitle/serviceSubtitle for the static cards.
+
+### NEW: app/src/main/res/layout/view_service_card.xml
+- The single card row layout. Colours use @color/rh_* only (no hardcoded hex).
+
+### res/values/attrs.xml
+- Added <declare-styleable name="ServiceCardView"> (serviceIcon/serviceTitle/serviceSubtitle).
+
+### res/layout/fragment_home.xml
+- Replaced the 4 hand-inlined MaterialCardView cards (health_analysis_card, checkin_home_card,
+  nutri_check_card, watch_connect_card) with <Utils.ServiceCardView> (SAME ids).
+- Added 4 new ServiceCardViews: daily_advisory_card, aqi_card, dietary_insights_card (promoted
+  from the hidden compat block to visible), feed_card. Order now mirrors iOS.
+- Kept the Daily Briefing carousel card (daily_digest_card) as-is; the digest TEXT is now a
+  separate Daily Advisory card.
+- Moved retired 0dp compat ids (health_status_chip, health_analysis_last_updated,
+  checkin_start_button, nutri_stale_indicator, watch_connect_button, dietary_stale_indicator)
+  into the hidden compat block so existing null-guarded Java toggles still resolve.
+- Rewrote the TOOLS CARD STANDARD comment to point at the component.
+
+### Activities/HomeFragment.java
+- Field types: healthAnalysisCard / checkInHomeCard → Utils.ServiceCardView; added fields
+  nutriCheckCard, watchConnectCard, advisoryCard, aqiCard, dietaryCard, feedCard, advisoryFullContent.
+- initViews: bound legacy pill/subtitle/meta fields to the ServiceCardView inner views via
+  getters (findViewById of the old inner ids removed) — preserves ALL existing pill/stale logic.
+- setupClickListeners: watch pill now from watchConnectCard.getPillView() (old id gone); added
+  clicks for advisory (expand digest in CardInfoDialog), aqi (AQI history), feed (openFeedTab).
+- Status-coloured chevron wired per iOS contract (URGENT>ATTENTION>NORMAL):
+  Health = URGENT if CRITICAL, else ATTENTION if healthDataNeedsUpdate/BAD/NEEDS_ATTENTION;
+  Check-In = ATTENTION if due/pending/in-progress; NutriCheck/Dietary = ATTENTION if stale;
+  Advisory = ATTENTION if digest stale; AQI/Feed = NORMAL.
+- Daily Advisory: now calls fetchDailyDigest() on load; showDigestCard/empty/error paths
+  repointed from the briefing card to advisoryCard (subtitle=content, date=generatedAt, pill/
+  chevron on `stale`).
+- AQI card: added updateAqiCard() reading cached AQI (aqi_prefs: cached_aqi/cached_city/
+  last_update_time); pill via aqiIntent + getAqiQualityLabel; refreshed from updateIQAirDisplay().
+- Dietary card: added fetchDietaryInsights() (GET /api/home/dietary-insights) → "Eat more: … ·
+  Limit: …" subtitle, lastUpdated meta, stale chevron. Helpers added: aqiIntent, relativeFromMillis,
+  joinFoods.
+
+### Activities/ServicesFragment.java
+- Added public showFeedTab() so the Health Feed card can switch the host to the Feed tab.
+
+---
+
 ## [2026-03-24] Upgrade/limit flow fixes — 4 files changed
 
 ### MedicalReportApiService.java

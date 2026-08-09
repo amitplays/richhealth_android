@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Internal layout for Utils.ServiceCardView — the single reusable "TOOLS CARD
+  STANDARD" row (icon 30dp · teal title + status pill · subtitle · meta date ·
+  status-coloured chevron). Merged into the MaterialCardView host, so the whole
+  card surface is the click target. Colours use @color/rh_* resources only.
+-->
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="16dp"
+        android:minHeight="84dp">
+
+        <ImageView
+            android:id="@+id/service_card_icon"
+            android:layout_width="@dimen/icon_lg"
+            android:layout_height="@dimen/icon_lg"
+            android:src="@drawable/ic_heart"
+            app:tint="@color/rh_accent"
+            android:layout_marginEnd="14dp"
+            android:contentDescription="@null" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/service_card_title"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textColor="@color/rh_accent"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+
+                <TextView
+                    android:id="@+id/service_card_pill"
+                    style="@style/Widget.RH.StatusPill"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/pill_status_neutral"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/service_card_subtitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/rh_text_secondary"
+                android:textSize="12.5sp"
+                android:maxLines="3"
+                android:ellipsize="end"
+                android:layout_marginTop="3dp" />
+
+            <TextView
+                android:id="@+id/service_card_meta"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/rh_text_tertiary"
+                android:textSize="11.5sp"
+                android:layout_marginTop="5dp"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <ImageView
+            android:id="@+id/service_card_chevron"
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:src="@drawable/ic_arrow_forward_ios"
+            app:tint="@color/rh_text_tertiary"
+            android:layout_marginStart="10dp"
+            android:contentDescription="Open" />
+    </LinearLayout>
+</merge>
