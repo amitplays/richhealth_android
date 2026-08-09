@@ -662,7 +662,7 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                     body.addView(readonly("Frequency", card.getFrequency(), dp));
                     body.addView(input("For (purpose)", card.getPurpose(), "e.g. headache",
                             InputType.TYPE_CLASS_TEXT, dp, card::setPurpose));
-                    body.addView(dateRow("When", card, card.getDateTime(), true, card::setDateTime, dp));
+                    body.addView(dateRow("Started", card, card.getDateTime(), false, card::setDateTime, dp));
                     break;
                 case HealthCard.KIND_PERIOD:
                     body.addView(flowChips(card, dp));
