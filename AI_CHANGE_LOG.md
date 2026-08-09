@@ -5,6 +5,16 @@
 
 ---
 
+## [2026-08-09] Services → Tools: follow-up — bare date labels (owner review)
+
+Owner wanted the card date consistent with iOS: **bare "X ago"**, no descriptive prefix
+("Last insight / Updated / Checked / Last check-in" all dropped). Position unchanged
+(left, under the content). No divider (Android already had none).
+File: `Activities/HomeFragment.java` (setDate/setText calls for health analysis, check-in,
+nutricheck, dietary, advisory, AQI).
+
+---
+
 ## [2026-08-09] Services → Tools: ONE reusable card component + status chevron + missing cards — 6 files
 
 ### WHY

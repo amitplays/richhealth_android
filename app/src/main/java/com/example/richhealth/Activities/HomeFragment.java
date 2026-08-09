@@ -2669,7 +2669,7 @@ public class HomeFragment extends Fragment {
         boolean stale = json.optBoolean("stale", false);
         String generatedAt = json.optString("generatedAt", "");
         if (generatedAt != null && !generatedAt.isEmpty()) {
-            advisoryCard.setDate("Updated " + formatTimeAgo(generatedAt));
+            advisoryCard.setDate(formatTimeAgo(generatedAt));
         } else {
             advisoryCard.hideDate();
         }
@@ -2831,7 +2831,7 @@ public class HomeFragment extends Fragment {
 
                         // Meta line: when the last insight was generated.
                         if (healthAnalysisUpdatedTime != null) {
-                            healthAnalysisUpdatedTime.setText("Last insight " + formatTimeAgo(lastUpdatedStr));
+                            healthAnalysisUpdatedTime.setText(formatTimeAgo(lastUpdatedStr));
                             healthAnalysisUpdatedTime.setVisibility(View.VISIBLE);
                         }
                         // Hide stale pill
@@ -2871,7 +2871,7 @@ public class HomeFragment extends Fragment {
                     if (needsUpdate && healthStatusPill != null) {
                         Utils.StatusPill.apply(healthStatusPill, Utils.StatusPill.Intent.WARNING, "Update");
                         healthStatusPill.setOnClickListener(v -> showStaleDataInfoDialog("Health Analysis"));
-                        // Keep the "Last insight …" meta visible; the pill conveys staleness.
+                        // Keep the bare "X ago" meta visible; the pill conveys staleness.
                     }
                     // Legacy 0dp badge kept in sync (invisible) so nothing else breaks.
                     if (healthAnalysisLastUpdated != null) {
@@ -2924,7 +2924,7 @@ public class HomeFragment extends Fragment {
                         if (dietaryIsStale) {
                             dietarySecondaryInfo.setVisibility(View.GONE);
                         } else if (dietaryUpdatedStr != null && !dietaryUpdatedStr.isEmpty()) {
-                            dietarySecondaryInfo.setText("Updated " + formatTimeAgo(dietaryUpdatedStr));
+                            dietarySecondaryInfo.setText(formatTimeAgo(dietaryUpdatedStr));
                             dietarySecondaryInfo.setVisibility(View.VISIBLE);
                         } else {
                             dietarySecondaryInfo.setVisibility(View.GONE);
@@ -2965,7 +2965,7 @@ public class HomeFragment extends Fragment {
                     // conveys staleness), or a friendly fallback if never used.
                     if (nutriSecondaryInfo != null) {
                         if (nutriUpdatedStr != null && !nutriUpdatedStr.isEmpty()) {
-                            nutriSecondaryInfo.setText("Checked " + formatTimeAgo(nutriUpdatedStr));
+                            nutriSecondaryInfo.setText(formatTimeAgo(nutriUpdatedStr));
                         } else {
                             nutriSecondaryInfo.setText("No checks yet");
                         }
@@ -3921,7 +3921,7 @@ public class HomeFragment extends Fragment {
         aqiCard.setSubtitle("AQI " + aqi + (city.isEmpty() ? "" : " · " + city));
         aqiCard.setPill(aqiIntent(aqi), getAqiQualityLabel(aqi));
         if (updated > 0) {
-            aqiCard.setDate("Updated " + relativeFromMillis(updated));
+            aqiCard.setDate(relativeFromMillis(updated));
         } else {
             aqiCard.hideDate();
         }
@@ -3964,7 +3964,7 @@ public class HomeFragment extends Fragment {
                             dietaryCard.setSubtitle(sub.toString());
 
                             if (lastUpdated != null && !lastUpdated.isEmpty()) {
-                                dietaryCard.setDate("Updated " + formatTimeAgo(lastUpdated));
+                                dietaryCard.setDate(formatTimeAgo(lastUpdated));
                             } else {
                                 dietaryCard.hideDate();
                             }
@@ -4262,7 +4262,7 @@ public class HomeFragment extends Fragment {
                         if (checkInStatusText != null) {
                             String lastAt = json.optString("lastCompletedAt", "");
                             if (lastAt != null && !lastAt.isEmpty() && !lastAt.equals("null")) {
-                                checkInStatusText.setText("Last check-in " + formatTimeAgo(lastAt));
+                                checkInStatusText.setText(formatTimeAgo(lastAt));
                             } else {
                                 checkInStatusText.setText("No check-ins yet");
                             }
