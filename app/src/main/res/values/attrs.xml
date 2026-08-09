@@ -4,4 +4,13 @@
             <attr name="actionIcon" format="reference"/>
             <attr name="buttonText" format="string"/>
         </declare-styleable>
+
+        <!-- Reusable Services/Tools card (Utils.ServiceCardView). Runtime setters
+             are the primary API; these attrs let the static cards declare their
+             icon/title/subtitle straight from XML. -->
+        <declare-styleable name="ServiceCardView">
+            <attr name="serviceIcon" format="reference"/>
+            <attr name="serviceTitle" format="string"/>
+            <attr name="serviceSubtitle" format="string"/>
+        </declare-styleable>
     </resources>

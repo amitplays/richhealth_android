@@ -142,14 +142,25 @@ public class HomeFragment extends Fragment {
     private String currentAnalysisTab = "reports";
 
     // ========== CHECK-IN CARD ==========
-    private MaterialCardView checkInHomeCard;
+    private Utils.ServiceCardView checkInHomeCard;
     private TextView checkInStatusText;
     private TextView checkInStartButton;
     private TextView checkInStatusPill;
     // ========== END CHECK-IN CARD ==========
 
+    // ========== REUSABLE SERVICE CARDS (Tools screen) ==========
+    // Every primary tool card is now one Utils.ServiceCardView. These hold the
+    // card refs so the fragment can drive pill / meta / status-coloured chevron.
+    private Utils.ServiceCardView nutriCheckCard;
+    private Utils.ServiceCardView watchConnectCard;
+    private Utils.ServiceCardView advisoryCard;
+    private Utils.ServiceCardView aqiCard;
+    private Utils.ServiceCardView dietaryCard;
+    private Utils.ServiceCardView feedCard;
+    private String advisoryFullContent = "";   // cached digest text for the tap-to-expand dialog
+
     // ========== NEW VARIABLES FOR HEALTH ANALYSIS & USAGE ==========
-    private LinearLayout healthAnalysisCard;
+    private Utils.ServiceCardView healthAnalysisCard;
     private LinearLayout usageStatusCard;
     private TextView healthAnalysisLocation;
     private TextView healthAnalysisAQI;
@@ -243,6 +254,9 @@ public class HomeFragment extends Fragment {
         // ========== END LOAD CALLS ==========
         ProStatusManager.syncProStatusOnLogin(requireContext());
         fetchBriefing();
+        fetchDailyDigest();      // Daily Advisory card (digest text, split from the Briefing carousel)
+        fetchDietaryInsights();  // Dietary Insights card (eat / avoid)
+        updateAqiCard();         // Air Quality card — seed from cached AQI immediately
         // Request location permission
         fetchLocation();
         Utils.IconAnimator.animateSectionIcons(view);
@@ -254,7 +268,7 @@ public class HomeFragment extends Fragment {
         welcomeText = view.findViewById(R.id.welcome_text);
         healthScoreText = view.findViewById(R.id.health_score);
         weeklyProgressText = view.findViewById(R.id.weekly_progress);
-        nutriCheckText = view.findViewById(R.id.nutri_check_text);
+        // nutriCheckText is bound below from the NutriCheck ServiceCardView subtitle.
         weightProgressText = view.findViewById(R.id.weight_progress);
         profileCompletionStatus = view.findViewById(R.id.profile_completion_status);
 
@@ -269,13 +283,32 @@ public class HomeFragment extends Fragment {
             });
         }
 
-        dietaryInsightsText = view.findViewById(R.id.dietary_insights_text);
+        // ── Reusable ServiceCardView refs (one component per tool card) ──
+        healthAnalysisCard = view.findViewById(R.id.health_analysis_card);
+        checkInHomeCard = view.findViewById(R.id.checkin_home_card);
+        nutriCheckCard = view.findViewById(R.id.nutri_check_card);
+        watchConnectCard = view.findViewById(R.id.watch_connect_card);
+        advisoryCard = view.findViewById(R.id.daily_advisory_card);
+        aqiCard = view.findViewById(R.id.aqi_card);
+        dietaryCard = view.findViewById(R.id.dietary_insights_card);
+        feedCard = view.findViewById(R.id.feed_card);
+
+        // Legacy per-card view fields now point at the ServiceCardView's inner views
+        // (pill / subtitle / meta) so ALL existing wiring keeps working unchanged.
+        // Retired 0dp badges (…_chip, …_last_updated, …_stale_indicator, …_button)
+        // still live in the hidden compat block and are looked up normally below.
+        healthStatusPill = healthAnalysisCard.getPillView();
+        healthAnalysisUpdatedTime = healthAnalysisCard.getMetaView();
+
+        nutriStatusPill = nutriCheckCard.getPillView();
+        nutriSecondaryInfo = nutriCheckCard.getMetaView();
+        nutriCheckText = nutriCheckCard.getSubtitleView();
+
+        dietaryInsightsText = dietaryCard.getSubtitleView();
+        dietarySecondaryInfo = dietaryCard.getMetaView();
+
         dietaryStaleIndicator = view.findViewById(R.id.dietary_stale_indicator);
-        dietarySecondaryInfo = view.findViewById(R.id.dietary_secondary_info);
         nutriStaleIndicator = view.findViewById(R.id.nutri_stale_indicator);
-        nutriStatusPill = view.findViewById(R.id.nutri_status_pill);
-        nutriSecondaryInfo = view.findViewById(R.id.nutri_secondary_info);
-        healthAnalysisUpdatedTime = view.findViewById(R.id.health_analysis_updated_time);
         chatSecondaryInfo = view.findViewById(R.id.chat_secondary_info);
         locationNameText = view.findViewById(R.id.location_name);
         aqiStatusChip = view.findViewById(R.id.aqi_status_chip);
@@ -285,15 +318,14 @@ public class HomeFragment extends Fragment {
         // lastDataInsights removed
 
         // ========== NEW HEALTH ANALYSIS CARD VIEWS ==========
-        healthAnalysisCard = view.findViewById(R.id.health_analysis_card);
+        // healthAnalysisCard / healthStatusPill / healthAnalysisUpdatedTime bound above.
         healthAnalysisLocation = view.findViewById(R.id.health_analysis_location);
         healthAnalysisAQI = view.findViewById(R.id.health_analysis_aqi);
         healthAnalysisProfilePercent = view.findViewById(R.id.health_analysis_profile_percent);
         analyzeHealthButton = view.findViewById(R.id.analyze_health_button);
 
-        // Health Analysis Card - new views
+        // Retired 0dp compat badges (kept for legacy toggles; carry no visible state now)
         healthStatusChip = view.findViewById(R.id.health_status_chip);
-        healthStatusPill = view.findViewById(R.id.health_status_pill);
         healthAnalysisLastUpdated = view.findViewById(R.id.health_analysis_last_updated);
 
         // ========== NEW USAGE STATUS CARD VIEWS ==========
@@ -305,11 +337,11 @@ public class HomeFragment extends Fragment {
         viewUsageButton = view.findViewById(R.id.view_usage_button);
         // ========== END NEW VIEWS ==========
 
-        // Check-In home card
-        checkInHomeCard = view.findViewById(R.id.checkin_home_card);
-        checkInStatusText = view.findViewById(R.id.checkin_status_text);
+        // Check-In home card (checkInHomeCard bound above). Pill/meta from the card;
+        // start button is a retired 0dp compat view.
+        checkInStatusText = checkInHomeCard.getMetaView();
+        checkInStatusPill = checkInHomeCard.getPillView();
         checkInStartButton = view.findViewById(R.id.checkin_start_button);
-        checkInStatusPill = view.findViewById(R.id.checkin_status_pill);
 
         // Health Advisory card
         dailyDigestCard = view.findViewById(R.id.daily_digest_card);
@@ -390,11 +422,25 @@ public class HomeFragment extends Fragment {
             startActivity(intent);
         });
 
-        MaterialCardView nutriCheckCard = view.findViewById(R.id.nutri_check_card);
-        nutriCheckCard.setOnClickListener(v -> {
-            Intent nutriIntent = new Intent(requireContext(), NutriCheckActivity.class);
-            startActivity(nutriIntent);
-        });
+        if (nutriCheckCard != null) {
+            nutriCheckCard.setOnClickListener(v -> {
+                Intent nutriIntent = new Intent(requireContext(), NutriCheckActivity.class);
+                startActivity(nutriIntent);
+            });
+        }
+
+        // Daily Advisory → expand full digest text in a CardInfoDialog.
+        if (advisoryCard != null) {
+            advisoryCard.setOnClickListener(v -> showAdvisoryDialog());
+        }
+        // Air Quality → open the AQI history sheet (same as the old AQI chip).
+        if (aqiCard != null) {
+            aqiCard.setOnClickListener(v -> fetchAndShowAQIHistory());
+        }
+        // Health Feed → switch the Services host to the Feed tab (fallback: activity).
+        if (feedCard != null) {
+            feedCard.setOnClickListener(v -> openFeedTab());
+        }
 
         // AQI views may be null if Health Metrics card was replaced with new design
         View aqiChip = view.findViewById(R.id.aqi_status_chip);
@@ -466,13 +512,42 @@ public class HomeFragment extends Fragment {
         }
 
         // ── Connect watch / health data (Google Health / Health Connect) ──
-        MaterialCardView watchConnectCard = view.findViewById(R.id.watch_connect_card);
         TextView watchConnectButton = view.findViewById(R.id.watch_connect_button);
-        TextView watchConnectPill = view.findViewById(R.id.watch_connect_pill);
+        TextView watchConnectPill = watchConnectCard != null ? watchConnectCard.getPillView() : null;
         refreshWatchConnectState(watchConnectPill);
         View.OnClickListener watchClick = v -> openHealthConnect(watchConnectPill);
         if (watchConnectCard != null) watchConnectCard.setOnClickListener(watchClick);
         if (watchConnectButton != null) watchConnectButton.setOnClickListener(watchClick);
+
+        // Feed / AQI cards are informational → NORMAL chevron.
+        if (feedCard != null) feedCard.setChevronStatus(Utils.ServiceCardView.ChevronStatus.NORMAL);
+        if (aqiCard != null) aqiCard.setChevronStatus(Utils.ServiceCardView.ChevronStatus.NORMAL);
+    }
+
+    /** Switch the Services host to the Feed tab; fall back to the standalone activity. */
+    private void openFeedTab() {
+        Fragment parent = getParentFragment();
+        if (parent instanceof ServicesFragment) {
+            ((ServicesFragment) parent).showFeedTab();
+        } else {
+            startActivity(new Intent(requireContext(), HealthFeedActivity.class));
+        }
+    }
+
+    /** Tap-to-expand for the Daily Advisory card: full digest text in a dialog. */
+    private void showAdvisoryDialog() {
+        String content = advisoryFullContent != null ? advisoryFullContent.trim() : "";
+        if (content.isEmpty()) {
+            startActivity(new Intent(requireContext(), HealthAnalysisActivity.class));
+            return;
+        }
+        new Utils.CardInfoDialog.Builder(requireContext())
+                .title("Daily Advisory")
+                .subtitle("Personalized for today")
+                .icon(R.drawable.ic_heart_smile)
+                .body(content)
+                .build()
+                .show();
     }
 
     // ── Wearable / fitness linking (Google Fit, pure Java) ───────────────────
@@ -1531,6 +1606,9 @@ public class HomeFragment extends Fragment {
             aqiStatusChip.setChipBackgroundColor(ColorStateList.valueOf(aqiColor));
         }
 
+        // Refresh the reusable Air Quality ServiceCard from the just-updated cache.
+        updateAqiCard();
+
         Log.d(TAG, "AQI display updated successfully");
     }
 
@@ -2514,10 +2592,13 @@ public class HomeFragment extends Fragment {
                             JSONObject json = new JSONObject(response);
                             String content = json.optString("content", "");
                             if (content.isEmpty()) {
-                                // No advisory generated — show a helpful placeholder instead of hiding
-                                if (digestStatusText != null) {
-                                    digestStatusText.setText("No advisory today. Complete your health profile or enable location for personalized tips.");
-                                    digestStatusText.setVisibility(View.VISIBLE);
+                                // No advisory generated — show a helpful placeholder on the card.
+                                advisoryFullContent = "";
+                                if (advisoryCard != null) {
+                                    advisoryCard.setSubtitle("No advisory today. Complete your health profile or enable location for personalized tips.");
+                                    advisoryCard.hidePill();
+                                    advisoryCard.hideDate();
+                                    advisoryCard.setChevronStatus(Utils.ServiceCardView.ChevronStatus.NORMAL);
                                 }
                                 return;
                             }
@@ -2574,78 +2655,52 @@ public class HomeFragment extends Fragment {
         }
     }
 
+    /**
+     * Populates the Daily Advisory ServiceCard (the digest text, split from the
+     * Briefing carousel). Subtitle = advisory content (≤3 lines, tap to expand),
+     * meta = "Updated X ago" from generatedAt, chevron = ATTENTION when stale.
+     */
     private void showDigestCard(JSONObject json, String content) {
-        Skeleton.hide(digestStatusText, digestLocationChip);
-        setDigestAttention(false);
-        // Date label
-        if (digestDateLabel != null) {
-            String today = new java.text.SimpleDateFormat("MMM d", java.util.Locale.getDefault())
-                    .format(new java.util.Date());
-            digestDateLabel.setText(today);
+        advisoryFullContent = content;
+        if (advisoryCard == null) return;
+
+        advisoryCard.setSubtitle(content);
+
+        boolean stale = json.optBoolean("stale", false);
+        String generatedAt = json.optString("generatedAt", "");
+        if (generatedAt != null && !generatedAt.isEmpty()) {
+            advisoryCard.setDate("Updated " + formatTimeAgo(generatedAt));
+        } else {
+            advisoryCard.hideDate();
         }
 
-        // Update location chip if server returns a city name
-        String city = json.optString("city", "");
-        if (!city.isEmpty() && digestLocationChip != null) {
-            updateLocationChip(city, true);
+        if (stale) {
+            advisoryCard.setPill(Utils.StatusPill.Intent.WARNING, "Update");
+            advisoryCard.setChevronStatus(Utils.ServiceCardView.ChevronStatus.ATTENTION);
+        } else {
+            advisoryCard.hidePill();
+            advisoryCard.setChevronStatus(Utils.ServiceCardView.ChevronStatus.NORMAL);
         }
-
-        // AQI row
-        boolean showAqi = json.optBoolean("showAqi", false);
-        if (showAqi && digestAqiRow != null) {
-            int aqiValue = json.optInt("aqiValue", 0);
-            String aqiLabel = json.optString("aqiLabel", "");
-            String aqiColorHex = json.optString("aqiColor", "#808080");
-
-            if (digestAqiDot != null) {
-                android.graphics.drawable.GradientDrawable dot = new android.graphics.drawable.GradientDrawable();
-                dot.setShape(android.graphics.drawable.GradientDrawable.OVAL);
-                try {
-                    dot.setColor(Color.parseColor(aqiColorHex));
-                } catch (Exception e) {
-                    dot.setColor(Color.parseColor("#808080"));
-                }
-                digestAqiDot.setBackground(dot);
-            }
-            if (digestAqiText != null && !aqiLabel.isEmpty()) {
-                digestAqiText.setText("AQI " + aqiValue + "  —  " + aqiLabel);
-            }
-            digestAqiRow.setVisibility(View.VISIBLE);
-        }
-
-        // Content
-        if (digestContent != null) {
-            digestContent.setText(content);
-            digestContent.setVisibility(View.VISIBLE);
-        }
-
-        // Hide loading/no-content placeholder once real content is shown
-        if (digestStatusText != null) digestStatusText.setVisibility(View.GONE);
-        if (digestErrorRow != null) digestErrorRow.setVisibility(View.GONE);
-        if (dailyDigestCard != null) dailyDigestCard.setVisibility(View.VISIBLE);
     }
 
     private void showDigestErrorState() {
         showDigestErrorState("Unavailable");
     }
 
-    /** Compact error pill on the advisory card. Tap the card (or status pill)
-     *  to retry — keeps the design consistent with other loading failures. */
+    /** Error state for the Daily Advisory card. Subtitle carries the reason and a
+     *  tap retries the fetch (falls back to the advisory dialog once content loads). */
     private void showDigestErrorState(String reason) {
-        if (dailyDigestCard == null) return;
-        setDigestAttention(true);
-        if (digestContent != null) digestContent.setVisibility(View.GONE);
-        if (digestAqiRow != null) digestAqiRow.setVisibility(View.GONE);
-        if (digestErrorRow != null) digestErrorRow.setVisibility(View.GONE);
-        Skeleton.hideAndGone(digestLocationChip);
-        if (digestStatusText != null) {
-            Skeleton.error(digestStatusText, reason);
-            digestStatusText.setOnClickListener(v -> {
-                Skeleton.show(digestStatusText, digestLocationChip);
-                fetchDailyDigest();
-            });
-        }
-        dailyDigestCard.setVisibility(View.VISIBLE);
+        if (advisoryCard == null) return;
+        advisoryFullContent = "";
+        advisoryCard.setSubtitle((reason != null ? reason : "Unavailable") + " — tap to retry");
+        advisoryCard.hidePill();
+        advisoryCard.hideDate();
+        advisoryCard.setChevronStatus(Utils.ServiceCardView.ChevronStatus.ATTENTION);
+        advisoryCard.setOnClickListener(v -> {
+            // Restore the normal expand-on-tap behaviour after a retry is triggered.
+            advisoryCard.setOnClickListener(vv -> showAdvisoryDialog());
+            fetchDailyDigest();
+        });
     }
 
     /**
@@ -2824,6 +2879,21 @@ public class HomeFragment extends Fragment {
                         healthAnalysisLastUpdated.setOnClickListener(needsUpdate
                                 ? v -> showStaleDataInfoDialog("Health Analysis") : null);
                     }
+                    // Status-coloured chevron (shared iOS contract: URGENT > ATTENTION > NORMAL).
+                    if (healthAnalysisCard != null) {
+                        // Chevron encodes urgency/staleness, NOT the health state (the pill does that),
+                        // so BAD/NEEDS_ATTENTION do NOT trigger the yellow chevron — only a critical
+                        // result (red) or new data since the last analysis (yellow). Matches iOS.
+                        Utils.ServiceCardView.ChevronStatus cs;
+                        if ("CRITICAL".equals(currentStatusLevel)) {
+                            cs = Utils.ServiceCardView.ChevronStatus.URGENT;
+                        } else if (needsUpdate) {
+                            cs = Utils.ServiceCardView.ChevronStatus.ATTENTION;
+                        } else {
+                            cs = Utils.ServiceCardView.ChevronStatus.NORMAL;
+                        }
+                        healthAnalysisCard.setChevronStatus(cs);
+                    }
 
                     // Per-feature stale indicators: compare lastHealthDataChange vs each feature's generatedAt
                     String lastDataChangeStr = analysis.optString("lastHealthDataChange", null);
@@ -2834,6 +2904,10 @@ public class HomeFragment extends Fragment {
                     long dietaryUpdated = dietaryUpdatedStr != null ? parseIsoToMillis(dietaryUpdatedStr) : 0;
                     boolean dietaryIsStale = lastDataChange > 0 && lastDataChange > dietaryUpdated;
 
+                    // NOTE: the dietary CHEVRON is driven solely by the backend `stale` flag in
+                    // fetchDietaryInsights() — single source of truth, matching iOS. We do NOT set it
+                    // here (avoids a race between the two async responses). dietaryIsStale below only
+                    // drives the legacy 0dp "!" indicator.
                     // Show "!" icon ONLY when data has changed after the last Diet Guide run.
                     if (dietaryStaleIndicator != null) {
                         if (dietaryIsStale) {
@@ -2860,7 +2934,9 @@ public class HomeFragment extends Fragment {
                     // NutriCheck — stale if data changed after last check
                     String nutriUpdatedStr = analysis.optString("lastNutriCheckAt", null);
                     long nutriUpdated = nutriUpdatedStr != null ? parseIsoToMillis(nutriUpdatedStr) : 0;
-                    boolean nutriIsStale = lastDataChange > 0 && lastDataChange > nutriUpdated;
+                    // Require a prior check before flagging stale — a never-checked user is NORMAL,
+                    // not attention (matches iOS nutriCheckIsStale, which needs both timestamps).
+                    boolean nutriIsStale = nutriUpdated > 0 && lastDataChange > 0 && lastDataChange > nutriUpdated;
 
                     // Stale → WARNING "Update" pill (standard); otherwise the pill hides and
                     // the meta line shows "Last check: X ago".
@@ -2878,6 +2954,12 @@ public class HomeFragment extends Fragment {
                         nutriStaleIndicator.setVisibility(nutriIsStale ? View.VISIBLE : View.GONE);
                         nutriStaleIndicator.setOnClickListener(nutriIsStale
                                 ? v -> showStaleDataInfoDialog("NutriCheck") : null);
+                    }
+                    // NutriCheck chevron: ATTENTION when stale, else NORMAL.
+                    if (nutriCheckCard != null) {
+                        nutriCheckCard.setChevronStatus(nutriIsStale
+                                ? Utils.ServiceCardView.ChevronStatus.ATTENTION
+                                : Utils.ServiceCardView.ChevronStatus.NORMAL);
                     }
                     // Meta line: always show when NutriCheck was last used (the pill
                     // conveys staleness), or a friendly fallback if never used.
@@ -3794,6 +3876,132 @@ public class HomeFragment extends Fragment {
         return Color.parseColor("#F44336");
     }
 
+    // ========== AIR QUALITY CARD (reuses cached AQI from aqi_prefs) ==========
+
+    /** Pill intent for an AQI value (SUCCESS good → DANGER unhealthy+). */
+    private Utils.StatusPill.Intent aqiIntent(int aqi) {
+        if (aqi <= 50) return Utils.StatusPill.Intent.SUCCESS;
+        if (aqi <= 100) return Utils.StatusPill.Intent.WARNING;
+        return Utils.StatusPill.Intent.DANGER;
+    }
+
+    /** Short "X ago" for an epoch-millis timestamp (AQI reading time). */
+    private String relativeFromMillis(long whenMs) {
+        if (whenMs <= 0) return "";
+        long mins = (System.currentTimeMillis() - whenMs) / 60000L;
+        if (mins < 1) return "just now";
+        if (mins < 60) return mins + " min ago";
+        long hours = mins / 60;
+        if (hours < 24) return hours + " hour" + (hours > 1 ? "s" : "") + " ago";
+        long days = hours / 24;
+        return days + " day" + (days > 1 ? "s" : "") + " ago";
+    }
+
+    /**
+     * Populates the Air Quality ServiceCard from the same cached source the daily
+     * digest already uses (aqi_prefs: cached_aqi / cached_city / last_update_time).
+     * Informational → chevron always NORMAL. Called on load and whenever AQI refreshes.
+     */
+    private void updateAqiCard() {
+        if (aqiCard == null) return;
+        Context ctx = getContext();
+        if (ctx == null) return;
+        SharedPreferences prefs = ctx.getSharedPreferences("aqi_prefs", Context.MODE_PRIVATE);
+        int aqi = prefs.getInt("cached_aqi", -1);
+        String city = prefs.getString("cached_city", "");
+        long updated = prefs.getLong("last_update_time", 0);
+
+        aqiCard.setChevronStatus(Utils.ServiceCardView.ChevronStatus.NORMAL);
+        if (aqi < 0) {
+            aqiCard.setSubtitle("Waiting for location…");
+            aqiCard.hidePill();
+            aqiCard.hideDate();
+            return;
+        }
+        aqiCard.setSubtitle("AQI " + aqi + (city.isEmpty() ? "" : " · " + city));
+        aqiCard.setPill(aqiIntent(aqi), getAqiQualityLabel(aqi));
+        if (updated > 0) {
+            aqiCard.setDate("Updated " + relativeFromMillis(updated));
+        } else {
+            aqiCard.hideDate();
+        }
+    }
+
+    // ========== DIETARY INSIGHTS CARD (GET /api/home/dietary-insights) ==========
+
+    /**
+     * Fills the Dietary Insights ServiceCard with "Eat more: … · Limit: …" from
+     * foodsToEat / foodsToAvoid, meta from lastUpdated, chevron ATTENTION when stale.
+     * Mirrors the existing Volley + Bearer-token pattern used across this fragment.
+     */
+    private void fetchDietaryInsights() {
+        if (dietaryCard == null) return;
+        Context context = getContext();
+        if (context == null) return;
+        TokenManager tokenManager = TokenManager.getInstance(context);
+        final String token = tokenManager != null ? tokenManager.getToken() : null;
+        if (token == null) return;
+
+        final String url = ApiConfig.BASE_URL + "/api/home/dietary-insights";
+        StringRequest request = new StringRequest(Request.Method.GET, url,
+                response -> {
+                    if (!isAdded() || getActivity() == null) return;
+                    requireActivity().runOnUiThread(() -> {
+                        try {
+                            JSONObject json = new JSONObject(response);
+                            String eat = joinFoods(json.optJSONArray("foodsToEat"), 3);
+                            String avoid = joinFoods(json.optJSONArray("foodsToAvoid"), 3);
+                            boolean stale = json.optBoolean("stale", false);
+                            String lastUpdated = json.optString("lastUpdated", "");
+
+                            StringBuilder sub = new StringBuilder();
+                            if (!eat.isEmpty()) sub.append("Eat more: ").append(eat);
+                            if (!avoid.isEmpty()) {
+                                if (sub.length() > 0) sub.append("  ·  ");
+                                sub.append("Limit: ").append(avoid);
+                            }
+                            if (sub.length() == 0) sub.append("What foods to eat and avoid");
+                            dietaryCard.setSubtitle(sub.toString());
+
+                            if (lastUpdated != null && !lastUpdated.isEmpty()) {
+                                dietaryCard.setDate("Updated " + formatTimeAgo(lastUpdated));
+                            } else {
+                                dietaryCard.hideDate();
+                            }
+                            dietaryCard.setChevronStatus(stale
+                                    ? Utils.ServiceCardView.ChevronStatus.ATTENTION
+                                    : Utils.ServiceCardView.ChevronStatus.NORMAL);
+                        } catch (JSONException e) {
+                            Log.e(TAG, "Dietary insights parse error", e);
+                        }
+                    });
+                },
+                error -> Log.w(TAG, "Could not load dietary insights: " + error)) {
+            @Override
+            public Map<String, String> getHeaders() {
+                Map<String, String> h = new HashMap<>();
+                h.put("Authorization", "Bearer " + token);
+                return h;
+            }
+        };
+        request.setRetryPolicy(new DefaultRetryPolicy(15000, 0, 1.0f));
+        Volley.newRequestQueue(context).add(request);
+    }
+
+    /** Join up to {@code max} strings from a JSON array into a comma list. */
+    private String joinFoods(org.json.JSONArray arr, int max) {
+        if (arr == null) return "";
+        StringBuilder sb = new StringBuilder();
+        int n = Math.min(arr.length(), max);
+        for (int i = 0; i < n; i++) {
+            String s = arr.optString(i, "").trim();
+            if (s.isEmpty()) continue;
+            if (sb.length() > 0) sb.append(", ");
+            sb.append(s);
+        }
+        return sb.toString();
+    }
+
     // ========== NEW METHODS: USAGE STATUS ==========
 
     private void loadAndDisplayUsageStatus() {
@@ -4039,6 +4247,15 @@ public class HomeFragment extends Fragment {
                             if (checkInStartButton != null) {
                                 checkInStartButton.setText("History \u203a");
                             }
+                        }
+
+                        // Chevron: ATTENTION when a check-in is due/pending/in-progress, else NORMAL.
+                        if (checkInHomeCard != null) {
+                            boolean attention = canAccess
+                                    && (inProgressCount > 0 || pendingOnlyCount > 0 || isDue);
+                            checkInHomeCard.setChevronStatus(attention
+                                    ? Utils.ServiceCardView.ChevronStatus.ATTENTION
+                                    : Utils.ServiceCardView.ChevronStatus.NORMAL);
                         }
 
                         // Meta line: real "last check-in" date (pill already carries the status).

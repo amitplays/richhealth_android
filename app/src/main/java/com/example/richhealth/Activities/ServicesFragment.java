@@ -71,6 +71,11 @@ public class ServicesFragment extends Fragment implements BackPressHandler {
         selectTab(currentTab);
     }
 
+    /** Public entry so child tools (e.g. the Health Feed card) can jump to the Feed tab. */
+    public void showFeedTab() {
+        selectTab(0);
+    }
+
     private void selectTab(int index) {
         currentTab = index;
         if (feedFragment != null && toolsFragment != null && isAdded()) {
