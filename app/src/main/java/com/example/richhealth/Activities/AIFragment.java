@@ -3873,6 +3873,22 @@ public class AIFragment extends Fragment implements BackPressHandler {
         Volley.newRequestQueue(context).add(request);
     }
 
+    /** Parse a card's dateTime (ISO-UTC or yyyy-MM-dd) to a Date; now when blank/invalid. */
+    private Date parseCardDate(String iso) {
+        if (iso == null || iso.trim().isEmpty()) return new Date();
+        String s = iso.trim();
+        String[] fmts = { "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", "yyyy-MM-dd'T'HH:mm", "yyyy-MM-dd" };
+        for (String fmt : fmts) {
+            try {
+                SimpleDateFormat f = new SimpleDateFormat(fmt, Locale.US);
+                if (fmt.endsWith("'Z'")) f.setTimeZone(TimeZone.getTimeZone("UTC"));
+                Date d = f.parse(s);
+                if (d != null) return d;
+            } catch (Exception ignored) {}
+        }
+        return new Date();
+    }
+
     private void saveSymptomCard(HealthCard card, ChatAdapter.HealthCardCallback cb) {
         String name = card.getTitle() == null ? "" : card.getTitle().trim();
         String duration = card.getDuration() == null ? "" : card.getDuration().trim();
@@ -3884,7 +3900,7 @@ public class AIFragment extends Fragment implements BackPressHandler {
         symptom.setSeverity(card.getSeverity());
         symptom.setDuration(duration);
         symptom.setDescription(card.getDescription());
-        symptom.setRecordedAt(new Date());
+        symptom.setRecordedAt(parseCardDate(card.getDateTime()));
         symptom.setShareWithFamily(false);
         if (userProfile != null) symptom.setUserId(userProfile.getId());
 
@@ -3950,7 +3966,7 @@ public class AIFragment extends Fragment implements BackPressHandler {
             body.put("description", card.getDescription());
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
             sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
-            body.put("dateTime", sdf.format(new Date()));
+            body.put("dateTime", sdf.format(parseCardDate(card.getDateTime())));
             body.put("shareWithFamily", false);
         } catch (JSONException e) { cb.onResult(false); return; }
 
@@ -3970,6 +3986,9 @@ public class AIFragment extends Fragment implements BackPressHandler {
             body.put("dosage", dosage);
             body.put("frequency", card.getFrequency());
             body.put("isOngoing", true);
+            SimpleDateFormat msdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
+            msdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+            body.put("startDate", msdf.format(parseCardDate(card.getDateTime())));
             if (card.getPurpose() != null && !card.getPurpose().isEmpty()) body.put("purpose", card.getPurpose());
             body.put("shareWithFamily", false);
         } catch (JSONException e) { cb.onResult(false); return; }

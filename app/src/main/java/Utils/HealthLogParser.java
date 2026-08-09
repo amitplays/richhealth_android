@@ -51,6 +51,7 @@ public final class HealthLogParser {
                 card.setValue(c.optString("value", ""));
                 card.setUnit(c.optString("unit", ""));
                 card.setDescription(c.optString("description", ""));
+                card.setDateTime(c.optString("dateTime", ""));
                 break;
             case HealthCard.KIND_MEDICATION:
                 card.setKind(HealthCard.KIND_MEDICATION);
@@ -58,6 +59,7 @@ public final class HealthLogParser {
                 card.setDosage(c.optString("dosage", ""));
                 card.setFrequency(normalizeFrequency(c.optString("frequency", "As needed")));
                 card.setPurpose(c.optString("purpose", ""));
+                card.setDateTime(c.optString("dateTime", ""));
                 break;
             case HealthCard.KIND_PERIOD:
                 card.setKind(HealthCard.KIND_PERIOD);
@@ -72,6 +74,7 @@ public final class HealthLogParser {
                 card.setSeverity(clamp(c.optInt("severity", 3)));
                 card.setDuration(c.optString("duration", ""));
                 card.setDescription(c.optString("description", ""));
+                card.setDateTime(c.optString("dateTime", ""));
                 break;
             default:
                 return null;

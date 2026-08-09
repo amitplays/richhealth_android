@@ -1,5 +1,7 @@
 package Adapters;
 
+import android.app.DatePickerDialog;
+import android.app.TimePickerDialog;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
@@ -29,7 +31,9 @@ import com.google.android.material.card.MaterialCardView;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
+import java.util.TimeZone;
 import java.util.List;
 import java.util.Locale;
 
@@ -648,6 +652,7 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                             InputType.TYPE_CLASS_TEXT, dp, card::setValue));
                     body.addView(input("Unit", card.getUnit(), "e.g. mmHg",
                             InputType.TYPE_CLASS_TEXT, dp, card::setUnit));
+                    body.addView(dateRow("When", card, card.getDateTime(), true, card::setDateTime, dp));
                     break;
                 case HealthCard.KIND_MEDICATION:
                     body.addView(input("Medication", card.getName(), "e.g. Paracetamol",
@@ -657,11 +662,12 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                     body.addView(readonly("Frequency", card.getFrequency(), dp));
                     body.addView(input("For (purpose)", card.getPurpose(), "e.g. headache",
                             InputType.TYPE_CLASS_TEXT, dp, card::setPurpose));
+                    body.addView(dateRow("When", card, card.getDateTime(), true, card::setDateTime, dp));
                     break;
                 case HealthCard.KIND_PERIOD:
                     body.addView(flowChips(card, dp));
                     body.addView(seekRow("Pain", card.getPainLevel(), dp, level -> card.setPainLevel(level)));
-                    body.addView(readonly("Start", "Today", dp));
+                    body.addView(dateRow("Start", card, card.getStartDate(), false, card::setStartDate, dp));
                     body.addView(input("Notes", card.getNotes(), "optional",
                             InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES, dp, card::setNotes));
                     break;
@@ -674,6 +680,7 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                             InputType.TYPE_CLASS_TEXT, dp, card::setDuration));
                     body.addView(input("Notes", card.getDescription(), "optional",
                             InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES, dp, card::setDescription));
+                    body.addView(dateRow("When", card, card.getDateTime(), true, card::setDateTime, dp));
                     break;
             }
         }
@@ -893,6 +900,82 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             }
             wrap.addView(chipRow);
             return wrap;
+        }
+
+        // ── date / time picker row (quick-log cards can carry an editable time) ──
+        private LinearLayout dateRow(final String label, final HealthCard card, final String currentIso,
+                                     final boolean withTime, final StrSetter setter, final float dp) {
+            LinearLayout wrap = new LinearLayout(context);
+            wrap.setOrientation(LinearLayout.VERTICAL);
+            LinearLayout.LayoutParams wLp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            wLp.bottomMargin = (int) (9 * dp);
+            wrap.setLayoutParams(wLp);
+            wrap.addView(fieldLabel(label, dp));
+
+            final TextView t = new TextView(context);
+            t.setText(displayDate(currentIso, withTime));
+            t.setTextColor(Color.parseColor("#37C9A6"));
+            t.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
+            t.setClickable(true);
+            t.setOnClickListener(v -> pickDate(currentIso, withTime, iso -> {
+                setter.set(iso);
+                build(card);
+            }));
+            LinearLayout.LayoutParams tLp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            tLp.topMargin = (int) (3 * dp);
+            wrap.addView(t, tLp);
+            return wrap;
+        }
+
+        private String displayDate(String iso, boolean withTime) {
+            Date d = parseIso(iso);
+            if (d == null) return withTime ? "Now  (tap to change)" : "Today  (tap to change)";
+            SimpleDateFormat out = new SimpleDateFormat(withTime ? "d MMM, h:mm a" : "d MMM yyyy", Locale.getDefault());
+            return out.format(d);
+        }
+
+        private Date parseIso(String iso) {
+            if (iso == null || iso.trim().isEmpty()) return null;
+            String s = iso.trim();
+            String[] fmts = { "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", "yyyy-MM-dd'T'HH:mm", "yyyy-MM-dd" };
+            for (String fmt : fmts) {
+                try {
+                    SimpleDateFormat f = new SimpleDateFormat(fmt, Locale.US);
+                    if (fmt.endsWith("'Z'")) f.setTimeZone(TimeZone.getTimeZone("UTC"));
+                    return f.parse(s);
+                } catch (Exception ignored) {}
+            }
+            return null;
+        }
+
+        private void pickDate(String currentIso, final boolean withTime, final StrSetter onPicked) {
+            final Calendar cal = Calendar.getInstance();
+            Date cur = parseIso(currentIso);
+            if (cur != null) cal.setTime(cur);
+            final android.content.Context ctx = root.getContext();
+            DatePickerDialog dpd = new DatePickerDialog(ctx, (view, y, m, d) -> {
+                cal.set(Calendar.YEAR, y);
+                cal.set(Calendar.MONTH, m);
+                cal.set(Calendar.DAY_OF_MONTH, d);
+                if (withTime) {
+                    new TimePickerDialog(ctx, (tv2, h, min) -> {
+                        cal.set(Calendar.HOUR_OF_DAY, h);
+                        cal.set(Calendar.MINUTE, min);
+                        cal.set(Calendar.SECOND, 0);
+                        cal.set(Calendar.MILLISECOND, 0);
+                        SimpleDateFormat out = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
+                        out.setTimeZone(TimeZone.getTimeZone("UTC"));
+                        onPicked.set(out.format(cal.getTime()));
+                    }, cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE), false).show();
+                } else {
+                    SimpleDateFormat out = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+                    onPicked.set(out.format(cal.getTime()));
+                }
+            }, cal.get(Calendar.YEAR), cal.get(Calendar.MONTH), cal.get(Calendar.DAY_OF_MONTH));
+            dpd.getDatePicker().setMaxDate(System.currentTimeMillis());
+            dpd.show();
         }
     }
 
