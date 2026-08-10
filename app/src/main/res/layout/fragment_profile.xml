@@ -6,121 +6,281 @@
     android:orientation="vertical"
     android:background="@color/black">
 
-    <!-- ═══════════════════ FIXED HEADER ═══════════════════ -->
-    <LinearLayout
+    <!-- ═══════════════════ FIXED HEADER (iOS-parity identity card) ═══════════════════ -->
+    <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:paddingHorizontal="@dimen/rh_screen_margin"
-        android:paddingTop="18dp"
-        android:paddingBottom="14dp">
+        android:layout_marginHorizontal="@dimen/rh_screen_margin"
+        android:layout_marginTop="14dp"
+        android:layout_marginBottom="12dp"
+        app:cardCornerRadius="18dp"
+        app:cardElevation="0dp"
+        app:cardBackgroundColor="@color/rh_surface">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:orientation="vertical"
+            android:padding="16dp">
 
-            <!-- Avatar -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="58dp"
-                android:layout_height="58dp"
-                app:cardCornerRadius="29dp"
-                app:cardElevation="0dp"
-                app:cardBackgroundColor="@color/rh_surface">
-
-                <ImageView
-                    android:layout_width="@dimen/icon_avatar"
-                    android:layout_height="@dimen/icon_avatar"
-                    android:layout_gravity="center"
-                    android:src="@drawable/ic_personf"
-                    android:contentDescription="Profile"
-                    app:tint="@color/rh_accent"/>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Name / email / plan badge -->
+            <!-- ─── Identity row: avatar (+completion ring) · name/email/pills · edit · logout ─── -->
             <LinearLayout
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical"
-                android:layout_marginStart="14dp">
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
 
-                <TextView
-                    android:id="@+id/profile_name"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="John Doe"
-                    android:textColor="@color/white"
-                    android:textSize="22sp"
-                    android:fontFamily="sans-serif-medium"
-                    android:maxLines="1"
-                    android:ellipsize="end"/>
+                <!-- Avatar with profile-completion ring -->
+                <FrameLayout
+                    android:layout_width="66dp"
+                    android:layout_height="66dp">
 
-                <!-- [PLAN-PILL-REVIEW] disabled for review (backend-driven, keep after review):
-                <TextView
-                    android:id="@+id/profile_plan_badge"
-                    android:layout_width="wrap_content"
+                    <Utils.UsageRing
+                        android:id="@+id/completeness_ring"
+                        android:layout_width="66dp"
+                        android:layout_height="66dp"
+                        android:layout_gravity="center"/>
+
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="52dp"
+                        android:layout_height="52dp"
+                        android:layout_gravity="center"
+                        app:cardCornerRadius="16dp"
+                        app:cardElevation="0dp"
+                        app:cardBackgroundColor="@color/rh_surface_elevated">
+
+                        <TextView
+                            android:id="@+id/profile_initials"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:text="?"
+                            android:textColor="@color/rh_accent"
+                            android:textSize="20sp"
+                            android:fontFamily="sans-serif-medium"/>
+                    </com.google.android.material.card.MaterialCardView>
+                </FrameLayout>
+
+                <!-- Name / email / plan + verified pills -->
+                <LinearLayout
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:text="Free Plan"
-                    android:textColor="@color/white"
-                    android:textSize="10sp"
-                    android:textAllCaps="true"
-                    android:letterSpacing="0.06"
-                    android:background="@drawable/rounded_category_bg"
-                    android:backgroundTint="#1A1A1A"
-                    android:paddingHorizontal="9dp"
-                    android:paddingVertical="3dp"
-                    android:layout_marginTop="7dp"/>
-                -->
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:layout_marginStart="14dp">
+
+                    <TextView
+                        android:id="@+id/profile_name"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="John Doe"
+                        android:textColor="@color/white"
+                        android:textSize="20sp"
+                        android:fontFamily="sans-serif-medium"
+                        android:maxLines="1"
+                        android:ellipsize="end"/>
+
+                    <TextView
+                        android:id="@+id/email_value"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/empty_value"
+                        android:textColor="@color/rh_text_secondary"
+                        android:textSize="13sp"
+                        android:maxLines="1"
+                        android:ellipsize="end"
+                        android:layout_marginTop="2dp"/>
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="7dp">
+
+                        <TextView
+                            android:id="@+id/profile_plan_badge"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textSize="11sp"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/profile_verified_pill"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textSize="11sp"
+                            android:paddingHorizontal="10dp"
+                            android:paddingVertical="3dp"
+                            android:layout_marginStart="6dp"
+                            android:visibility="gone"/>
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- Edit Profile Button -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/edit_profile_button"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    app:cardCornerRadius="20dp"
+                    app:cardElevation="0dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:layout_marginStart="8dp"
+                    android:foreground="?attr/selectableItemBackgroundBorderless"
+                    app:cardBackgroundColor="@color/rh_surface_elevated">
+
+                    <ImageView
+                        android:layout_width="@dimen/icon_edit_profile"
+                        android:layout_height="@dimen/icon_edit_profile"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_edit"
+                        android:contentDescription="Edit profile"
+                        app:tint="@color/rh_accent"/>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Logout Button (danger-tinted) -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/logout_button"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    app:cardCornerRadius="20dp"
+                    app:cardElevation="0dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:layout_marginStart="8dp"
+                    android:foreground="?attr/selectableItemBackgroundBorderless"
+                    app:cardBackgroundColor="@color/rh_surface_elevated">
+
+                    <ImageView
+                        android:layout_width="@dimen/icon_edit_profile"
+                        android:layout_height="@dimen/icon_edit_profile"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_logout"
+                        android:contentDescription="Log out"
+                        app:tint="@color/rh_danger"/>
+                </com.google.android.material.card.MaterialCardView>
             </LinearLayout>
 
-            <!-- Edit Profile Button -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/edit_profile_button"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                app:cardCornerRadius="20dp"
-                app:cardElevation="0dp"
+            <!-- Divider -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/rh_divider"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="14dp"/>
+
+            <!-- ─── At a Glance: Air Quality · Weight · Sleep · Water ─── -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:baselineAligned="false">
+
+                <LinearLayout
+                    android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:orientation="vertical"
+                    android:gravity="center_horizontal">
+                    <ImageView android:layout_width="@dimen/icon_sm" android:layout_height="@dimen/icon_sm"
+                        android:src="@drawable/ic_air" app:tint="@color/rh_accent" android:layout_marginBottom="7dp"/>
+                    <TextView android:id="@+id/aqi_value" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="—" android:textColor="@color/white" android:textSize="16sp" android:fontFamily="sans-serif-medium"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="Air Quality" android:textColor="@color/rh_text_tertiary" android:textSize="10sp" android:layout_marginTop="4dp"/>
+                </LinearLayout>
+
+                <View android:layout_width="1dp" android:layout_height="match_parent"
+                    android:background="@color/rh_divider" android:layout_marginVertical="4dp"/>
+
+                <LinearLayout
+                    android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:orientation="vertical"
+                    android:gravity="center_horizontal">
+                    <ImageView android:layout_width="@dimen/icon_sm" android:layout_height="@dimen/icon_sm"
+                        android:src="@drawable/ic_weight" app:tint="@color/rh_accent" android:layout_marginBottom="7dp"/>
+                    <TextView android:id="@+id/weight_value" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="—" android:textColor="@color/white" android:textSize="16sp" android:fontFamily="sans-serif-medium"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="Weight" android:textColor="@color/rh_text_tertiary" android:textSize="10sp" android:layout_marginTop="4dp"/>
+                </LinearLayout>
+
+                <View android:layout_width="1dp" android:layout_height="match_parent"
+                    android:background="@color/rh_divider" android:layout_marginVertical="4dp"/>
+
+                <LinearLayout
+                    android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:orientation="vertical"
+                    android:gravity="center_horizontal">
+                    <ImageView android:layout_width="@dimen/icon_sm" android:layout_height="@dimen/icon_sm"
+                        android:src="@drawable/ic_sleep" app:tint="@color/rh_accent" android:layout_marginBottom="7dp"/>
+                    <TextView android:id="@+id/sleep_value" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="—" android:textColor="@color/white" android:textSize="16sp" android:fontFamily="sans-serif-medium"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="Sleep" android:textColor="@color/rh_text_tertiary" android:textSize="10sp" android:layout_marginTop="4dp"/>
+                </LinearLayout>
+
+                <View android:layout_width="1dp" android:layout_height="match_parent"
+                    android:background="@color/rh_divider" android:layout_marginVertical="4dp"/>
+
+                <LinearLayout
+                    android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:orientation="vertical"
+                    android:gravity="center_horizontal">
+                    <ImageView android:layout_width="@dimen/icon_sm" android:layout_height="@dimen/icon_sm"
+                        android:src="@drawable/ic_water_full" app:tint="@color/rh_accent" android:layout_marginBottom="7dp"/>
+                    <TextView android:id="@+id/water_value" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="—" android:textColor="@color/white" android:textSize="16sp" android:fontFamily="sans-serif-medium"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="Water" android:textColor="@color/rh_text_tertiary" android:textSize="10sp" android:layout_marginTop="4dp"/>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Divider (hidden with the CTA when the profile is complete) -->
+            <View
+                android:id="@+id/completeness_divider"
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/rh_divider"
+                android:layout_marginTop="14dp"
+                android:layout_marginBottom="12dp"/>
+
+            <!-- ─── Completion CTA (tap → edit profile); hidden at 100% ─── -->
+            <LinearLayout
+                android:id="@+id/completeness_cta"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
                 android:clickable="true"
                 android:focusable="true"
-                android:layout_marginStart="8dp"
-                android:foreground="?attr/selectableItemBackgroundBorderless"
-                app:cardBackgroundColor="@color/rh_surface">
+                android:background="?attr/selectableItemBackground">
+
+                <TextView
+                    android:id="@+id/completeness_percent"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0% complete"
+                    android:textColor="@color/rh_accent"
+                    android:textSize="12sp"
+                    android:fontFamily="sans-serif-medium"/>
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="end"
+                    android:text="Add missing info"
+                    android:textColor="@color/rh_accent"
+                    android:textSize="12sp"/>
 
                 <ImageView
-                    android:layout_width="@dimen/icon_edit_profile"
-                    android:layout_height="@dimen/icon_edit_profile"
-                    android:layout_gravity="center"
-                    android:src="@drawable/ic_edit"
-                    android:contentDescription="Edit profile"
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:layout_marginStart="6dp"
+                    android:src="@drawable/ic_arrow_forward"
                     app:tint="@color/rh_accent"/>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Logout Button (moved from Settings tab; danger-tinted) -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/logout_button"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                app:cardCornerRadius="20dp"
-                app:cardElevation="0dp"
-                android:clickable="true"
-                android:focusable="true"
-                android:layout_marginStart="8dp"
-                android:foreground="?attr/selectableItemBackgroundBorderless"
-                app:cardBackgroundColor="@color/rh_surface">
-
-                <ImageView
-                    android:layout_width="@dimen/icon_edit_profile"
-                    android:layout_height="@dimen/icon_edit_profile"
-                    android:layout_gravity="center"
-                    android:src="@drawable/ic_logout"
-                    android:contentDescription="Log out"
-                    app:tint="@color/rh_danger"/>
-            </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
         </LinearLayout>
-
-    </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
 
     <!-- ═══════════════════ PILL TABS ═══════════════════ -->
     <LinearLayout
@@ -236,83 +396,6 @@
                 android:paddingTop="4dp"
                 android:paddingBottom="24dp">
 
-                <!-- ═══ AT A GLANCE (snapshot) ═══ -->
-                <TextView style="@style/Widget.RH.SectionLabel" android:text="At a Glance"
-                    android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-
-                <com.google.android.material.card.MaterialCardView style="@style/Widget.RH.Card"
-                    android:layout_width="match_parent" android:layout_height="wrap_content">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:paddingVertical="16dp"
-                        android:baselineAligned="false">
-
-                        <!-- Air Quality (AQI) — dynamic, from the user's location data -->
-                        <LinearLayout
-                            android:layout_width="0dp" android:layout_height="wrap_content"
-                            android:layout_weight="1" android:orientation="vertical"
-                            android:gravity="center_horizontal">
-                            <ImageView android:layout_width="@dimen/icon_sm" android:layout_height="@dimen/icon_sm"
-                                android:src="@drawable/ic_air" app:tint="@color/rh_accent" android:layout_marginBottom="7dp"/>
-                            <TextView android:id="@+id/aqi_value" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                                android:text="—" android:textColor="@color/white" android:textSize="18sp" android:fontFamily="sans-serif-medium"/>
-                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                                android:text="Air Quality" android:textColor="@color/rh_text_tertiary" android:textSize="10sp" android:layout_marginTop="4dp"/>
-                        </LinearLayout>
-
-                        <View android:layout_width="1dp" android:layout_height="match_parent"
-                            android:background="@color/rh_divider" android:layout_marginVertical="4dp"/>
-
-                        <!-- Weight -->
-                        <LinearLayout
-                            android:layout_width="0dp" android:layout_height="wrap_content"
-                            android:layout_weight="1" android:orientation="vertical"
-                            android:gravity="center_horizontal">
-                            <ImageView android:layout_width="@dimen/icon_sm" android:layout_height="@dimen/icon_sm"
-                                android:src="@drawable/ic_weight" app:tint="@color/rh_accent" android:layout_marginBottom="7dp"/>
-                            <TextView android:id="@+id/weight_value" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                                android:text="—" android:textColor="@color/white" android:textSize="18sp" android:fontFamily="sans-serif-medium"/>
-                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                                android:text="Weight" android:textColor="@color/rh_text_tertiary" android:textSize="10sp" android:layout_marginTop="4dp"/>
-                        </LinearLayout>
-
-                        <View android:layout_width="1dp" android:layout_height="match_parent"
-                            android:background="@color/rh_divider" android:layout_marginVertical="4dp"/>
-
-                        <!-- Sleep -->
-                        <LinearLayout
-                            android:layout_width="0dp" android:layout_height="wrap_content"
-                            android:layout_weight="1" android:orientation="vertical"
-                            android:gravity="center_horizontal">
-                            <ImageView android:layout_width="@dimen/icon_sm" android:layout_height="@dimen/icon_sm"
-                                android:src="@drawable/ic_sleep" app:tint="@color/rh_accent" android:layout_marginBottom="7dp"/>
-                            <TextView android:id="@+id/sleep_value" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                                android:text="—" android:textColor="@color/white" android:textSize="18sp" android:fontFamily="sans-serif-medium"/>
-                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                                android:text="Sleep" android:textColor="@color/rh_text_tertiary" android:textSize="10sp" android:layout_marginTop="4dp"/>
-                        </LinearLayout>
-
-                        <View android:layout_width="1dp" android:layout_height="match_parent"
-                            android:background="@color/rh_divider" android:layout_marginVertical="4dp"/>
-
-                        <!-- Water -->
-                        <LinearLayout
-                            android:layout_width="0dp" android:layout_height="wrap_content"
-                            android:layout_weight="1" android:orientation="vertical"
-                            android:gravity="center_horizontal">
-                            <ImageView android:layout_width="@dimen/icon_sm" android:layout_height="@dimen/icon_sm"
-                                android:src="@drawable/ic_water_full" app:tint="@color/rh_accent" android:layout_marginBottom="7dp"/>
-                            <TextView android:id="@+id/water_value" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                                android:text="—" android:textColor="@color/white" android:textSize="18sp" android:fontFamily="sans-serif-medium"/>
-                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                                android:text="Water" android:textColor="@color/rh_text_tertiary" android:textSize="10sp" android:layout_marginTop="4dp"/>
-                        </LinearLayout>
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
-
                 <!-- ═══ PERSONAL INFO ═══ -->
                 <TextView style="@style/Widget.RH.SectionLabel" android:text="Personal Info"
                     android:layout_width="wrap_content" android:layout_height="wrap_content"/>
@@ -321,13 +404,6 @@
                     android:layout_width="match_parent" android:layout_height="wrap_content">
                     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
 
-                        <LinearLayout style="@style/Widget.RH.Row" android:layout_width="match_parent" android:layout_height="wrap_content">
-                            <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_email"/>
-                            <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Email"/>
-                            <TextView android:id="@+id/email_value" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                                android:maxLines="1" android:ellipsize="end" android:text="@string/empty_value"/>
-                        </LinearLayout>
-                        <View style="@style/Widget.RH.Divider"/>
                         <LinearLayout style="@style/Widget.RH.Row" android:layout_width="match_parent" android:layout_height="wrap_content">
                             <ImageView style="@style/Widget.RH.Row.Icon" android:src="@drawable/ic_cake"/>
                             <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Age"/>

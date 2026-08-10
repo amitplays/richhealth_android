@@ -10,6 +10,7 @@ public class UserProfile {
     private long id;
     private String name;
     private String email;
+    private boolean emailVerified;
     private Date dateOfBirth;
     private String gender;
     private boolean isMetric;
@@ -170,6 +171,9 @@ public class UserProfile {
 
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
+
+    public boolean isEmailVerified() { return emailVerified; }
+    public void setEmailVerified(boolean emailVerified) { this.emailVerified = emailVerified; }
 
     public Date getDateOfBirth() { return dateOfBirth; }
     public void setDateOfBirth(Date dateOfBirth) { this.dateOfBirth = dateOfBirth; }

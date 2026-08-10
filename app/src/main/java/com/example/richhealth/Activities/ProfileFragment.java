@@ -81,6 +81,8 @@ public class ProfileFragment extends Fragment {
 
     // Header section
     private TextView profileName;
+    private TextView profileInitials;
+    private TextView profileVerifiedPill;
     private MaterialCardView editProfileButton;
 
     // Health Metrics section
@@ -139,6 +141,8 @@ public class ProfileFragment extends Fragment {
     private TextView profilePlanBadge;
     private Utils.UsageRing completenessRing;
     private TextView completenessPercent;
+    private View completenessCta;
+    private View completenessDivider;
     private View tabBtnProfile, tabBtnSettings, tabBtnPlan;
     private TextView tabLabelProfile, tabLabelSettings, tabLabelPlan;
     private android.widget.ImageView tabIconProfile, tabIconSettings, tabIconPlan;
@@ -271,6 +275,18 @@ public class ProfileFragment extends Fragment {
                 loadAndDisplayProfile();
             }
         });
+        // Completion CTA in the header → opens the edit sheet (mirrors iOS "Add missing info").
+        if (completenessCta != null) {
+            completenessCta.setOnClickListener(v -> {
+                if (userProfile != null) {
+                    showEditProfileDialog();
+                } else {
+                    Utilities.toast(requireContext(), "Please wait while loading profile data");
+                    loadAndDisplayProfile();
+                }
+            });
+        }
+
         // Initialize the ProUpgradeDialog (add this after initializing other UI components)
         proUpgradeDialog = new ProUpgradeDialog(requireActivity());
 
@@ -696,7 +712,14 @@ public class ProfileFragment extends Fragment {
     private void initViews(View view) {
         // Header section
         profileName = view.findViewById(R.id.profile_name);
+        profileInitials = view.findViewById(R.id.profile_initials);
+        profileVerifiedPill = view.findViewById(R.id.profile_verified_pill);
         editProfileButton = view.findViewById(R.id.edit_profile_button);
+        completenessRing = view.findViewById(R.id.completeness_ring);
+        completenessPercent = view.findViewById(R.id.completeness_percent);
+        completenessCta = view.findViewById(R.id.completeness_cta);
+        completenessDivider = view.findViewById(R.id.completeness_divider);
+        profilePlanBadge = view.findViewById(R.id.profile_plan_badge);
 
         // Health Metrics section
         aqiValue = view.findViewById(R.id.aqi_value);
@@ -1286,6 +1309,7 @@ public class ProfileFragment extends Fragment {
 
         if (u.has("name")) profile.setName(u.optString("name"));
         if (u.has("email")) profile.setEmail(u.optString("email"));
+        profile.setEmailVerified(u.optBoolean("emailVerified", false));
         if (u.has("gender") && !u.isNull("gender")) profile.setGender(u.optString("gender"));
         if (u.has("phoneNumber") && !u.isNull("phoneNumber")) profile.setPhoneNumber(u.optString("phoneNumber"));
         if (u.has("location") && !u.isNull("location")) profile.setLocation(u.optString("location"));
@@ -1402,6 +1426,8 @@ public class ProfileFragment extends Fragment {
             // Basic Info
             profileName.setText(userProfile.getName() != null && !userProfile.getName().isEmpty() ?
                     userProfile.getName() : "User");
+            if (profileInitials != null) profileInitials.setText(initialsFor(userProfile.getName()));
+            updateVerifiedPill();
 
             // At a Glance: Weight (via updateDisplayedMetrics) + Sleep + Water from the
             // profile, plus live Air Quality fetched from the user's location data.
@@ -2476,7 +2502,33 @@ public class ProfileFragment extends Fragment {
      *  name + color match every other screen (previously this used a divergent palette). */
     private void updatePlanBadge() {
         if (profilePlanBadge == null || proStatusManager == null) return;
-        // [PLAN-PILL-REVIEW] disabled (backend-driven, keep after review): Utils.PlanBadge.apply(profilePlanBadge, proStatusManager.getUserTier());
+        // Tier-tinted plan pill next to the name (mirrors iOS plan pill). PlanBadge maps
+        // tier → label + color; a null/free tier renders the "Free Plan" pill.
+        Utils.PlanBadge.apply(profilePlanBadge, proStatusManager.getUserTier());
+        profilePlanBadge.setVisibility(View.VISIBLE);
+    }
+
+    /** "Verified" pill (mirrors iOS) — shown only when the account's email is verified. */
+    private void updateVerifiedPill() {
+        if (profileVerifiedPill == null) return;
+        boolean verified = userProfile != null && userProfile.isEmailVerified();
+        if (verified) {
+            Utils.StatusPill.apply(profileVerifiedPill, Utils.StatusPill.Intent.SUCCESS, "Verified");
+            profileVerifiedPill.setVisibility(View.VISIBLE);
+        } else {
+            profileVerifiedPill.setVisibility(View.GONE);
+        }
+    }
+
+    /** Up to two initials from the user's name for the avatar (mirrors iOS). */
+    private String initialsFor(String name) {
+        if (name == null || name.trim().isEmpty()) return "?";
+        StringBuilder sb = new StringBuilder();
+        for (String part : name.trim().split("\\s+")) {
+            if (!part.isEmpty()) sb.append(Character.toUpperCase(part.charAt(0)));
+            if (sb.length() == 2) break;
+        }
+        return sb.length() == 0 ? "?" : sb.toString();
     }
 
     /**
@@ -2507,7 +2559,11 @@ public class ProfileFragment extends Fragment {
 
         int percent = total == 0 ? 0 : Math.round(100f * filled / total);
         completenessRing.setPercent(percent);
-        if (completenessPercent != null) completenessPercent.setText(percent + "%");
+        if (completenessPercent != null) completenessPercent.setText(percent + "% complete");
+        // Hide the "Add missing info" CTA (and its divider) once the profile is complete.
+        int ctaVis = percent >= 100 ? View.GONE : View.VISIBLE;
+        if (completenessCta != null) completenessCta.setVisibility(ctaVis);
+        if (completenessDivider != null) completenessDivider.setVisibility(ctaVis);
     }
 
     private boolean notBlank(String s) { return s != null && !s.trim().isEmpty(); }
