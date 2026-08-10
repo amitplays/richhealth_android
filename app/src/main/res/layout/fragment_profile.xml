@@ -116,6 +116,45 @@
                     </LinearLayout>
                 </LinearLayout>
 
+                <!-- Family requests — appears only when there are pending incoming requests -->
+                <FrameLayout
+                    android:id="@+id/family_requests_button"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_marginStart="8dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:visibility="gone">
+
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        app:cardCornerRadius="20dp"
+                        app:cardElevation="0dp"
+                        app:cardBackgroundColor="@color/rh_surface_elevated">
+
+                        <ImageView
+                            android:layout_width="@dimen/icon_edit_profile"
+                            android:layout_height="@dimen/icon_edit_profile"
+                            android:layout_gravity="center"
+                            android:src="@drawable/ic_family_group"
+                            android:contentDescription="Family requests"
+                            app:tint="@color/rh_accent"/>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <TextView
+                        android:id="@+id/family_requests_badge"
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:layout_gravity="top|end"
+                        android:gravity="center"
+                        android:text="0"
+                        android:textColor="@color/white"
+                        android:textSize="10sp"
+                        android:fontFamily="sans-serif-medium"
+                        android:background="@drawable/bg_badge_count"/>
+                </FrameLayout>
+
                 <!-- Edit Profile Button -->
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/edit_profile_button"

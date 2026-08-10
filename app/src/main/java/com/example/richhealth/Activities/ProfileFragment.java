@@ -84,6 +84,8 @@ public class ProfileFragment extends Fragment {
     private TextView profileInitials;
     private TextView profileVerifiedPill;
     private MaterialCardView editProfileButton;
+    private View familyRequestsButton;
+    private TextView familyRequestsBadge;
 
     // Health Metrics section
     private TextView aqiValue;
@@ -282,6 +284,19 @@ public class ProfileFragment extends Fragment {
                     loadAndDisplayProfile();
                 }
             });
+        }
+
+        // Family requests icon (header) → open the incoming-requests bottom sheet.
+        if (familyRequestsButton != null) {
+            familyRequestsButton.setOnClickListener(v ->
+                    Utils.FamilyRequestsSheet.show(requireActivity(), () -> {
+                        // A request was accepted/rejected → refresh the badge and, if the
+                        // owner accepted a new relative, the family member list.
+                        refreshFamilyRequestsBadge();
+                        if (proStatusManager != null && proStatusManager.isFamilyPlanOwner()) {
+                            loadFamilyMembers();
+                        }
+                    }));
         }
 
         // Initialize the ProUpgradeDialog (add this after initializing other UI components)
@@ -712,6 +727,8 @@ public class ProfileFragment extends Fragment {
         profileInitials = view.findViewById(R.id.profile_initials);
         profileVerifiedPill = view.findViewById(R.id.profile_verified_pill);
         editProfileButton = view.findViewById(R.id.edit_profile_button);
+        familyRequestsButton = view.findViewById(R.id.family_requests_button);
+        familyRequestsBadge = view.findViewById(R.id.family_requests_badge);
         completenessRing = view.findViewById(R.id.completeness_ring);
         completenessPercent = view.findViewById(R.id.completeness_percent);
         completenessCta = view.findViewById(R.id.completeness_cta);
@@ -1417,6 +1434,7 @@ public class ProfileFragment extends Fragment {
                     userProfile.getName() : "User");
             if (profileInitials != null) profileInitials.setText(initialsFor(userProfile.getName()));
             updateVerifiedPill();
+            refreshFamilyRequestsBadge();
 
             // At a Glance: Weight (via updateDisplayedMetrics) + Sleep + Water from the
             // profile, plus live Air Quality fetched from the user's location data.
@@ -2446,6 +2464,23 @@ public class ProfileFragment extends Fragment {
             if (sb.length() == 2) break;
         }
         return sb.length() == 0 ? "?" : sb.toString();
+    }
+
+    /** Header requests icon: shown with a count badge only when incoming family requests exist. */
+    private void refreshFamilyRequestsBadge() {
+        if (familyRequestsButton == null || getActivity() == null) return;
+        Utils.FamilyRequestsSheet.fetchPendingCount(getActivity(), count -> {
+            if (!isAdded() || familyRequestsButton == null) return;
+            if (count > 0) {
+                familyRequestsButton.setVisibility(View.VISIBLE);
+                if (familyRequestsBadge != null) {
+                    familyRequestsBadge.setVisibility(View.VISIBLE);
+                    familyRequestsBadge.setText(count > 9 ? "9+" : String.valueOf(count));
+                }
+            } else {
+                familyRequestsButton.setVisibility(View.GONE);
+            }
+        });
     }
 
     /**
