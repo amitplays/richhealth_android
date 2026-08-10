@@ -165,9 +165,6 @@ public class ProfileFragment extends Fragment {
 
     // Plan tab (live usage)
     private TextView planCurrentName, planCurrentDesc, planStatusChip;
-    private Utils.UsageRing usageRingChat, usageRingAnalysis, usageRingReports, usageRingNutri;
-    private TextView usageCountChat, usageCountAnalysis, usageCountReports, usageCountNutri;
-    private boolean planUsageLoaded = false;
 
     // AI & Chat section
     private LinearLayout aiToneItem;
@@ -774,14 +771,6 @@ public class ProfileFragment extends Fragment {
         planCurrentName = view.findViewById(R.id.plan_current_name);
         planCurrentDesc = view.findViewById(R.id.plan_current_desc);
         planStatusChip = view.findViewById(R.id.plan_status_chip);
-        usageRingChat = view.findViewById(R.id.usage_ring_chat);
-        usageRingAnalysis = view.findViewById(R.id.usage_ring_analysis);
-        usageRingReports = view.findViewById(R.id.usage_ring_reports);
-        usageRingNutri = view.findViewById(R.id.usage_ring_nutri);
-        usageCountChat = view.findViewById(R.id.usage_count_chat);
-        usageCountAnalysis = view.findViewById(R.id.usage_count_analysis);
-        usageCountReports = view.findViewById(R.id.usage_count_reports);
-        usageCountNutri = view.findViewById(R.id.usage_count_nutri);
 
         // AI & Chat section
         aiToneItem = view.findViewById(R.id.ai_tone_item);
@@ -2378,7 +2367,6 @@ public class ProfileFragment extends Fragment {
 
         if (index == 2) {
             updatePlanStatusCard();
-            if (!planUsageLoaded) fetchPlanUsage();
         }
     }
 
@@ -2415,77 +2403,6 @@ public class ProfileFragment extends Fragment {
         }
         // Keep the Membership section in sync whenever the Plan tab is shown.
         bindMembershipSection();
-    }
-
-    /** Pulls /api/user/usage and fills the four usage rings. */
-    private void fetchPlanUsage() {
-        Context context = getContext();
-        if (context == null) return;
-        TokenManager tokenManager = TokenManager.getInstance(context);
-        String token = tokenManager.getToken();
-        if (token == null) return;
-
-        // Skeleton-load the usage counts while /api/user/usage is in flight.
-        Skeleton.show(usageCountChat, usageCountAnalysis, usageCountReports, usageCountNutri);
-
-        String url = ApiConfig.BASE_URL + "/api/user/usage";
-        StringRequest request = new StringRequest(Request.Method.GET, url,
-                response -> {
-                    if (!isAdded()) return;
-                    try {
-                        JSONObject body = new JSONObject(response);
-                        JSONObject usage = body.optJSONObject("usage");
-                        Skeleton.hide(usageCountChat, usageCountAnalysis, usageCountReports, usageCountNutri);
-                        bindUsageRing(usageRingChat, usageCountChat, usage, "chatSessions");
-                        bindUsageRing(usageRingAnalysis, usageCountAnalysis, usage, "healthAnalysis");
-                        bindUsageRing(usageRingReports, usageCountReports, usage, "medicalReports");
-                        bindUsageRing(usageRingNutri, usageCountNutri, usage, "nutricheck");
-                        planUsageLoaded = true;
-                    } catch (Exception e) {
-                        Log.e(TAG, "Failed to parse usage", e);
-                        Skeleton.hide(usageCountChat, usageCountAnalysis, usageCountReports, usageCountNutri);
-                    }
-                },
-                error -> {
-                    Log.e(TAG, "Failed to fetch usage", error);
-                    if (!isAdded()) return;
-                    // One compact error pill, hide the rest so nothing shows stale.
-                    String reason = error.networkResponse == null ? "No connection" : "Unavailable";
-                    Skeleton.error(usageCountChat, reason);
-                    Skeleton.hideAndGone(usageCountAnalysis, usageCountReports, usageCountNutri);
-                }
-        ) {
-            @Override
-            public Map<String, String> getHeaders() {
-                Map<String, String> h = new HashMap<>();
-                h.put("Authorization", "Bearer " + token);
-                return h;
-            }
-        };
-        Volley.newRequestQueue(context).add(request);
-    }
-
-    private void bindUsageRing(Utils.UsageRing ring, TextView countView, JSONObject usage, String feature) {
-        if (ring == null || countView == null) return;
-        JSONObject f = usage != null ? usage.optJSONObject(feature) : null;
-        if (f == null) {
-            ring.setUsage(0, 0);
-            countView.setText(getString(R.string.empty_value));
-            return;
-        }
-        int count = f.optInt("count", 0);
-        boolean hasLimit = !f.isNull("limit");
-        int limit = f.optInt("limit", 0);
-        if (!hasLimit) {
-            ring.setPercent(100);
-            countView.setText(count + " used");
-        } else if (limit == 0) {
-            ring.setUsage(0, 1);
-            countView.setText("Locked");
-        } else {
-            ring.setUsage(count, limit);
-            countView.setText(Math.min(count, limit) + "/" + limit);
-        }
     }
 
     private void styleTab(View container, TextView label, android.widget.ImageView icon, boolean selected) {

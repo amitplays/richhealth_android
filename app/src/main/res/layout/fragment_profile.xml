@@ -1038,51 +1038,6 @@
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
-                <!-- ═══ THIS MONTH'S USAGE (live rings) ═══ -->
-                <TextView style="@style/Widget.RH.SectionLabel" android:text="This Month"
-                    android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-
-                <com.google.android.material.card.MaterialCardView style="@style/Widget.RH.Card"
-                    android:layout_width="match_parent" android:layout_height="wrap_content">
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
-
-                        <!-- Chat -->
-                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal"
-                            android:gravity="center_vertical" android:paddingHorizontal="16dp" android:paddingVertical="13dp">
-                            <Utils.UsageRing android:id="@+id/usage_ring_chat" android:layout_width="26dp" android:layout_height="26dp" android:layout_marginEnd="14dp"/>
-                            <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Chat / session"/>
-                            <TextView android:id="@+id/usage_count_chat" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="—"/>
-                        </LinearLayout>
-                        <View style="@style/Widget.RH.Divider"/>
-
-                        <!-- Health analysis -->
-                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal"
-                            android:gravity="center_vertical" android:paddingHorizontal="16dp" android:paddingVertical="13dp">
-                            <Utils.UsageRing android:id="@+id/usage_ring_analysis" android:layout_width="26dp" android:layout_height="26dp" android:layout_marginEnd="14dp"/>
-                            <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Health analysis"/>
-                            <TextView android:id="@+id/usage_count_analysis" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="—"/>
-                        </LinearLayout>
-                        <View style="@style/Widget.RH.Divider"/>
-
-                        <!-- Medical reports -->
-                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal"
-                            android:gravity="center_vertical" android:paddingHorizontal="16dp" android:paddingVertical="13dp">
-                            <Utils.UsageRing android:id="@+id/usage_ring_reports" android:layout_width="26dp" android:layout_height="26dp" android:layout_marginEnd="14dp"/>
-                            <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="Medical reports"/>
-                            <TextView android:id="@+id/usage_count_reports" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="—"/>
-                        </LinearLayout>
-                        <View style="@style/Widget.RH.Divider"/>
-
-                        <!-- NutriCheck -->
-                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal"
-                            android:gravity="center_vertical" android:paddingHorizontal="16dp" android:paddingVertical="13dp">
-                            <Utils.UsageRing android:id="@+id/usage_ring_nutri" android:layout_width="26dp" android:layout_height="26dp" android:layout_marginEnd="14dp"/>
-                            <TextView style="@style/Widget.RH.RowLabel" android:layout_height="wrap_content" android:text="NutriCheck"/>
-                            <TextView android:id="@+id/usage_count_nutri" style="@style/Widget.RH.RowValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="—"/>
-                        </LinearLayout>
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
-
                 <TextView style="@style/Widget.RH.SectionLabel" android:text="Membership"
                     android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 
