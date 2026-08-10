@@ -56,14 +56,6 @@
                     android:visibility="gone">
 
                     <ImageView
-                        android:id="@+id/thinking_chevron"
-                        android:layout_width="14dp"
-                        android:layout_height="14dp"
-                        android:layout_marginEnd="6dp"
-                        android:src="@drawable/ic_chevron_down"
-                        app:tint="#4A6A6A"/>
-
-                    <ImageView
                         android:id="@+id/thinking_icon"
                         android:layout_width="13dp"
                         android:layout_height="13dp"
@@ -78,6 +70,14 @@
                         android:text="Thought process"
                         android:textColor="#7FA8A8"
                         android:textSize="11sp"/>
+
+                    <ImageView
+                        android:id="@+id/thinking_chevron"
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:layout_marginStart="6dp"
+                        android:src="@drawable/ic_chevron_down"
+                        app:tint="#4A6A6A"/>
                 </LinearLayout>
 
                 <TextView
