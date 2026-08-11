@@ -140,7 +140,6 @@ public class ProfileFragment extends Fragment {
     private LinearLayout notificationItem;
 
     // Header + tabs (overhaul)
-    private TextView profilePlanBadge;
     private Utils.UsageRing completenessRing;
     private TextView completenessPercent;
     private View completenessCta;
@@ -733,7 +732,6 @@ public class ProfileFragment extends Fragment {
         completenessPercent = view.findViewById(R.id.completeness_percent);
         completenessCta = view.findViewById(R.id.completeness_cta);
         completenessDivider = view.findViewById(R.id.completeness_divider);
-        profilePlanBadge = view.findViewById(R.id.profile_plan_badge);
 
         // Health Metrics section
         aqiValue = view.findViewById(R.id.aqi_value);
@@ -2433,14 +2431,10 @@ public class ProfileFragment extends Fragment {
         if (icon != null) icon.setColorFilter(color);
     }
 
-    /** Plan badge in the header — uses PlanBadge (single source of truth) so the plan
-     *  name + color match every other screen (previously this used a divergent palette). */
+    /** No-op: the header plan pill was removed. The plan is shown only on the Plan tab card
+     *  (plan_current_name + plan_status_chip). Kept as a no-op so callers stay unchanged. */
     private void updatePlanBadge() {
-        if (profilePlanBadge == null || proStatusManager == null) return;
-        // Tier-tinted plan pill next to the name (mirrors iOS plan pill). PlanBadge maps
-        // tier → label + color; a null/free tier renders the "Free Plan" pill.
-        Utils.PlanBadge.apply(profilePlanBadge, proStatusManager.getUserTier());
-        profilePlanBadge.setVisibility(View.VISIBLE);
+        // intentionally empty
     }
 
     /** "Verified" pill (mirrors iOS) — shown only when the account's email is verified. */

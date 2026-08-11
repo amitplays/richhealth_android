@@ -43,7 +43,7 @@ public final class UsageBottomSheet {
             {"healthAnalysis",  "Health Analysis"},
             {"medicalReports",  "Medical Reports"},
             {"nutricheck",      "NutriCheck"},
-            {"dietaryInsights", "Dietary Insights"},
+            // Dietary Insights hidden for now (product decision).
     };
 
     public static void show(final Activity activity) {
