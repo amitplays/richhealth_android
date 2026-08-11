@@ -184,19 +184,25 @@ public class ProUpgradeDialog implements PaymentManager.PaymentCallback,
 
     // ── Upgrade dialog ────────────────────────────────────────────────────────
     private void openUpgradeDialog() {
-        upgradeDialog = new Dialog(context, R.style.DialogTheme);
-        upgradeDialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-        upgradeDialog.setContentView(R.layout.dialog_pro_upgrade);
+        // Bottom-sheet presentation (matches iOS PaywallView + UsageBottomSheet). All plan
+        // pager / coupon / Razorpay wiring below is unchanged — only the container changed.
+        com.google.android.material.bottomsheet.BottomSheetDialog sheet =
+                new com.google.android.material.bottomsheet.BottomSheetDialog(context, R.style.RH_Theme_BottomSheetDialog);
+        sheet.setContentView(R.layout.dialog_pro_upgrade);
+        upgradeDialog = sheet;
 
-        Window w = upgradeDialog.getWindow();
-        if (w != null) {
-            WindowManager.LayoutParams lp = new WindowManager.LayoutParams();
-            lp.copyFrom(w.getAttributes());
-            lp.width = WindowManager.LayoutParams.MATCH_PARENT;
-            lp.height = WindowManager.LayoutParams.MATCH_PARENT;
-            w.setAttributes(lp);
-            w.setBackgroundDrawable(new ColorDrawable(Color.parseColor("#1A1A1A")));
-            w.setWindowAnimations(R.style.DialogAnimationSlideRight);
+        // Transparent internal container (only our rounded-top surface shows) + open tall,
+        // near-full height so the plan cards and the pinned CTA are fully visible.
+        View sheetContainer = sheet.findViewById(com.google.android.material.R.id.design_bottom_sheet);
+        if (sheetContainer != null) {
+            sheetContainer.setBackgroundColor(Color.TRANSPARENT);
+            android.view.ViewGroup.LayoutParams clp = sheetContainer.getLayoutParams();
+            clp.height = (int) (context.getResources().getDisplayMetrics().heightPixels * 0.92f);
+            sheetContainer.setLayoutParams(clp);
+            com.google.android.material.bottomsheet.BottomSheetBehavior<View> beh =
+                    com.google.android.material.bottomsheet.BottomSheetBehavior.from(sheetContainer);
+            beh.setState(com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED);
+            beh.setSkipCollapsed(true);
         }
 
         upgradeButton = upgradeDialog.findViewById(R.id.upgrade_button);
