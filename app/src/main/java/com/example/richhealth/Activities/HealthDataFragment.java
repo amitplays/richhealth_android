@@ -539,7 +539,6 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         symptomsPanel.getWindow().getAttributes().windowAnimations = R.style.DialogAnimationSlideRight;
 
         // Close button
-        symptomsPanel.findViewById(R.id.close_panel_button).setOnClickListener(v -> symptomsPanel.dismiss());
 
         // Setup RecyclerView
         RecyclerView symptomsRecycler = symptomsPanel.findViewById(R.id.symptoms_recycler);
@@ -599,7 +598,6 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         measurementsPanel.getWindow().getAttributes().windowAnimations = R.style.DialogAnimationSlideRight;
 
         // Close button
-        measurementsPanel.findViewById(R.id.close_panel_button).setOnClickListener(v -> measurementsPanel.dismiss());
 
         // Setup RecyclerView
         RecyclerView measurementsRecycler = measurementsPanel.findViewById(R.id.measurements_recycler);
@@ -709,7 +707,6 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         periodLogsPanel.getWindow().getAttributes().windowAnimations = R.style.DialogAnimationSlideRight;
 
         // Close button
-        periodLogsPanel.findViewById(R.id.close_panel_button).setOnClickListener(v -> periodLogsPanel.dismiss());
 
         // Setup RecyclerView
         RecyclerView periodLogsRecycler = periodLogsPanel.findViewById(R.id.period_logs_recycler);
@@ -770,7 +767,6 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         medicalReportsPanel.getWindow().getAttributes().windowAnimations = R.style.DialogAnimationSlideRight;
 
         // Close button
-        medicalReportsPanel.findViewById(R.id.close_panel_button).setOnClickListener(v -> medicalReportsPanel.dismiss());
 
         // Initialize views (header is now a search field — no title/subtitle)
         com.google.android.material.button.MaterialButton addReportButton = medicalReportsPanel.findViewById(R.id.add_medical_report_button);
@@ -839,7 +835,6 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         medicationsPanel.getWindow().getAttributes().windowAnimations = R.style.DialogAnimationSlideRight;
 
         // Close button
-        medicationsPanel.findViewById(R.id.close_panel_button).setOnClickListener(v -> medicationsPanel.dismiss());
 
         // Setup Add Medication button
         View addMedicationButton = medicationsPanel.findViewById(R.id.add_medication_button);
@@ -886,7 +881,6 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         familyMembersPanel.getWindow().getAttributes().windowAnimations = R.style.DialogAnimationSlideRight;
 
         // Close button
-        familyMembersPanel.findViewById(R.id.close_panel_button).setOnClickListener(v -> familyMembersPanel.dismiss());
 
         // Setup RecyclerView for family relationships
         sentRequestsRecyclerView = familyMembersPanel.findViewById(R.id.family_relationships_recycler);

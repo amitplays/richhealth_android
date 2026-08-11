@@ -147,7 +147,6 @@ public class AIFragment extends Fragment implements BackPressHandler {
     private View emptyStateView;
     private MaterialButton newChatButton;
     private MaterialButton deleteAllChatsButton;
-    private ImageButton closePanelButton;
     private EditText chatSearchInput;
     private View historyLoading;
     // Full, unfiltered session list — the search box filters a copy of this.
@@ -1469,7 +1468,6 @@ public class AIFragment extends Fragment implements BackPressHandler {
         emptyStateView = chatHistoryPanel.findViewById(R.id.empty_state);
         newChatButton = chatHistoryPanel.findViewById(R.id.new_chat_button);
         deleteAllChatsButton = chatHistoryPanel.findViewById(R.id.delete_all_chats_button);
-        closePanelButton = chatHistoryPanel.findViewById(R.id.close_panel_button);
         historyLoading = chatHistoryPanel.findViewById(R.id.history_loading);
 
         // Search box — filters the loaded sessions live (focus visuals handled by
@@ -1498,10 +1496,6 @@ public class AIFragment extends Fragment implements BackPressHandler {
 
         deleteAllChatsButton.setOnClickListener(v -> {
             showDeleteAllChatsConfirmDialog();
-        });
-
-        closePanelButton.setOnClickListener(v -> {
-            chatHistoryPanel.dismiss();
         });
 
         // Setup chat history button (3-dots in pill) in the main view
@@ -2830,9 +2824,6 @@ public class AIFragment extends Fragment implements BackPressHandler {
 
         savedChatsPanel.getWindow().setAttributes(params);
         savedChatsPanel.getWindow().getAttributes().windowAnimations = R.style.DialogAnimationSlideRight;
-
-        // Close button
-        savedChatsPanel.findViewById(R.id.close_panel_button).setOnClickListener(v -> savedChatsPanel.dismiss());
 
         RecyclerView savedChatsRecycler = savedChatsPanel.findViewById(R.id.saved_chats_recycler);
         savedChatAdapter = new SavedChatAdapter(requireContext());

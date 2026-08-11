@@ -51,15 +51,6 @@
             app:tint="#008b8b"
             android:contentDescription="Add measurement" />
 
-        <ImageButton
-            android:id="@+id/close_panel_button"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:layout_marginStart="2dp"
-            android:src="@drawable/ic_close"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            app:tint="#008b8b"
-            android:contentDescription="Close panel" />
     </LinearLayout>
 
     <!-- Content -->
