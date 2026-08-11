@@ -1,198 +1,150 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Full-page plan card used inside the pager RecyclerView.
-    Width is set programmatically to (screenWidth - 80dp) for peek effect.
-    Accent color (icon, price, stroke, stat values) is applied from Java per tier.
+    Compact plan card — mirrors iOS PaywallView's single selected-plan card.
+    One card is shown at a time; the pill tabs above switch the selected plan.
+    Content (name, price, discount, features) is bound from the backend
+    (/api/payment/plans) in Java. Accent color is applied per tier.
+    No internal scroll / stat tiles / tagline — kept small like iOS so the
+    sheet sizes to content.
 -->
 <com.google.android.material.card.MaterialCardView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
+    android:layout_height="wrap_content"
     app:cardCornerRadius="18dp"
     app:cardElevation="0dp"
     app:strokeWidth="1.5dp"
     app:strokeColor="#2E2E2E"
     app:cardBackgroundColor="#1E1E1E">
 
-    <androidx.core.widget.NestedScrollView
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:fillViewport="true">
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
 
+        <!-- ── Name + BEST VALUE badge ──────────────────────────────────── -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="10dp">
+
+            <TextView
+                android:id="@+id/plan_name"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="#FFFFFF"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_marginEnd="8dp" />
+
+            <!-- "BEST VALUE" chip — shown for isMostPopular plans -->
+            <TextView
+                android:id="@+id/plan_popular_badge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="BEST VALUE"
+                android:textColor="#008b8b"
+                android:textSize="8sp"
+                android:textStyle="bold"
+                android:background="@drawable/chip_bg_teal_outline"
+                android:visibility="gone" />
+
+        </LinearLayout>
+
+        <!-- ── Price block ─────────────────────────────────────────────── -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="14dp">
+            android:layout_marginBottom="12dp">
 
-            <!-- ── Plan identity row ────────────────────────────────────────── -->
+            <!-- Main price row: big price + discount message pill -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/plan_price"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="30sp"
+                    android:textStyle="bold"
+                    android:layout_marginEnd="10dp" />
+
+                <!-- Discount message pill — e.g. "30% off — most popular" -->
+                <TextView
+                    android:id="@+id/plan_discount_msg"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/chip_bg_teal_outline"
+                    android:paddingLeft="10dp"
+                    android:paddingRight="10dp"
+                    android:paddingTop="3dp"
+                    android:paddingBottom="3dp"
+                    android:textColor="#00BFA5"
+                    android:textSize="11sp"
+                    android:visibility="gone" />
+
+            </LinearLayout>
+
+            <!-- Original price strikethrough + duration -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:layout_marginBottom="8dp">
+                android:layout_marginTop="4dp">
 
-                <FrameLayout
-                    android:id="@+id/plan_icon_bg"
-                    android:layout_width="44dp"
-                    android:layout_height="44dp"
-                    android:layout_marginEnd="12dp">
-                    <ImageView
-                        android:id="@+id/plan_icon"
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:layout_gravity="center"
-                        android:scaleType="fitCenter" />
-                </FrameLayout>
-
-                <LinearLayout
-                    android:layout_width="0dp"
+                <TextView
+                    android:id="@+id/plan_original_price"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
+                    android:textColor="#4A4A4A"
+                    android:textSize="13sp"
+                    android:layout_marginEnd="8dp"
+                    android:visibility="gone" />
 
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:layout_marginBottom="3dp">
-
-                        <TextView
-                            android:id="@+id/plan_name"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:textColor="#FFFFFF"
-                            android:textSize="17sp"
-                            android:textStyle="bold"
-                            android:layout_marginEnd="7dp" />
-
-                        <!-- "BEST VALUE" chip — shown for isMostPopular plans -->
-                        <TextView
-                            android:id="@+id/plan_popular_badge"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="BEST VALUE"
-                            android:textColor="#008b8b"
-                            android:textSize="8sp"
-                            android:textStyle="bold"
-                            android:background="@drawable/chip_bg_teal_outline"
-                            android:visibility="gone" />
-
-                    </LinearLayout>
-
-                    <TextView
-                        android:id="@+id/plan_tagline"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textColor="#5A5A5A"
-                        android:textSize="12sp" />
-
-                </LinearLayout>
+                <TextView
+                    android:id="@+id/plan_duration"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="#8A8A8A"
+                    android:textSize="12sp" />
 
             </LinearLayout>
-
-            <!-- ── Price block ─────────────────────────────────────────────── -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:layout_marginBottom="10dp">
-
-                <!-- Main price row: big price + discount message pill -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
-
-                    <TextView
-                        android:id="@+id/plan_price"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textSize="26sp"
-                        android:textStyle="bold"
-                        android:layout_marginEnd="10dp" />
-
-                    <!-- Discount message pill — e.g. "30% off — most popular" -->
-                    <TextView
-                        android:id="@+id/plan_discount_msg"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:background="@drawable/chip_bg_teal_outline"
-                        android:paddingLeft="10dp"
-                        android:paddingRight="10dp"
-                        android:paddingTop="3dp"
-                        android:paddingBottom="3dp"
-                        android:textColor="#00BFA5"
-                        android:textSize="11sp"
-                        android:visibility="gone" />
-
-                </LinearLayout>
-
-                <!-- Original price strikethrough + duration -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginTop="3dp">
-
-                    <TextView
-                        android:id="@+id/plan_original_price"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textColor="#4A4A4A"
-                        android:textSize="13sp"
-                        android:layout_marginEnd="8dp"
-                        android:visibility="gone" />
-
-                    <TextView
-                        android:id="@+id/plan_duration"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textColor="#4A4A4A"
-                        android:textSize="12sp" />
-
-                </LinearLayout>
-
-            </LinearLayout>
-
-            <!-- ── Key stats row — 3 tiles built programmatically ──────────── -->
-            <LinearLayout
-                android:id="@+id/plan_stats_row"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginBottom="10dp" />
-
-            <!-- ── Features section ─────────────────────────────────────────── -->
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="0.5dp"
-                android:background="#2A2A2A"
-                android:layout_marginBottom="8dp" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="WHAT'S INCLUDED"
-                android:textColor="#505050"
-                android:textSize="10sp"
-                android:textAllCaps="true"
-                android:letterSpacing="0.08"
-                android:layout_marginBottom="7dp" />
-
-            <!-- Feature rows — built programmatically -->
-            <LinearLayout
-                android:id="@+id/plan_features_list"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical" />
 
         </LinearLayout>
-    </androidx.core.widget.NestedScrollView>
+
+        <!-- ── Features section ─────────────────────────────────────────── -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="0.5dp"
+            android:background="#2A2A2A"
+            android:layout_marginBottom="10dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="WHAT'S INCLUDED"
+            android:textColor="#505050"
+            android:textSize="10sp"
+            android:textAllCaps="true"
+            android:letterSpacing="0.08"
+            android:layout_marginBottom="8dp" />
+
+        <!-- Feature rows — built programmatically from backend features -->
+        <LinearLayout
+            android:id="@+id/plan_features_list"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+
+    </LinearLayout>
 
 </com.google.android.material.card.MaterialCardView>

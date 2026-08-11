@@ -98,30 +98,16 @@ public class ProUpgradeDialog implements PaymentManager.PaymentCallback,
     private PlanOption selectedPlan = null;
     private String limitContext = null;
 
-    // Coupon state — applied is non-null only after backend confirms validity
-    private String appliedCouponCode = null;
-    private double appliedCouponFinalAmount = 0;
-    private double appliedCouponDiscount = 0;
-    private int appliedCouponPlanId = 0;
-
     // Dialog views
     private Dialog upgradeDialog;
     private MaterialButton upgradeButton;
-    private RecyclerView plansPager;
+    private View planCardView;              // the single inflated item_plan_card
     private LinearLayout chipsRow;
-    private LinearLayoutManager pagerLayoutManager;
-    private PagerSnapHelper snapHelper;
+    private List<PlanOption> upgradeablePlans = new ArrayList<>();
 
     // Chip views for selection state updates (parallel to upgradeable list)
     private final List<View> chipViews = new ArrayList<>();
     private ObjectAnimator logoAnimator;
-
-    // ── Stat tile model ───────────────────────────────────────────────────────
-    private static class Stat {
-        final String value, label;
-        final int iconRes;
-        Stat(String v, String l, int icon) { value = v; label = l; iconRes = icon; }
-    }
 
     // ── Public interface ──────────────────────────────────────────────────────
     public interface ProUpgradeCallback {
@@ -197,7 +183,8 @@ public class ProUpgradeDialog implements PaymentManager.PaymentCallback,
         if (sheetContainer != null) {
             sheetContainer.setBackgroundColor(Color.TRANSPARENT);
             android.view.ViewGroup.LayoutParams clp = sheetContainer.getLayoutParams();
-            clp.height = (int) (context.getResources().getDisplayMetrics().heightPixels * 0.92f);
+            // Wrap to content (matches iOS — the compact card needs no tall scroll sheet).
+            clp.height = android.view.ViewGroup.LayoutParams.WRAP_CONTENT;
             sheetContainer.setLayoutParams(clp);
             com.google.android.material.bottomsheet.BottomSheetBehavior<View> beh =
                     com.google.android.material.bottomsheet.BottomSheetBehavior.from(sheetContainer);
@@ -206,7 +193,6 @@ public class ProUpgradeDialog implements PaymentManager.PaymentCallback,
         }
 
         upgradeButton = upgradeDialog.findViewById(R.id.upgrade_button);
-        plansPager    = upgradeDialog.findViewById(R.id.plans_pager);
         chipsRow      = upgradeDialog.findViewById(R.id.plans_chip_row);
 
         // Limit context banner
@@ -221,8 +207,6 @@ public class ProUpgradeDialog implements PaymentManager.PaymentCallback,
 
         upgradeButton.setEnabled(false);
         upgradeButton.setOnClickListener(v -> onUpgradeClicked());
-
-        setupCouponRow();
 
         upgradeDialog.show();
 
@@ -291,56 +275,25 @@ public class ProUpgradeDialog implements PaymentManager.PaymentCallback,
 
         List<PlanOption> upgradeable = getUpgradeablePlans(plans, currentTier);
         if (upgradeable.isEmpty()) upgradeable = plans;
+        upgradeablePlans = upgradeable;
 
-        // Build segmented chip tabs
+        // Pill tabs (matches iOS segmented selector)
         buildChips(upgradeable);
 
-        // Set up RecyclerView pager
-        pagerLayoutManager = new LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false);
-        plansPager.setLayoutManager(pagerLayoutManager);
-        plansPager.setClipToPadding(false);
-        plansPager.setClipChildren(false);
-        int peekPx = dpToPx(24);
-        plansPager.setPadding(peekPx, 0, peekPx, 0);
+        // Inflate the single compact plan card into its container (one card at a
+        // time, switched by the pills — same model as iOS PaywallView).
+        FrameLayout cardContainer = upgradeDialog.findViewById(R.id.plan_card_container);
+        cardContainer.removeAllViews();
+        planCardView = LayoutInflater.from(context)
+                .inflate(R.layout.item_plan_card, cardContainer, false);
+        cardContainer.addView(planCardView);
 
-        // Gap between cards
-        plansPager.addItemDecoration(new RecyclerView.ItemDecoration() {
-            @Override public void getItemOffsets(@NonNull android.graphics.Rect out,
-                    @NonNull View view, @NonNull RecyclerView parent,
-                    @NonNull RecyclerView.State state) {
-                out.right = dpToPx(10);
-            }
-        });
-
-        snapHelper = new PagerSnapHelper();
-        snapHelper.attachToRecyclerView(plansPager);
-
-        final List<PlanOption> finalUpgradeable = upgradeable;
-        plansPager.setAdapter(new PlanPagerAdapter(upgradeable));
-
-        // Update chip + button when swipe settles
-        plansPager.addOnScrollListener(new RecyclerView.OnScrollListener() {
-            @Override public void onScrollStateChanged(@NonNull RecyclerView rv, int state) {
-                if (state == RecyclerView.SCROLL_STATE_IDLE) {
-                    View snap = snapHelper.findSnapView(pagerLayoutManager);
-                    if (snap != null) {
-                        int pos = pagerLayoutManager.getPosition(snap);
-                        onPageChanged(pos, finalUpgradeable);
-                    }
-                }
-            }
-        });
-
-        // Default page: most popular, or index 0
+        // Default selection: most popular, else first
         int defaultIdx = 0;
         for (int i = 0; i < upgradeable.size(); i++) {
             if (upgradeable.get(i).isMostPopular()) { defaultIdx = i; break; }
         }
-        final int startIdx = defaultIdx;
-        plansPager.post(() -> {
-            plansPager.scrollToPosition(startIdx);
-            onPageChanged(startIdx, finalUpgradeable);
-        });
+        onPageChanged(defaultIdx, upgradeable);
     }
 
     // ── Segmented chip tabs ───────────────────────────────────────────────────
@@ -374,11 +327,7 @@ public class ProUpgradeDialog implements PaymentManager.PaymentCallback,
                     LinearLayout.LayoutParams.WRAP_CONTENT);
             chip.setLayoutParams(lp);
 
-            chip.setOnClickListener(v -> {
-                plansPager.smoothScrollToPosition(idx);
-                // Also fire immediately for chip feel
-                onPageChanged(idx, upgradeable);
-            });
+            chip.setOnClickListener(v -> onPageChanged(idx, upgradeable));
 
             chipsRow.addView(chip);
             chipViews.add(chip);
@@ -408,41 +357,17 @@ public class ProUpgradeDialog implements PaymentManager.PaymentCallback,
     private void onPageChanged(int pos, List<PlanOption> upgradeable) {
         if (pos < 0 || pos >= upgradeable.size()) return;
         selectedPlan = upgradeable.get(pos);
-        // If a coupon was applied for a different plan, clear it — must re-validate per plan
-        if (appliedCouponCode != null && appliedCouponPlanId != selectedPlan.getPlanId()) {
-            appliedCouponCode = null;
-            appliedCouponDiscount = 0;
-            appliedCouponFinalAmount = 0;
-            appliedCouponPlanId = 0;
-            if (upgradeDialog != null) {
-                View statusRow = upgradeDialog.findViewById(R.id.coupon_status_row);
-                View ticketRow = upgradeDialog.findViewById(R.id.coupon_row);
-                MaterialButton ap = upgradeDialog.findViewById(R.id.coupon_apply_button);
-                if (statusRow != null) statusRow.setVisibility(View.GONE);
-                if (ap != null) {
-                    ap.setText("APPLY");
-                    ap.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
-                            Color.parseColor("#008b8b")));
-                }
-                if (ticketRow != null) ticketRow.setBackgroundResource(R.drawable.bg_coupon_ticket);
-            }
-        }
         updateChipSelection(pos, upgradeable);
+        if (planCardView != null) bindPlanCard(planCardView, selectedPlan);
         updateUpgradeButton(selectedPlan);
         upgradeButton.setEnabled(true);
-        // Subtle plan-name entrance animation on the visible card
+        // Subtle plan-name entrance animation on the card
         animateVisiblePlanName();
     }
 
     private void animateVisiblePlanName() {
-        if (plansPager == null || pagerLayoutManager == null) return;
-        View snap = snapHelper != null ? snapHelper.findSnapView(pagerLayoutManager) : null;
-        if (snap == null) {
-            // Fallback: first visible
-            snap = pagerLayoutManager.findViewByPosition(pagerLayoutManager.findFirstVisibleItemPosition());
-        }
-        if (snap == null) return;
-        TextView name = snap.findViewById(R.id.plan_name);
+        if (planCardView == null) return;
+        TextView name = planCardView.findViewById(R.id.plan_name);
         if (name == null) return;
         name.setAlpha(0f);
         name.setTranslationY(dpToPx(6));
@@ -450,51 +375,11 @@ public class ProUpgradeDialog implements PaymentManager.PaymentCallback,
                 .setInterpolator(new DecelerateInterpolator()).start();
     }
 
-    // ── RecyclerView pager adapter ────────────────────────────────────────────
-    private class PlanPagerAdapter extends RecyclerView.Adapter<PlanPagerAdapter.VH> {
-        private final List<PlanOption> data;
-        PlanPagerAdapter(List<PlanOption> data) { this.data = data; }
-
-        @NonNull @Override
-        public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            View v = LayoutInflater.from(context).inflate(R.layout.item_plan_card, parent, false);
-            // Card width = pager width minus the two 24dp side paddings
-            // pager width = dialog card width (screen - 32dp dialog margin)
-            int screenPx = context.getResources().getDisplayMetrics().widthPixels;
-            int cardWidthPx = screenPx - dpToPx(32) - dpToPx(48); // 32=dialog margins, 48=peek padding
-            RecyclerView.LayoutParams lp = new RecyclerView.LayoutParams(
-                    cardWidthPx, RecyclerView.LayoutParams.MATCH_PARENT);
-            v.setLayoutParams(lp);
-            return new VH(v);
-        }
-
-        @Override public void onBindViewHolder(@NonNull VH holder, int pos) {
-            bindPlanCard(holder.itemView, data.get(pos));
-        }
-
-        @Override public int getItemCount() { return data.size(); }
-
-        class VH extends RecyclerView.ViewHolder {
-            VH(View v) { super(v); }
-        }
-    }
-
-    // ── Bind a plan card (called by adapter for each page) ────────────────────
+    // ── Bind the single compact plan card (iOS-parity: name, price, features) ──
     private void bindPlanCard(View card, PlanOption plan) {
         int accentColor = getPlanColor(plan.getTierKey());
 
-        // ── Icon circle ───────────────────────────────────────────────────────
-        FrameLayout iconBg  = card.findViewById(R.id.plan_icon_bg);
-        ImageView iconView  = card.findViewById(R.id.plan_icon);
-        GradientDrawable circle = new GradientDrawable();
-        circle.setShape(GradientDrawable.OVAL);
-        circle.setColor(Color.argb(35, Color.red(accentColor),
-                Color.green(accentColor), Color.blue(accentColor)));
-        iconBg.setBackground(circle);
-        iconView.setImageResource(getPlanIconRes(plan.getTierKey()));
-        iconView.setColorFilter(accentColor);
-
-        // ── Card stroke (plan identity color) ─────────────────────────────────
+        // Card stroke — subtle plan identity color
         if (card instanceof MaterialCardView) {
             ((MaterialCardView) card).setStrokeColor(
                     Color.argb(70, Color.red(accentColor),
@@ -502,19 +387,19 @@ public class ProUpgradeDialog implements PaymentManager.PaymentCallback,
             ((MaterialCardView) card).setStrokeWidth(dpToPx(1));
         }
 
-        // ── Name + badge + tagline ────────────────────────────────────────────
-        ((TextView) card.findViewById(R.id.plan_name)).setText(plan.getName());
-        if (plan.isMostPopular()) {
-            card.findViewById(R.id.plan_popular_badge).setVisibility(View.VISIBLE);
-        }
-        ((TextView) card.findViewById(R.id.plan_tagline)).setText(getPlanTagline(plan.getTierKey()));
+        // Name (tinted like iOS) + best-value badge
+        TextView nameView = card.findViewById(R.id.plan_name);
+        nameView.setText(plan.getName());
+        nameView.setTextColor(accentColor);
+        card.findViewById(R.id.plan_popular_badge)
+                .setVisibility(plan.isMostPopular() ? View.VISIBLE : View.GONE);
 
-        // ── Price ─────────────────────────────────────────────────────────────
+        // Price
         TextView priceView = card.findViewById(R.id.plan_price);
         priceView.setText(formatPrice(plan.getPrice()));
         priceView.setTextColor(accentColor);
 
-        // ── Discount msg pill (inline with price) ────────────────────────────
+        // Discount message pill (inline with price)
         TextView discountMsg = card.findViewById(R.id.plan_discount_msg);
         if (plan.hasDiscount() && !plan.getDiscountMessage().isEmpty()) {
             discountMsg.setText(plan.getDiscountMessage());
@@ -523,28 +408,25 @@ public class ProUpgradeDialog implements PaymentManager.PaymentCallback,
             discountMsg.setVisibility(View.GONE);
         }
 
-        // ── Original price (strikethrough) ────────────────────────────────────
+        // Original price (strikethrough) — GONE when no discount so the reused
+        // card doesn't carry a stale strikethrough from a previous plan.
+        TextView origView = card.findViewById(R.id.plan_original_price);
         if (plan.hasDiscount()) {
-            TextView origView = card.findViewById(R.id.plan_original_price);
             origView.setText(formatPrice(plan.getOriginalPrice()));
             origView.setPaintFlags(origView.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG);
             origView.setVisibility(View.VISIBLE);
+        } else {
+            origView.setVisibility(View.GONE);
         }
 
-        // ── Duration ──────────────────────────────────────────────────────────
+        // Duration (mirrors iOS "Billed yearly / monthly / every N months")
+        int dm = plan.getDurationMonths();
         TextView durationView = card.findViewById(R.id.plan_duration);
-        durationView.setText(plan.getDurationMonths() == 12 ? "12 months" : plan.getDurationMonths() + " months");
-        durationView.setTextColor(Color.parseColor("#BBBBBB"));
-        durationView.setTypeface(null, Typeface.BOLD);
+        durationView.setText(dm == 12 ? "Billed yearly"
+                : dm == 1 ? "Billed monthly"
+                : "Billed every " + dm + " months");
 
-        // ── Stats row ─────────────────────────────────────────────────────────
-        LinearLayout statsRow = card.findViewById(R.id.plan_stats_row);
-        statsRow.removeAllViews();
-        for (Stat s : getKeyStats(plan.getTierKey())) {
-            statsRow.addView(buildStatTile(s.value, s.label, s.iconRes, accentColor));
-        }
-
-        // ── Feature list ──────────────────────────────────────────────────────
+        // Feature list — backend features (shared source of truth with iOS)
         LinearLayout featuresList = card.findViewById(R.id.plan_features_list);
         featuresList.removeAllViews();
         for (String feature : plan.getFeatures()) {
@@ -555,176 +437,10 @@ public class ProUpgradeDialog implements PaymentManager.PaymentCallback,
     // ── Upgrade button ────────────────────────────────────────────────────────
     private void updateUpgradeButton(PlanOption plan) {
         String shortName = plan.getName().replace("RichHealth ", "");
-        double price = effectivePriceFor(plan);
-        upgradeButton.setText("Get " + shortName + "  ·  " + formatPrice(price));
+        upgradeButton.setText("Get " + shortName + "  ·  " + formatPrice(plan.getPrice()));
         int accent = getPlanColor(plan.getTierKey());
         upgradeButton.setBackgroundTintList(
                 android.content.res.ColorStateList.valueOf(accent));
-    }
-
-    private double effectivePriceFor(PlanOption plan) {
-        if (appliedCouponCode != null && appliedCouponPlanId == plan.getPlanId()) {
-            return appliedCouponFinalAmount;
-        }
-        return plan.getPrice();
-    }
-
-    // ── Coupon row ────────────────────────────────────────────────────────────
-    private void setupCouponRow() {
-        if (upgradeDialog == null) return;
-        final EditText input = upgradeDialog.findViewById(R.id.coupon_input);
-        final MaterialButton apply = upgradeDialog.findViewById(R.id.coupon_apply_button);
-        final View statusRow = upgradeDialog.findViewById(R.id.coupon_status_row);
-        final ImageView statusIcon = upgradeDialog.findViewById(R.id.coupon_status_icon);
-        final TextView status = upgradeDialog.findViewById(R.id.coupon_status);
-        final View ticketRow = upgradeDialog.findViewById(R.id.coupon_row);
-        if (input == null || apply == null || status == null || statusRow == null) return;
-
-        Runnable resetCoupon = () -> {
-            appliedCouponCode = null;
-            appliedCouponDiscount = 0;
-            appliedCouponFinalAmount = 0;
-            appliedCouponPlanId = 0;
-            statusRow.setVisibility(View.GONE);
-            apply.setText("APPLY");
-            apply.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
-                    Color.parseColor("#008b8b")));
-            ticketRow.setBackgroundResource(R.drawable.bg_coupon_ticket);
-            if (selectedPlan != null) updateUpgradeButton(selectedPlan);
-        };
-
-        // Editing the field after applying clears the applied state
-        input.addTextChangedListener(new android.text.TextWatcher() {
-            @Override public void beforeTextChanged(CharSequence s, int a, int b, int c) {}
-            @Override public void onTextChanged(CharSequence s, int a, int b, int c) {}
-            @Override public void afterTextChanged(android.text.Editable s) {
-                if (appliedCouponCode != null) resetCoupon.run();
-            }
-        });
-
-        apply.setOnClickListener(v -> {
-            // If already applied, the button removes the coupon
-            if (appliedCouponCode != null) {
-                input.setText("");
-                resetCoupon.run();
-                return;
-            }
-            String code = input.getText() == null ? "" : input.getText().toString().trim();
-            if (code.isEmpty()) {
-                Utilities.toast(context, "Enter a coupon code");
-                return;
-            }
-            if (selectedPlan == null) {
-                Utilities.toast(context, "Select a plan first");
-                return;
-            }
-            apply.setEnabled(false);
-            statusRow.setVisibility(View.VISIBLE);
-            statusIcon.setImageResource(R.drawable.ic_pending);
-            statusIcon.setColorFilter(Color.parseColor("#999999"));
-            status.setTextColor(Color.parseColor("#999999"));
-            status.setText("Checking " + code + "…");
-
-            final PlanOption planAtRequest = selectedPlan;
-            paymentService.validateCoupon(code, planAtRequest.getPlanId(),
-                    new PaymentService.CouponCallback() {
-                        @Override public void onResult(PaymentService.CouponResult r) {
-                            apply.setEnabled(true);
-                            if (!r.valid) {
-                                appliedCouponCode = null;
-                                statusIcon.setImageResource(R.drawable.ic_warning);
-                                statusIcon.setColorFilter(Color.parseColor("#E57373"));
-                                status.setTextColor(Color.parseColor("#E57373"));
-                                status.setText(r.message != null && !r.message.isEmpty()
-                                        ? r.message : "Invalid coupon");
-                                return;
-                            }
-                            appliedCouponCode = r.code;
-                            appliedCouponDiscount = r.discount;
-                            appliedCouponFinalAmount = r.finalAmount;
-                            appliedCouponPlanId = planAtRequest.getPlanId();
-                            statusIcon.setImageResource(R.drawable.ic_success);
-                            statusIcon.setColorFilter(Color.parseColor("#4CAF50"));
-                            status.setTextColor(Color.parseColor("#4CAF50"));
-                            status.setText(r.code + " applied — you save " + formatPrice(r.discount));
-                            apply.setText("REMOVE");
-                            apply.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
-                                    Color.parseColor("#4A4A4A")));
-                            ticketRow.setBackgroundResource(R.drawable.bg_coupon_ticket_applied);
-                            if (selectedPlan != null) updateUpgradeButton(selectedPlan);
-                        }
-                        @Override public void onError(String errorMessage) {
-                            apply.setEnabled(true);
-                            statusIcon.setImageResource(R.drawable.ic_warning);
-                            statusIcon.setColorFilter(Color.parseColor("#E57373"));
-                            status.setTextColor(Color.parseColor("#E57373"));
-                            status.setText(errorMessage != null ? errorMessage : "Failed to validate");
-                        }
-                    });
-        });
-    }
-
-    // ── Stat tile ─────────────────────────────────────────────────────────────
-    private View buildStatTile(String value, String label, int iconRes, int accentColor) {
-        LinearLayout tile = new LinearLayout(context);
-        tile.setOrientation(LinearLayout.VERTICAL);
-        tile.setGravity(Gravity.CENTER);
-        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(
-                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        p.setMargins(dpToPx(3), 0, dpToPx(3), 0);
-        tile.setLayoutParams(p);
-        tile.setPadding(dpToPx(4), dpToPx(8), dpToPx(4), dpToPx(8));
-
-        GradientDrawable bg = new GradientDrawable();
-        bg.setShape(GradientDrawable.RECTANGLE);
-        bg.setCornerRadius(dpToPx(10));
-        bg.setColor(Color.parseColor("#141414"));
-        tile.setBackground(bg);
-
-        // Icon
-        ImageView icon = new ImageView(context);
-        LinearLayout.LayoutParams iconP = new LinearLayout.LayoutParams(dpToPx(20), dpToPx(20));
-        iconP.setMargins(0, 0, 0, dpToPx(3));
-        iconP.gravity = Gravity.CENTER_HORIZONTAL;
-        icon.setLayoutParams(iconP);
-        icon.setImageResource(iconRes);
-        icon.setColorFilter(accentColor);
-        tile.addView(icon);
-
-        // Big value
-        TextView valTv = new TextView(context);
-        valTv.setLayoutParams(new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
-        valTv.setText(value);
-        valTv.setTextColor(accentColor);
-        valTv.setTextSize(24f);
-        valTv.setTypeface(null, Typeface.BOLD);
-        valTv.setGravity(Gravity.CENTER);
-        tile.addView(valTv);
-
-        // Label — first line bold white, second line smaller grey
-        TextView lblTv = new TextView(context);
-        lblTv.setLayoutParams(new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
-        String[] parts = label.split("\n", 2);
-        if (parts.length == 2) {
-            SpannableString ss = new SpannableString(parts[0] + "\n" + parts[1]);
-            ss.setSpan(new StyleSpan(Typeface.BOLD), 0, parts[0].length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-            ss.setSpan(new ForegroundColorSpan(Color.parseColor("#CCCCCC")), 0, parts[0].length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-            ss.setSpan(new ForegroundColorSpan(Color.parseColor("#888888")), parts[0].length() + 1, ss.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-            ss.setSpan(new RelativeSizeSpan(0.85f), parts[0].length() + 1, ss.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-            lblTv.setText(ss);
-        } else {
-            lblTv.setText(label);
-            lblTv.setTypeface(null, Typeface.BOLD);
-            lblTv.setTextColor(Color.parseColor("#CCCCCC"));
-        }
-        lblTv.setTextSize(9.5f);
-        lblTv.setGravity(Gravity.CENTER);
-        lblTv.setLineSpacing(0f, 1.15f);
-        tile.addView(lblTv);
-
-        return tile;
     }
 
     // ── Feature row ───────────────────────────────────────────────────────────
@@ -802,45 +518,6 @@ public class ProUpgradeDialog implements PaymentManager.PaymentCallback,
         }
     }
 
-    private int getPlanIconRes(String tierKey) {
-        switch (tierKey) {
-            case "pro":   return R.drawable.ic_premium;
-            case "ultra": return R.drawable.ic_ai;
-            default:      return R.drawable.ic_analytics;
-        }
-    }
-
-    private String getPlanTagline(String tierKey) {
-        switch (tierKey) {
-            case "pro":   return "Full AI power + family health";
-            case "ultra": return "Everything, unlimited, for a year";
-            default:      return "Essential AI-powered health tools";
-        }
-    }
-
-    private Stat[] getKeyStats(String tierKey) {
-        switch (tierKey) {
-            case "pro":
-                return new Stat[]{
-                    new Stat("10",  "AI Reports\nper month",  R.drawable.ic_medical_reports),
-                    new Stat("50",  "Chats per\nsession",     R.drawable.ic_chat),
-                    new Stat("2",   "Family\nMembers",        R.drawable.ic_family)
-                };
-            case "ultra":
-                return new Stat[]{
-                    new Stat("∞",   "AI Reports\nUnlimited",  R.drawable.ic_medical_reports),
-                    new Stat("100", "Chats per\nsession",     R.drawable.ic_chat),
-                    new Stat("5",   "Family\nMembers",        R.drawable.ic_family)
-                };
-            default: // plus
-                return new Stat[]{
-                    new Stat("5",   "AI Reports\nper month",  R.drawable.ic_medical_reports),
-                    new Stat("25",  "Chats per\nsession",     R.drawable.ic_chat),
-                    new Stat("All", "Health\nFeatures",       R.drawable.ic_analytics)
-                };
-        }
-    }
-
     private int getFeatureIconRes(String feature) {
         String l = feature.toLowerCase();
         // Order matters: check the most specific keywords first so generic ones
@@ -895,16 +572,12 @@ public class ProUpgradeDialog implements PaymentManager.PaymentCallback,
     // ── Payment flow ──────────────────────────────────────────────────────────
     private void onUpgradeClicked() {
         if (selectedPlan == null) return;
-        // Only forward the coupon if it was validated for the same plan the user is buying
-        String couponToSend = (appliedCouponCode != null
-                && appliedCouponPlanId == selectedPlan.getPlanId())
-                ? appliedCouponCode : null;
         upgradeDialog.dismiss();
         paymentManager.setSelectedPlanType(selectedPlan.getPlanId());
         if (activity instanceof MainActivity) {
             ((MainActivity) activity).setPaymentManager(paymentManager);
         }
-        paymentManager.startPaymentFlow(activity, selectedPlan, couponToSend, this);
+        paymentManager.startPaymentFlow(activity, selectedPlan, null, this);
     }
 
     // ── PaymentManager.PaymentCallback ────────────────────────────────────────
