@@ -83,10 +83,9 @@ public class ProfileFragment extends Fragment {
     private TextView profileName;
     private TextView profileInitials;
     private TextView profileVerifiedPill;
-    private MaterialCardView editProfileButton;
-    private View familyRequestsButton;
-    private TextView familyRequestsBadge;
-    private View profileAddButton;
+    private View profileOptionsButton;
+    private TextView profileOptionsBadge;
+    private int lastPendingRequestCount = 0;
 
     // Health Metrics section
     private TextView aqiValue;
@@ -182,7 +181,6 @@ public class ProfileFragment extends Fragment {
     private SwitchMaterial aiShowThinkingSwitch;
 
     // Logout button (now an icon button in the header)
-    private View logoutButton;
 
     private DatabaseHelper dbHelper;
     private UserProfile userProfile;
@@ -263,17 +261,11 @@ public class ProfileFragment extends Fragment {
     }
 
     private void setupListeners() {
-        // Single edit button to edit all profile information
-        editProfileButton.setOnClickListener(v -> {
-            // Add null check here to prevent NullPointerException
-            if (userProfile != null) {
-                showEditProfileDialog();
-            } else {
-                Utilities.toast(requireContext(), "Please wait while loading profile data");
-                // You might want to try loading the profile again here
-                loadAndDisplayProfile();
-            }
-        });
+        // Header "options" button → single dropdown menu (Edit, Requests, Log out).
+        if (profileOptionsButton != null) {
+            profileOptionsButton.setOnClickListener(this::showProfileOptionsMenu);
+        }
+
         // Completion CTA in the header → opens the edit sheet (mirrors iOS "Add missing info").
         if (completenessCta != null) {
             completenessCta.setOnClickListener(v -> {
@@ -284,24 +276,6 @@ public class ProfileFragment extends Fragment {
                     loadAndDisplayProfile();
                 }
             });
-        }
-
-        // "+" add button → native PopupMenu (Add dependent / Connect family member).
-        if (profileAddButton != null) {
-            profileAddButton.setOnClickListener(this::showProfileAddMenu);
-        }
-
-        // Family requests icon (header) → open the incoming-requests bottom sheet.
-        if (familyRequestsButton != null) {
-            familyRequestsButton.setOnClickListener(v ->
-                    Utils.FamilyRequestsSheet.show(requireActivity(), () -> {
-                        // A request was accepted/rejected → refresh the badge and, if the
-                        // owner accepted a new relative, the family member list.
-                        refreshFamilyRequestsBadge();
-                        if (proStatusManager != null && proStatusManager.isFamilyPlanOwner()) {
-                            loadFamilyMembers();
-                        }
-                    }));
         }
 
         // Initialize the ProUpgradeDialog (add this after initializing other UI components)
@@ -346,12 +320,6 @@ public class ProfileFragment extends Fragment {
             changePasswordItem.setOnClickListener(v -> showChangePasswordDialog());
         }
 
-        // Setup logout button if it exists
-        if (logoutButton != null) {
-            logoutButton.setOnClickListener(v -> {
-                confirmLogout();
-            });
-        }
     }
 
     private void setupBiometricToggle() {
@@ -731,10 +699,8 @@ public class ProfileFragment extends Fragment {
         profileName = view.findViewById(R.id.profile_name);
         profileInitials = view.findViewById(R.id.profile_initials);
         profileVerifiedPill = view.findViewById(R.id.profile_verified_pill);
-        editProfileButton = view.findViewById(R.id.edit_profile_button);
-        familyRequestsButton = view.findViewById(R.id.family_requests_button);
-        familyRequestsBadge = view.findViewById(R.id.family_requests_badge);
-        profileAddButton = view.findViewById(R.id.profile_add_button);
+        profileOptionsButton = view.findViewById(R.id.profile_options_button);
+        profileOptionsBadge = view.findViewById(R.id.profile_options_badge);
         completenessRing = view.findViewById(R.id.completeness_ring);
         completenessPercent = view.findViewById(R.id.completeness_percent);
         completenessCta = view.findViewById(R.id.completeness_cta);
@@ -809,7 +775,6 @@ public class ProfileFragment extends Fragment {
         aiShowThinkingSwitch = view.findViewById(R.id.ai_show_thinking_switch);
 
         // Find logout button if it exists
-        logoutButton = view.findViewById(R.id.logout_button);
 
         bloodTypeValue = view.findViewById(R.id.blood_type);
         medicalConditionsGroup = view.findViewById(R.id.medical_conditions_group);
@@ -2468,23 +2433,23 @@ public class ProfileFragment extends Fragment {
     }
 
     /** Header requests icon: shown with a count badge only when incoming family requests exist. */
+    /** Options-button badge: shows the pending incoming family-request count (dot when > 0). */
     private void refreshFamilyRequestsBadge() {
-        if (familyRequestsButton == null) return;
-        familyRequestsButton.setVisibility(View.VISIBLE);   // always available (per design)
-        if (getActivity() == null) return;
+        if (getActivity() == null || profileOptionsBadge == null) return;
         Utils.FamilyRequestsSheet.fetchPendingCount(getActivity(), count -> {
-            if (!isAdded() || familyRequestsBadge == null) return;
+            if (!isAdded() || profileOptionsBadge == null) return;
+            lastPendingRequestCount = count;
             if (count > 0) {
-                familyRequestsBadge.setVisibility(View.VISIBLE);
-                familyRequestsBadge.setText(count > 9 ? "9+" : String.valueOf(count));
+                profileOptionsBadge.setVisibility(View.VISIBLE);
+                profileOptionsBadge.setText(count > 9 ? "9+" : String.valueOf(count));
             } else {
-                familyRequestsBadge.setVisibility(View.GONE);
+                profileOptionsBadge.setVisibility(View.GONE);
             }
         });
     }
 
-    /** Native anchored dropdown (PopupMenu) from the "+" button — mirrors the iOS Menu. */
-    private void showProfileAddMenu(View anchor) {
+    /** Single header dropdown (native PopupMenu): Edit profile · Requests · Log out. */
+    private void showProfileOptionsMenu(View anchor) {
         androidx.appcompat.widget.PopupMenu popup =
                 new androidx.appcompat.widget.PopupMenu(requireContext(), anchor);
         popup.getMenuInflater().inflate(R.menu.profile_add_menu, popup.getMenu());
@@ -2494,92 +2459,37 @@ public class ProfileFragment extends Fragment {
             java.lang.reflect.Method m = popup.getClass().getMethod("setForceShowIcon", boolean.class);
             m.invoke(popup, true);
         } catch (Throwable ignored) {}
+        // Reflect the pending count in the Requests item title.
+        android.view.MenuItem reqItem = popup.getMenu().findItem(R.id.menu_requests);
+        if (reqItem != null && lastPendingRequestCount > 0) {
+            String cnt = lastPendingRequestCount > 9 ? "9+" : String.valueOf(lastPendingRequestCount);
+            reqItem.setTitle("Requests (" + cnt + ")");
+        }
         popup.setOnMenuItemClickListener(item -> {
             int id = item.getItemId();
-            if (id == R.id.menu_add_dependent) {
-                startActivity(new Intent(requireContext(), AddDependentActivity.class));
+            if (id == R.id.menu_edit_profile) {
+                if (userProfile != null) {
+                    showEditProfileDialog();
+                } else {
+                    Utilities.toast(requireContext(), "Please wait while loading profile data");
+                    loadAndDisplayProfile();
+                }
                 return true;
-            } else if (id == R.id.menu_connect_family) {
-                showConnectFamilyDialog();
+            } else if (id == R.id.menu_requests) {
+                Utils.FamilyRequestsSheet.show(requireActivity(), () -> {
+                    refreshFamilyRequestsBadge();
+                    if (proStatusManager != null && proStatusManager.isFamilyPlanOwner()) {
+                        loadFamilyMembers();
+                    }
+                });
+                return true;
+            } else if (id == R.id.menu_logout) {
+                confirmLogout();
                 return true;
             }
             return false;
         });
         popup.show();
-    }
-
-    /** Invite an existing user as a relative (mirrors Health Hub's add-family dialog). */
-    private void showConnectFamilyDialog() {
-        Context context = getContext();
-        if (context == null) return;
-        Dialog dialog = new Dialog(requireContext(), R.style.DialogTheme);
-        dialog.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE);
-        dialog.setContentView(R.layout.dialog_add_family_member);
-        Utils.DialogUtils.applyStandardEditDialogWindow(dialog);
-
-        android.widget.EditText emailInput = dialog.findViewById(R.id.email_input);
-        android.widget.AutoCompleteTextView relationshipDropdown = dialog.findViewById(R.id.relationship_dropdown);
-        Button cancelButton = dialog.findViewById(R.id.cancel_button);
-        Button sendButton = dialog.findViewById(R.id.send_button);
-
-        String[] relationships = {
-                "Father", "Mother", "Brother", "Sister", "Grandfather", "Grandmother",
-                "Paternal Uncle", "Paternal Aunt", "Maternal Uncle", "Maternal Aunt",
-                "Son", "Daughter", "Grandson", "Granddaughter", "Nephew", "Niece"
-        };
-        relationshipDropdown.setAdapter(new android.widget.ArrayAdapter<>(
-                requireContext(), android.R.layout.simple_dropdown_item_1line, relationships));
-
-        cancelButton.setOnClickListener(v -> dialog.dismiss());
-        sendButton.setOnClickListener(v -> {
-            String email = emailInput.getText().toString().trim();
-            String relationship = relationshipDropdown.getText().toString().trim();
-            if (email.isEmpty()) {
-                Toast.makeText(requireContext(), "Please enter an email", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            if (relationship.isEmpty()) {
-                Toast.makeText(requireContext(), "Please select a relationship", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            sendFamilyRelationshipRequest(email, relationship);
-            dialog.dismiss();
-        });
-        dialog.show();
-    }
-
-    private void sendFamilyRelationshipRequest(String email, String relationship) {
-        Context context = getContext();
-        if (context == null) return;
-        TokenManager tm = TokenManager.getInstance(context);
-        final String token = tm != null ? tm.getToken() : null;
-        if (token == null) { Toast.makeText(context, "Authentication error", Toast.LENGTH_SHORT).show(); return; }
-
-        final String url = Utils.ApiConfig.BASE_URL + "/api/user/relationship/request";
-        final String body = "{\"email\":\"" + email.replace("\"", "\\\"")
-                + "\",\"relationship\":\"" + relationship.replace("\"", "\\\"") + "\"}";
-
-        StringRequest req = new StringRequest(Request.Method.POST, url,
-                response -> Toast.makeText(context, "Request sent successfully", Toast.LENGTH_SHORT).show(),
-                error -> {
-                    String msg = "Failed to send request";
-                    if (error.networkResponse != null && error.networkResponse.data != null) {
-                        try {
-                            JSONObject j = new JSONObject(new String(error.networkResponse.data, java.nio.charset.StandardCharsets.UTF_8));
-                            if (j.has("message")) msg = j.getString("message");
-                        } catch (Exception ignored) {}
-                    }
-                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show();
-                }) {
-            @Override public byte[] getBody() { return body.getBytes(java.nio.charset.StandardCharsets.UTF_8); }
-            @Override public String getBodyContentType() { return "application/json; charset=utf-8"; }
-            @Override public java.util.Map<String, String> getHeaders() {
-                java.util.Map<String, String> h = new java.util.HashMap<>();
-                h.put("Authorization", "Bearer " + token);
-                return h;
-            }
-        };
-        Volley.newRequestQueue(context).add(req);
     }
 
     /**
@@ -3181,12 +3091,7 @@ public class ProfileFragment extends Fragment {
      * Handles user logout when the logout button is clicked
      */
     private void setupLogoutButton() {
-        View logoutButton = rootView.findViewById(R.id.logout_button);
-
-        if (logoutButton != null) {
-            // Route through the single app-styled confirmation path (see confirmLogout()).
-            logoutButton.setOnClickListener(v -> confirmLogout());
-        }
+        // Logout now lives in the header options dropdown (see showProfileOptionsMenu()).
     }
 
     @Override

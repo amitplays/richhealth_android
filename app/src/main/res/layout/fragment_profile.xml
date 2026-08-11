@@ -111,37 +111,15 @@
                     </LinearLayout>
                 </LinearLayout>
 
-                <!-- Add menu button — native PopupMenu: Add dependent / Connect family member -->
-                <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/profile_add_button"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    app:cardCornerRadius="20dp"
-                    app:cardElevation="0dp"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:layout_marginStart="8dp"
-                    android:foreground="?attr/selectableItemBackgroundBorderless"
-                    app:cardBackgroundColor="@color/rh_surface_elevated">
-
-                    <ImageView
-                        android:layout_width="@dimen/icon_edit_profile"
-                        android:layout_height="@dimen/icon_edit_profile"
-                        android:layout_gravity="center"
-                        android:src="@drawable/ic_add"
-                        android:contentDescription="Add"
-                        app:tint="@color/rh_accent"/>
-                </com.google.android.material.card.MaterialCardView>
-
-                <!-- Family / friend requests — always available; badge shows pending count -->
+                <!-- Single "options" button → native PopupMenu (Edit · Requests · Log out).
+                     Badge shows the pending family-request count so requests stay discoverable. -->
                 <FrameLayout
-                    android:id="@+id/family_requests_button"
+                    android:id="@+id/profile_options_button"
                     android:layout_width="40dp"
                     android:layout_height="40dp"
                     android:layout_marginStart="8dp"
                     android:clickable="true"
-                    android:focusable="true"
-                    android:visibility="visible">
+                    android:focusable="true">
 
                     <com.google.android.material.card.MaterialCardView
                         android:layout_width="40dp"
@@ -154,13 +132,13 @@
                             android:layout_width="@dimen/icon_edit_profile"
                             android:layout_height="@dimen/icon_edit_profile"
                             android:layout_gravity="center"
-                            android:src="@drawable/ic_family_group"
-                            android:contentDescription="Family requests"
+                            android:src="@drawable/ic_more_vert"
+                            android:contentDescription="Options"
                             app:tint="@color/rh_accent"/>
                     </com.google.android.material.card.MaterialCardView>
 
                     <TextView
-                        android:id="@+id/family_requests_badge"
+                        android:id="@+id/profile_options_badge"
                         android:layout_width="18dp"
                         android:layout_height="18dp"
                         android:layout_gravity="top|end"
@@ -172,50 +150,6 @@
                         android:background="@drawable/bg_badge_count"
                         android:visibility="gone"/>
                 </FrameLayout>
-
-                <!-- Edit Profile Button -->
-                <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/edit_profile_button"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    app:cardCornerRadius="20dp"
-                    app:cardElevation="0dp"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:layout_marginStart="8dp"
-                    android:foreground="?attr/selectableItemBackgroundBorderless"
-                    app:cardBackgroundColor="@color/rh_surface_elevated">
-
-                    <ImageView
-                        android:layout_width="@dimen/icon_edit_profile"
-                        android:layout_height="@dimen/icon_edit_profile"
-                        android:layout_gravity="center"
-                        android:src="@drawable/ic_edit"
-                        android:contentDescription="Edit profile"
-                        app:tint="@color/rh_accent"/>
-                </com.google.android.material.card.MaterialCardView>
-
-                <!-- Logout Button (danger-tinted) -->
-                <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/logout_button"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    app:cardCornerRadius="20dp"
-                    app:cardElevation="0dp"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:layout_marginStart="8dp"
-                    android:foreground="?attr/selectableItemBackgroundBorderless"
-                    app:cardBackgroundColor="@color/rh_surface_elevated">
-
-                    <ImageView
-                        android:layout_width="@dimen/icon_edit_profile"
-                        android:layout_height="@dimen/icon_edit_profile"
-                        android:layout_gravity="center"
-                        android:src="@drawable/ic_logout"
-                        android:contentDescription="Log out"
-                        app:tint="@color/rh_danger"/>
-                </com.google.android.material.card.MaterialCardView>
             </LinearLayout>
 
             <!-- Divider -->

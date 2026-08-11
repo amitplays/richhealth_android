@@ -1,12 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Native PopupMenu shown from the Profile header "+" button (bubble dropdown). -->
+<!-- Header "options" dropdown (native PopupMenu): Edit profile · Requests · Log out. -->
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
-        android:id="@+id/menu_add_dependent"
-        android:icon="@drawable/ic_personf"
-        android:title="Add dependent" />
+        android:id="@+id/menu_edit_profile"
+        android:icon="@drawable/ic_edit"
+        android:title="Edit profile" />
     <item
-        android:id="@+id/menu_connect_family"
+        android:id="@+id/menu_requests"
         android:icon="@drawable/ic_family_group"
-        android:title="Connect family member" />
+        android:title="Requests" />
+    <item
+        android:id="@+id/menu_logout"
+        android:icon="@drawable/ic_logout"
+        android:title="Log out" />
 </menu>
