@@ -42,6 +42,16 @@
             android:importantForAutofill="no" />
 
         <ImageButton
+            android:id="@+id/add_measurement_button"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginStart="2dp"
+            android:src="@drawable/ic_add"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            app:tint="#008b8b"
+            android:contentDescription="Add measurement" />
+
+        <ImageButton
             android:id="@+id/close_panel_button"
             android:layout_width="36dp"
             android:layout_height="36dp"
@@ -101,21 +111,4 @@
             android:padding="4dp" />
     </FrameLayout>
 
-    <!-- Bottom action button -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingHorizontal="12dp"
-        android:paddingVertical="10dp">
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/add_measurement_button"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:text="Add Measurement"
-            android:textSize="14sp"
-            android:textColor="@color/white"
-            app:cornerRadius="8dp"
-            app:backgroundTint="#008b8b" />
-    </LinearLayout>
 </LinearLayout>

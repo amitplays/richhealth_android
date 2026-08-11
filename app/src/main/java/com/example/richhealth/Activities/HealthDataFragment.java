@@ -357,20 +357,7 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         sentRequestsRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
         sentRequestsRecyclerView.setAdapter(relationshipAdapter);
 
-        // Setup add dependent button
-        MaterialButton addDependentButton = rootView.findViewById(R.id.add_dependent_button);
-        if (addDependentButton != null) {
-            addDependentButton.setOnClickListener(v -> {
-                Intent intent = new Intent(requireContext(), AddDependentActivity.class);
-                startActivity(intent);
-            });
-        }
-
-        // Setup connect family member button
-        MaterialButton addFamilyMemberButton = rootView.findViewById(R.id.add_family_member_button);
-        addFamilyMemberButton.setOnClickListener(v -> {
-            showAddFamilyMemberDialog();
-        });
+        // Add actions now live in the panel header "+" dropdown (see showFamilyAddMenu()).
     }
 
     private void initViews(View view) {
@@ -586,7 +573,7 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         }
 
         // Setup Add Symptom Button
-        MaterialButton addSymptomButton = symptomsPanel.findViewById(R.id.add_symptom_button);
+        View addSymptomButton = symptomsPanel.findViewById(R.id.add_symptom_button);
         addSymptomButton.setOnClickListener(v -> {
             showAddSymptomDialog();
         });
@@ -647,7 +634,7 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         }
 
         // Setup Add Measurement Button
-        MaterialButton addMeasurementButton = measurementsPanel.findViewById(R.id.add_measurement_button);
+        View addMeasurementButton = measurementsPanel.findViewById(R.id.add_measurement_button);
         addMeasurementButton.setOnClickListener(v -> {
             showAddMeasurementDialog();
         });
@@ -756,7 +743,7 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         }
 
         // Setup Add Period Log Button
-        MaterialButton addPeriodLogButton = periodLogsPanel.findViewById(R.id.add_period_log_button);
+        View addPeriodLogButton = periodLogsPanel.findViewById(R.id.add_period_log_button);
         addPeriodLogButton.setOnClickListener(v -> {
             showAddPeriodLogDialog();
         });
@@ -855,7 +842,7 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         medicationsPanel.findViewById(R.id.close_panel_button).setOnClickListener(v -> medicationsPanel.dismiss());
 
         // Setup Add Medication button
-        MaterialButton addMedicationButton = medicationsPanel.findViewById(R.id.add_medication_button);
+        View addMedicationButton = medicationsPanel.findViewById(R.id.add_medication_button);
         addMedicationButton.setOnClickListener(v -> {
             showAddMedicationDialog();
         });
@@ -907,18 +894,11 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         sentRequestsRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
         sentRequestsRecyclerView.setAdapter(relationshipAdapter);
 
-        // Setup Add Dependent button
-        MaterialButton addDependentButton = familyMembersPanel.findViewById(R.id.add_dependent_button);
-        addDependentButton.setOnClickListener(v -> {
-            Intent intent = new Intent(requireContext(), AddDependentActivity.class);
-            startActivity(intent);
-        });
-
-        // Setup Connect Family Member button
-        MaterialButton addFamilyMemberButton = familyMembersPanel.findViewById(R.id.add_family_member_button);
-        addFamilyMemberButton.setOnClickListener(v -> {
-            showAddFamilyMemberDialog();
-        });
+        // Header "+" → native dropdown (Add dependent / Connect family member).
+        View familyAddButton = familyMembersPanel.findViewById(R.id.family_add_menu_button);
+        if (familyAddButton != null) {
+            familyAddButton.setOnClickListener(this::showFamilyAddMenu);
+        }
 
 
         // Show empty state initially, will be updated when data loads
@@ -3998,6 +3978,29 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
                 year, month, day);
 
         datePickerDialog.show();
+    }
+
+    /** Family panel "+" → native PopupMenu (Add dependent / Connect family member). */
+    private void showFamilyAddMenu(View anchor) {
+        androidx.appcompat.widget.PopupMenu popup =
+                new androidx.appcompat.widget.PopupMenu(requireContext(), anchor);
+        popup.getMenuInflater().inflate(R.menu.family_add_menu, popup.getMenu());
+        try {
+            java.lang.reflect.Method m = popup.getClass().getMethod("setForceShowIcon", boolean.class);
+            m.invoke(popup, true);
+        } catch (Throwable ignored) {}
+        popup.setOnMenuItemClickListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.menu_add_dependent) {
+                startActivity(new Intent(requireContext(), AddDependentActivity.class));
+                return true;
+            } else if (id == R.id.menu_connect_family) {
+                showAddFamilyMemberDialog();
+                return true;
+            }
+            return false;
+        });
+        popup.show();
     }
 
     private void showAddFamilyMemberDialog() {

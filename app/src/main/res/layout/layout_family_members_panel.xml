@@ -46,6 +46,15 @@
             android:visibility="gone" />
 
         <ImageButton
+            android:id="@+id/family_add_menu_button"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:src="@drawable/ic_add"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            app:tint="#008b8b"
+            android:contentDescription="Add" />
+
+        <ImageButton
             android:id="@+id/close_panel_button"
             android:layout_width="36dp"
             android:layout_height="36dp"
@@ -115,40 +124,4 @@
             android:padding="4dp" />
     </FrameLayout>
 
-    <!-- Bottom action buttons -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:paddingHorizontal="12dp"
-        android:paddingTop="6dp"
-        android:paddingBottom="10dp">
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/add_dependent_button"
-            android:layout_width="match_parent"
-            android:layout_height="36dp"
-            android:layout_marginBottom="6dp"
-            android:text="Add Dependent"
-            android:textSize="12sp"
-            android:textColor="@color/white"
-            app:icon="@drawable/ic_person"
-            app:iconGravity="start"
-            app:cornerRadius="8dp"
-            app:backgroundTint="#008b8b" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/add_family_member_button"
-            android:layout_width="match_parent"
-            android:layout_height="36dp"
-            android:text="Connect Family Member"
-            android:textSize="12sp"
-            android:textAllCaps="true"
-            app:icon="@drawable/ic_person"
-            app:iconGravity="start"
-            app:cornerRadius="8dp"
-            style="@style/Widget.Material3.Button.OutlinedButton"
-            app:strokeColor="#008b8b"
-            android:textColor="#008b8b" />
-    </LinearLayout>
 </LinearLayout>
