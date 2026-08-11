@@ -86,6 +86,7 @@ public class ProfileFragment extends Fragment {
     private MaterialCardView editProfileButton;
     private View familyRequestsButton;
     private TextView familyRequestsBadge;
+    private View profileAddButton;
 
     // Health Metrics section
     private TextView aqiValue;
@@ -283,6 +284,11 @@ public class ProfileFragment extends Fragment {
                     loadAndDisplayProfile();
                 }
             });
+        }
+
+        // "+" add button → native PopupMenu (Add dependent / Connect family member).
+        if (profileAddButton != null) {
+            profileAddButton.setOnClickListener(this::showProfileAddMenu);
         }
 
         // Family requests icon (header) → open the incoming-requests bottom sheet.
@@ -728,6 +734,7 @@ public class ProfileFragment extends Fragment {
         editProfileButton = view.findViewById(R.id.edit_profile_button);
         familyRequestsButton = view.findViewById(R.id.family_requests_button);
         familyRequestsBadge = view.findViewById(R.id.family_requests_badge);
+        profileAddButton = view.findViewById(R.id.profile_add_button);
         completenessRing = view.findViewById(R.id.completeness_ring);
         completenessPercent = view.findViewById(R.id.completeness_percent);
         completenessCta = view.findViewById(R.id.completeness_cta);
@@ -2462,19 +2469,117 @@ public class ProfileFragment extends Fragment {
 
     /** Header requests icon: shown with a count badge only when incoming family requests exist. */
     private void refreshFamilyRequestsBadge() {
-        if (familyRequestsButton == null || getActivity() == null) return;
+        if (familyRequestsButton == null) return;
+        familyRequestsButton.setVisibility(View.VISIBLE);   // always available (per design)
+        if (getActivity() == null) return;
         Utils.FamilyRequestsSheet.fetchPendingCount(getActivity(), count -> {
-            if (!isAdded() || familyRequestsButton == null) return;
+            if (!isAdded() || familyRequestsBadge == null) return;
             if (count > 0) {
-                familyRequestsButton.setVisibility(View.VISIBLE);
-                if (familyRequestsBadge != null) {
-                    familyRequestsBadge.setVisibility(View.VISIBLE);
-                    familyRequestsBadge.setText(count > 9 ? "9+" : String.valueOf(count));
-                }
+                familyRequestsBadge.setVisibility(View.VISIBLE);
+                familyRequestsBadge.setText(count > 9 ? "9+" : String.valueOf(count));
             } else {
-                familyRequestsButton.setVisibility(View.GONE);
+                familyRequestsBadge.setVisibility(View.GONE);
             }
         });
+    }
+
+    /** Native anchored dropdown (PopupMenu) from the "+" button — mirrors the iOS Menu. */
+    private void showProfileAddMenu(View anchor) {
+        androidx.appcompat.widget.PopupMenu popup =
+                new androidx.appcompat.widget.PopupMenu(requireContext(), anchor);
+        popup.getMenuInflater().inflate(R.menu.profile_add_menu, popup.getMenu());
+        // Show item icons where supported (appcompat 1.4+). Reflection avoids a hard
+        // compile dependency on the method being present in this module's appcompat.
+        try {
+            java.lang.reflect.Method m = popup.getClass().getMethod("setForceShowIcon", boolean.class);
+            m.invoke(popup, true);
+        } catch (Throwable ignored) {}
+        popup.setOnMenuItemClickListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.menu_add_dependent) {
+                startActivity(new Intent(requireContext(), AddDependentActivity.class));
+                return true;
+            } else if (id == R.id.menu_connect_family) {
+                showConnectFamilyDialog();
+                return true;
+            }
+            return false;
+        });
+        popup.show();
+    }
+
+    /** Invite an existing user as a relative (mirrors Health Hub's add-family dialog). */
+    private void showConnectFamilyDialog() {
+        Context context = getContext();
+        if (context == null) return;
+        Dialog dialog = new Dialog(requireContext(), R.style.DialogTheme);
+        dialog.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE);
+        dialog.setContentView(R.layout.dialog_add_family_member);
+        Utils.DialogUtils.applyStandardEditDialogWindow(dialog);
+
+        android.widget.EditText emailInput = dialog.findViewById(R.id.email_input);
+        android.widget.AutoCompleteTextView relationshipDropdown = dialog.findViewById(R.id.relationship_dropdown);
+        Button cancelButton = dialog.findViewById(R.id.cancel_button);
+        Button sendButton = dialog.findViewById(R.id.send_button);
+
+        String[] relationships = {
+                "Father", "Mother", "Brother", "Sister", "Grandfather", "Grandmother",
+                "Paternal Uncle", "Paternal Aunt", "Maternal Uncle", "Maternal Aunt",
+                "Son", "Daughter", "Grandson", "Granddaughter", "Nephew", "Niece"
+        };
+        relationshipDropdown.setAdapter(new android.widget.ArrayAdapter<>(
+                requireContext(), android.R.layout.simple_dropdown_item_1line, relationships));
+
+        cancelButton.setOnClickListener(v -> dialog.dismiss());
+        sendButton.setOnClickListener(v -> {
+            String email = emailInput.getText().toString().trim();
+            String relationship = relationshipDropdown.getText().toString().trim();
+            if (email.isEmpty()) {
+                Toast.makeText(requireContext(), "Please enter an email", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            if (relationship.isEmpty()) {
+                Toast.makeText(requireContext(), "Please select a relationship", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            sendFamilyRelationshipRequest(email, relationship);
+            dialog.dismiss();
+        });
+        dialog.show();
+    }
+
+    private void sendFamilyRelationshipRequest(String email, String relationship) {
+        Context context = getContext();
+        if (context == null) return;
+        TokenManager tm = TokenManager.getInstance(context);
+        final String token = tm != null ? tm.getToken() : null;
+        if (token == null) { Toast.makeText(context, "Authentication error", Toast.LENGTH_SHORT).show(); return; }
+
+        final String url = Utils.ApiConfig.BASE_URL + "/api/user/relationship/request";
+        final String body = "{\"email\":\"" + email.replace("\"", "\\\"")
+                + "\",\"relationship\":\"" + relationship.replace("\"", "\\\"") + "\"}";
+
+        StringRequest req = new StringRequest(Request.Method.POST, url,
+                response -> Toast.makeText(context, "Request sent successfully", Toast.LENGTH_SHORT).show(),
+                error -> {
+                    String msg = "Failed to send request";
+                    if (error.networkResponse != null && error.networkResponse.data != null) {
+                        try {
+                            JSONObject j = new JSONObject(new String(error.networkResponse.data, java.nio.charset.StandardCharsets.UTF_8));
+                            if (j.has("message")) msg = j.getString("message");
+                        } catch (Exception ignored) {}
+                    }
+                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show();
+                }) {
+            @Override public byte[] getBody() { return body.getBytes(java.nio.charset.StandardCharsets.UTF_8); }
+            @Override public String getBodyContentType() { return "application/json; charset=utf-8"; }
+            @Override public java.util.Map<String, String> getHeaders() {
+                java.util.Map<String, String> h = new java.util.HashMap<>();
+                h.put("Authorization", "Bearer " + token);
+                return h;
+            }
+        };
+        Volley.newRequestQueue(context).add(req);
     }
 
     /**

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Native PopupMenu shown from the Profile header "+" button (bubble dropdown). -->
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/menu_add_dependent"
+        android:icon="@drawable/ic_personf"
+        android:title="Add dependent" />
+    <item
+        android:id="@+id/menu_connect_family"
+        android:icon="@drawable/ic_family_group"
+        android:title="Connect family member" />
+</menu>
