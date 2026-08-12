@@ -152,6 +152,12 @@ public class LoginActivity extends AppCompatActivity {
             startActivity(new Intent(LoginActivity.this, OnboardingActivity.class));
             finish();
         });
+
+        // Forgot password — email → emailed code → new password (was a dead button).
+        android.view.View forgotBtn = findViewById(R.id.forgot_password);
+        if (forgotBtn != null) {
+            forgotBtn.setOnClickListener(v -> Utils.ForgotPasswordDialog.show(LoginActivity.this));
+        }
     }
 
     private boolean validateEmail() {
