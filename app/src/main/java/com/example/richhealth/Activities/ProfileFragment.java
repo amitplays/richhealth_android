@@ -685,13 +685,50 @@ public class ProfileFragment extends Fragment {
                         throw new IllegalArgumentException("Passwords don't match");
                     }
 
-                    // Add password update logic here
-                    // userProfile.setPassword(newPass);
-                    // dbHelper.updateUserProfile(userProfile);
+                    String current = values.get("currentPassword");
+                    if (current == null || current.isEmpty()) {
+                        throw new IllegalArgumentException("Enter your current password");
+                    }
+                    if (newPass.length() < 8) {
+                        throw new IllegalArgumentException("New password must be at least 8 characters");
+                    }
+                    changePasswordOnServer(current, newPass);
                 },
                 null,
                 null
         );
+    }
+
+    /** POST /api/auth/change-password with the auth token (verifies current server-side). */
+    private void changePasswordOnServer(String currentPassword, String newPassword) {
+        try {
+            final String token = TokenManager.getInstance(requireContext()).getToken();
+            if (token == null) {
+                android.widget.Toast.makeText(requireContext(), "Please log in again.", android.widget.Toast.LENGTH_SHORT).show();
+                return;
+            }
+            org.json.JSONObject body = new org.json.JSONObject();
+            body.put("currentPassword", currentPassword);
+            body.put("newPassword", newPassword);
+            final byte[] payload = body.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            String url = Utils.ApiConfig.BASE_URL + "/api/auth/change-password";
+            com.android.volley.toolbox.StringRequest req = new com.android.volley.toolbox.StringRequest(
+                    com.android.volley.Request.Method.POST, url,
+                    r -> android.widget.Toast.makeText(requireContext(), "Password changed.", android.widget.Toast.LENGTH_LONG).show(),
+                    e -> android.widget.Toast.makeText(requireContext(), "Couldn't change password — check your current password.", android.widget.Toast.LENGTH_LONG).show()) {
+                @Override public byte[] getBody() { return payload; }
+                @Override public String getBodyContentType() { return "application/json; charset=utf-8"; }
+                @Override public java.util.Map<String, String> getHeaders() {
+                    java.util.Map<String, String> h = new java.util.HashMap<>();
+                    h.put("Authorization", "Bearer " + token);
+                    h.put("Content-Type", "application/json");
+                    return h;
+                }
+            };
+            com.android.volley.toolbox.Volley.newRequestQueue(requireContext()).add(req);
+        } catch (Exception e) {
+            android.util.Log.w("ProfileFragment", "changePassword", e);
+        }
     }
 
     private void initViews(View view) {
