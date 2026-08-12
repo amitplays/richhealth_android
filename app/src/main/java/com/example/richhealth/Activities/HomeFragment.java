@@ -4200,8 +4200,13 @@ public class HomeFragment extends Fragment {
 
                         checkInHomeCard.setVisibility(View.VISIBLE);
 
-                        // Schedule local notifications based on tier — no Firebase needed
-                        Utils.CheckInNotificationHelper.scheduleForTier(requireContext(), tier);
+                        // Schedule local check-in reminders (tier cadence) — no Firebase needed.
+                        // Android 13+ (API 33) requires POST_NOTIFICATIONS at runtime, else these
+                        // silently never show — ask once, and only schedule when it's allowed.
+                        Utils.NotificationPermissionHelper.requestIfNeeded(HomeFragment.this);
+                        if (Utils.NotificationPermissionHelper.hasPermission(requireContext())) {
+                            Utils.CheckInNotificationHelper.scheduleForTier(requireContext(), tier);
+                        }
 
                         // Reset pill; set below per state.
                         if (checkInStatusPill != null) {
