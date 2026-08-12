@@ -192,4 +192,32 @@ public class CheckInNotificationHelper {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 .getString(KEY_TIER, "free");
     }
+
+    /**
+     * Post a notification immediately on the check-in channel. Used to confirm to the
+     * user that reminders are on (and to verify the pipeline). Same channel as the
+     * scheduled reminders so it obeys the same user setting.
+     */
+    public static void fireNow(Context context, String title, String body) {
+        if (context == null) return;
+        android.app.NotificationManager mgr =
+                (android.app.NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (mgr == null) return;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            android.app.NotificationChannel channel = new android.app.NotificationChannel(
+                    "checkin_channel", "Health Check-In",
+                    android.app.NotificationManager.IMPORTANCE_DEFAULT);
+            channel.setDescription("Reminders for your scheduled health check-ins");
+            mgr.createNotificationChannel(channel);
+        }
+        androidx.core.app.NotificationCompat.Builder b =
+                new androidx.core.app.NotificationCompat.Builder(context, "checkin_channel")
+                        .setSmallIcon(com.example.richhealth.R.drawable.ic_notification)
+                        .setContentTitle(title)
+                        .setContentText(body)
+                        .setStyle(new androidx.core.app.NotificationCompat.BigTextStyle().bigText(body))
+                        .setPriority(androidx.core.app.NotificationCompat.PRIORITY_DEFAULT)
+                        .setAutoCancel(true);
+        mgr.notify(1002, b.build());
+    }
 }

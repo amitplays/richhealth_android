@@ -1519,6 +1519,12 @@ public class HomeFragment extends Fragment {
             } else {
                 Log.d("LocationPermission", "grantResults is empty");
             }
+        } else if (requestCode == Utils.NotificationPermissionHelper.RC_POST_NOTIFICATIONS) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Utils.CheckInNotificationHelper.fireNow(getContext(),
+                        "Reminders are on \uD83D\uDC99",
+                        "You'll get your health check-in reminders right here.");
+            }
         } else {
             Log.d("LocationPermission", "Unknown request code: " + requestCode);
         }
@@ -4201,12 +4207,10 @@ public class HomeFragment extends Fragment {
                         checkInHomeCard.setVisibility(View.VISIBLE);
 
                         // Schedule local check-in reminders (tier cadence) — no Firebase needed.
-                        // Android 13+ (API 33) requires POST_NOTIFICATIONS at runtime, else these
-                        // silently never show — ask once, and only schedule when it's allowed.
+                        // AlarmManager needs NO permission to schedule; POST_NOTIFICATIONS (13+) only
+                        // gates DISPLAY, so schedule unconditionally and ask for the permission once.
+                        Utils.CheckInNotificationHelper.scheduleForTier(requireContext(), tier);
                         Utils.NotificationPermissionHelper.requestIfNeeded(HomeFragment.this);
-                        if (Utils.NotificationPermissionHelper.hasPermission(requireContext())) {
-                            Utils.CheckInNotificationHelper.scheduleForTier(requireContext(), tier);
-                        }
 
                         // Reset pill; set below per state.
                         if (checkInStatusPill != null) {
