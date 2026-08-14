@@ -55,13 +55,15 @@
                     android:background="?attr/selectableItemBackground"
                     android:visibility="gone">
 
+                    <!-- Chevron leads the row; the cognition glyph was dropped so the
+                         expand affordance is the first thing read. -->
                     <ImageView
-                        android:id="@+id/thinking_icon"
-                        android:layout_width="13dp"
-                        android:layout_height="13dp"
+                        android:id="@+id/thinking_chevron"
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
                         android:layout_marginEnd="6dp"
-                        android:src="@drawable/ic_cognition"
-                        app:tint="#7FA8A8"/>
+                        android:src="@drawable/ic_chevron_down"
+                        app:tint="#4A6A6A"/>
 
                     <TextView
                         android:id="@+id/thinking_label"
@@ -70,14 +72,6 @@
                         android:text="Thought process"
                         android:textColor="#7FA8A8"
                         android:textSize="11sp"/>
-
-                    <ImageView
-                        android:id="@+id/thinking_chevron"
-                        android:layout_width="14dp"
-                        android:layout_height="14dp"
-                        android:layout_marginStart="6dp"
-                        android:src="@drawable/ic_chevron_down"
-                        app:tint="#4A6A6A"/>
                 </LinearLayout>
 
                 <TextView
