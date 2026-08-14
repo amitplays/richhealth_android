@@ -91,7 +91,9 @@ public class ProfileFragment extends Fragment {
     private TextView aqiValue;
     private TextView weightValue;
     private TextView sleepValue;
-    private TextView waterValue;
+    // At-a-Glance "Family" slot — replaced Water, which is still shown in full in
+    // the Lifestyle rows. Tapping it opens the family graph sheet.
+    private View familyStat;
     private Api.AQIAPIService aqiApiService;
     // Guards against repeated IQAir fetch/store cycles within a session (see refreshAqiFromLocation).
     private boolean aqiRefreshAttempted = false;
@@ -414,7 +416,11 @@ public class ProfileFragment extends Fragment {
         shareContent.append("Air Quality: ").append(aqiValue.getText()).append("\n");
         shareContent.append("Weight: ").append(weightValue.getText()).append("\n");
         shareContent.append("Sleep: ").append(sleepValue.getText()).append("\n");
-        shareContent.append("Water: ").append(waterValue.getText()).append("\n\n");
+        // Water no longer has an At-a-Glance view; read it straight off the profile.
+        shareContent.append("Water: ")
+                .append(userProfile != null && userProfile.getWaterIntake() > 0
+                        ? userProfile.getWaterIntake() + " gl" : "—")
+                .append("\n\n");
 
         shareContent.append("Download RichHealth to track your own health journey!");
 
@@ -747,7 +753,14 @@ public class ProfileFragment extends Fragment {
         aqiValue = view.findViewById(R.id.aqi_value);
         weightValue = view.findViewById(R.id.weight_value);
         sleepValue = view.findViewById(R.id.sleep_value);
-        waterValue = view.findViewById(R.id.water_value);
+        familyStat = view.findViewById(R.id.family_stat);
+        if (familyStat != null) {
+            familyStat.setOnClickListener(v -> {
+                if (getActivity() == null) return;
+                Utils.FamilyTreeBottomSheet.show(getActivity(),
+                        userProfile != null ? userProfile.getName() : null);
+            });
+        }
 
         // Fitness Goals section
         primaryGoal = view.findViewById(R.id.primary_goal);
@@ -1443,14 +1456,13 @@ public class ProfileFragment extends Fragment {
             updateVerifiedPill();
             refreshFamilyRequestsBadge();
 
-            // At a Glance: Weight (via updateDisplayedMetrics) + Sleep + Water from the
+            // At a Glance: Weight (via updateDisplayedMetrics) + Sleep from the
             // profile, plus live Air Quality fetched from the user's location data.
+            // The fourth slot is Family, which is a tap target rather than a metric.
             updateDisplayedMetrics();
 
             sleepValue.setText(userProfile.getSleepHours() > 0
                     ? userProfile.getSleepHours() + " h" : "—");
-            waterValue.setText(userProfile.getWaterIntake() > 0
-                    ? userProfile.getWaterIntake() + " gl" : "—");
 
             fetchAndShowAqi();
 

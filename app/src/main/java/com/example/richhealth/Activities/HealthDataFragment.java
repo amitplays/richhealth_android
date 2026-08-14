@@ -3997,6 +3997,28 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         popup.show();
     }
 
+    /**
+     * The one relationship list used by both the add and the edit dialog, ordered
+     * oldest generation first. Kept identical to the iOS picker in
+     * FamilySheetView.swift, and every entry is covered by the backend's
+     * reciprocal map (userController.getReciprocalRelationship) so accepting an
+     * invite always produces a usable label on the other side.
+     *
+     * The value the user picks describes THEMSELVES — "I am their ..." — which is
+     * what the backend stores for the recipient.
+     */
+    private static final String[] RELATIONSHIP_OPTIONS = new String[] {
+            "Grandfather", "Grandmother",
+            "Father", "Mother",
+            "Paternal Uncle", "Paternal Aunt",
+            "Maternal Uncle", "Maternal Aunt",
+            "Spouse", "Brother", "Sister", "Cousin",
+            "Son", "Daughter",
+            "Nephew", "Niece",
+            "Grandson", "Granddaughter",
+            "Other"
+    };
+
     private void showAddFamilyMemberDialog() {
         Dialog dialog = new Dialog(requireContext(), R.style.DialogTheme);
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
@@ -4011,14 +4033,7 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         Button sendButton = dialog.findViewById(R.id.send_button);
 
         // Setup relationship dropdown
-        String[] relationships = new String[] {
-                "Father", "Mother", "Brother", "Sister",
-                "Grandfather", "Grandmother",
-                "Paternal Uncle", "Paternal Aunt",
-                "Maternal Uncle", "Maternal Aunt",
-                "Son", "Daughter", "Grandson", "Granddaughter",
-                "Nephew", "Niece"
-        };
+        String[] relationships = RELATIONSHIP_OPTIONS;
 
         ArrayAdapter<String> adapter = new ArrayAdapter<>(
                 requireContext(),
@@ -4276,14 +4291,7 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         emailInput.setEnabled(false);
         emailInput.setAlpha(0.6f);
 
-        String[] relationships = new String[] {
-                "Father", "Mother", "Brother", "Sister",
-                "Grandfather", "Grandmother",
-                "Paternal Uncle", "Paternal Aunt",
-                "Maternal Uncle", "Maternal Aunt",
-                "Son", "Daughter", "Grandson", "Granddaughter",
-                "Nephew", "Niece", "Cousin", "Spouse"
-        };
+        String[] relationships = RELATIONSHIP_OPTIONS;
 
         ArrayAdapter<String> adapter = new ArrayAdapter<>(
                 requireContext(),

@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- "Your Family" sheet. The graph itself is drawn by Utils.FamilyTreeView from
+     the merged /api/user/relationships + /api/dependents payloads; this shell
+     holds the header, the fixed-height canvas and the empty state. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_sheet_surface"
+    android:paddingStart="22dp"
+    android:paddingEnd="22dp"
+    android:paddingTop="10dp"
+    android:paddingBottom="22dp">
+
+    <!-- Grabber -->
+    <View
+        android:layout_width="36dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="18dp"
+        android:background="@drawable/bg_dialog_input"
+        android:alpha="0.5"/>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Your Family"
+        android:textColor="@color/rh_text_primary"
+        android:textSize="20sp"
+        android:fontFamily="sans-serif-medium"/>
+
+    <TextView
+        android:id="@+id/family_sheet_subtitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="Loading your family…"
+        android:textColor="@color/rh_text_tertiary"
+        android:textSize="13sp"/>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="420dp"
+        android:layout_marginTop="14dp">
+
+        <Utils.FamilyTreeView
+            android:id="@+id/family_tree_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"/>
+
+        <ProgressBar
+            android:id="@+id/family_sheet_loading"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:layout_gravity="center"
+            android:indeterminateTint="@color/rh_accent"/>
+
+        <TextView
+            android:id="@+id/family_sheet_empty"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp"
+            android:visibility="gone"
+            android:text="No family connected yet.\nAdd relatives from Health Data to see them here."
+            android:textColor="@color/rh_text_tertiary"
+            android:textSize="13sp"
+            android:lineSpacingExtra="4dp"/>
+    </FrameLayout>
+
+    <!-- Honest about what the layout does and does not claim: the backend stores
+         each relative only in relation to you, so rows are generations, not
+         parentage links. -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="Grouped by generation, based on how each person is related to you. Pinch to zoom, drag to move, double-tap to fit."
+        android:textColor="@color/rh_text_tertiary"
+        android:textSize="11sp"
+        android:alpha="0.75"
+        android:lineSpacingExtra="2dp"/>
+</LinearLayout>

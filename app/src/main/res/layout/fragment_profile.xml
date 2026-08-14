@@ -160,7 +160,7 @@
                 android:layout_marginTop="16dp"
                 android:layout_marginBottom="14dp"/>
 
-            <!-- ─── At a Glance: Air Quality · Weight · Sleep · Water ─── -->
+            <!-- ─── At a Glance: Air Quality · Weight · Sleep · Family ─── -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -212,16 +212,25 @@
                 <View android:layout_width="1dp" android:layout_height="match_parent"
                     android:background="@color/rh_divider" android:layout_marginVertical="4dp"/>
 
+                <!-- Family opens the generation graph sheet. Water intake is still
+                     shown in full in the Lifestyle rows below (water_intake_value). -->
                 <LinearLayout
+                    android:id="@+id/family_stat"
                     android:layout_width="0dp" android:layout_height="wrap_content"
                     android:layout_weight="1" android:orientation="vertical"
-                    android:gravity="center_horizontal">
+                    android:gravity="center_horizontal"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="View your family tree">
                     <ImageView android:layout_width="@dimen/icon_sm" android:layout_height="@dimen/icon_sm"
-                        android:src="@drawable/ic_water_full" app:tint="@color/rh_accent" android:layout_marginBottom="7dp"/>
-                    <TextView android:id="@+id/water_value" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="—" android:textColor="@color/white" android:textSize="16sp" android:fontFamily="sans-serif-medium"/>
+                        android:src="@drawable/ic_family_group" app:tint="@color/rh_accent" android:layout_marginBottom="7dp"/>
+                    <TextView android:id="@+id/family_value" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="View" android:textColor="@color/white" android:textSize="16sp" android:fontFamily="sans-serif-medium"/>
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="Water" android:textColor="@color/rh_text_tertiary" android:textSize="10sp" android:layout_marginTop="4dp"/>
+                        android:text="Family" android:textColor="@color/rh_text_tertiary" android:textSize="10sp" android:layout_marginTop="4dp"/>
                 </LinearLayout>
             </LinearLayout>
 
