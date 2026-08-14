@@ -41,6 +41,64 @@ public class CheckInNotificationHelper {
     private static final String PREFS_NAME = "checkin_notif_prefs";
     private static final String KEY_TIER   = "stored_tier";
 
+    /** Shared by the receiver, fireNow() and the Profile row so they can never drift. */
+    public static final String CHANNEL_ID = "checkin_channel";
+
+    /**
+     * Create the notification channel. Idempotent, and safe to call before anything
+     * is ever posted — doing so early means the channel shows up in system settings
+     * so the user can configure it (and we can detect that they muted it) instead of
+     * it only appearing after the first reminder fires.
+     */
+    public static void ensureChannel(Context context) {
+        if (context == null) return;
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
+        android.app.NotificationManager mgr =
+                (android.app.NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (mgr == null) return;
+        android.app.NotificationChannel channel = new android.app.NotificationChannel(
+                CHANNEL_ID, "Health Check-In",
+                android.app.NotificationManager.IMPORTANCE_DEFAULT);
+        channel.setDescription("Reminders for your scheduled health check-ins");
+        mgr.createNotificationChannel(channel);
+    }
+
+    /**
+     * True when a reminder would actually reach the user — app-level notifications on
+     * AND this specific channel not muted. Lets the UI tell them why nothing arrives.
+     */
+    public static boolean areRemindersVisible(Context context) {
+        if (context == null) return false;
+        if (!androidx.core.app.NotificationManagerCompat.from(context).areNotificationsEnabled()) {
+            return false;
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            android.app.NotificationManager mgr =
+                    (android.app.NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (mgr == null) return false;
+            android.app.NotificationChannel ch = mgr.getNotificationChannel(CHANNEL_ID);
+            // No channel yet just means nothing has been posted — not "muted".
+            if (ch != null && ch.getImportance() == android.app.NotificationManager.IMPORTANCE_NONE) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Schedule using the last tier we saw, with no network involved.
+     *
+     * Reminders used to be scheduled only inside the success callback of the
+     * /api/checkin/home-card request, so any failure of that unrelated call — offline,
+     * server error, slow start — left the user with no alarms at all. Call this on
+     * every Home load; scheduleForTier() then refines it if/when the response lands.
+     */
+    public static void scheduleFromStoredTier(Context context) {
+        if (context == null) return;
+        ensureChannel(context);
+        scheduleForTier(context, loadTier(context));
+    }
+
     // ─── Public API ───────────────────────────────────────────────────────────
 
     /**
@@ -203,15 +261,9 @@ public class CheckInNotificationHelper {
         android.app.NotificationManager mgr =
                 (android.app.NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         if (mgr == null) return;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            android.app.NotificationChannel channel = new android.app.NotificationChannel(
-                    "checkin_channel", "Health Check-In",
-                    android.app.NotificationManager.IMPORTANCE_DEFAULT);
-            channel.setDescription("Reminders for your scheduled health check-ins");
-            mgr.createNotificationChannel(channel);
-        }
+        ensureChannel(context);
         androidx.core.app.NotificationCompat.Builder b =
-                new androidx.core.app.NotificationCompat.Builder(context, "checkin_channel")
+                new androidx.core.app.NotificationCompat.Builder(context, CHANNEL_ID)
                         .setSmallIcon(com.example.richhealth.R.drawable.ic_notification)
                         .setContentTitle(title)
                         .setContentText(body)

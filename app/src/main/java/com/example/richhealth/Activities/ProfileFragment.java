@@ -310,7 +310,18 @@ public class ProfileFragment extends Fragment {
         });
 
         notificationItem.setOnClickListener(v -> {
-            Utilities.toast(requireContext(), "Notification functionality will be implemented later");
+            android.content.Context ctx = getContext();
+            if (ctx == null) return;
+            // Check-in reminders are local alarms gated by the OS permission and the
+            // "Health Check-In" channel, so the system screen that owns both IS the
+            // control. This row used to be a "will be implemented later" toast, which
+            // left a denied permission with no route back.
+            if (Utils.CheckInNotificationHelper.areRemindersVisible(ctx)) {
+                Utilities.toast(ctx, "Reminders are on \u2014 opening notification settings");
+            } else {
+                Utilities.toast(ctx, "Reminders are off \u2014 turn them on here");
+            }
+            Utils.NotificationPermissionHelper.openNotificationSettings(ctx);
         });
 
         // ── AI & Chat preferences ──

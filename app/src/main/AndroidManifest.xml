@@ -95,13 +95,24 @@
 
         <activity
             android:name=".Activities.DailyCheckInActivity"
+            android:parentActivityName=".Activities.MainActivity"
             android:exported="false"/>
 
+        <!-- Must be exported: BOOT_COMPLETED and MY_PACKAGE_REPLACED are sent by the
+             system (uid 1000), and an unexported receiver is not a valid delivery
+             target for them. With exported="false" the alarms were never restored
+             after a reboot, so reminders stayed dead until Home was opened again.
+             The alarm itself is delivered by an explicit Intent, which does not
+             depend on this flag. -->
         <receiver
             android:name=".Activities.CheckInNotificationReceiver"
-            android:exported="false">
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <!-- Some OEM skins (Xiaomi, HTC) send this instead of BOOT_COMPLETED -->
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <!-- App updates also clear pending alarms -->
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
 

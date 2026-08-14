@@ -4188,6 +4188,14 @@ public class HomeFragment extends Fragment {
         String token = tokenManager.getToken();
         if (token == null) return;
 
+        // Reminders must NOT depend on this request succeeding. They used to be
+        // scheduled only inside the success callback below, so an offline start, a
+        // server error or an expired session left the user with no alarms at all and
+        // nothing retried. Schedule from the last known tier up front; the success
+        // handler refines the cadence if and when the response actually lands.
+        Utils.CheckInNotificationHelper.scheduleFromStoredTier(context);
+        Utils.NotificationPermissionHelper.requestIfNeeded(this);
+
         String url = ApiConfig.BASE_URL + "/api/checkin/home-card";
 
         StringRequest request = new StringRequest(Request.Method.GET, url,
@@ -4206,11 +4214,10 @@ public class HomeFragment extends Fragment {
 
                         checkInHomeCard.setVisibility(View.VISIBLE);
 
-                        // Schedule local check-in reminders (tier cadence) — no Firebase needed.
-                        // AlarmManager needs NO permission to schedule; POST_NOTIFICATIONS (13+) only
-                        // gates DISPLAY, so schedule unconditionally and ask for the permission once.
+                        // Refine the cadence now that the real tier is known. The initial
+                        // schedule + permission ask already happened before the request,
+                        // so a failure here no longer costs the user their reminders.
                         Utils.CheckInNotificationHelper.scheduleForTier(requireContext(), tier);
-                        Utils.NotificationPermissionHelper.requestIfNeeded(HomeFragment.this);
 
                         // Reset pill; set below per state.
                         if (checkInStatusPill != null) {
