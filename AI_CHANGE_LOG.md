@@ -1,5 +1,10 @@
 ## [2026-08-17] Health Check-In redesign (meaningful summary)
 
+## [2026-08-17] Health Check-In card polish
+- CompletionRingView thinner (4dp stroke) + container 54dp (was 72); percent scaled.
+- Ring row realigned: streak primary (flame + 18sp), answered·missed secondary muted; ⓘ trailing.
+- "Richie is reviewing" now uses the app logo spinning (ObjectAnimator) instead of a ProgressBar; animator stopped on ready/failed/hide/onDestroy.
+
 ## [2026-08-17] Health Check-In — analysis section (Council), completion ring, notify
 - New "What Richie thinks" section fetches GET /api/checkin/sessions/{latestCompletedId}/analysis (Bearer Volley, polled 4s/90s while processing): processing / ready (analysis + collapsible COUNCIL for pro or "Richie's reasoning" for free) / failed+retry.
 - Streak block now leads with a code-drawn CompletionRingView (rate-colored % ring) + answered·missed + streak; consistency grid capped to 10; ⓘ explainer dialog.

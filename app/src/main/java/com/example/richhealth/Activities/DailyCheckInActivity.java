@@ -93,6 +93,8 @@ public class DailyCheckInActivity extends AppCompatActivity {
     // "What Richie thinks" section
     private LinearLayout richieSection;
     private LinearLayout richieProcessing;
+    private android.widget.ImageView richieProcessingLogo;
+    private android.animation.ObjectAnimator richieProcessingSpinner;
     private LinearLayout richieReady;
     private LinearLayout richieFailed;
     private TextView richieAnalysisText;
@@ -181,6 +183,15 @@ public class DailyCheckInActivity extends AppCompatActivity {
         // "What Richie thinks" views
         richieSection         = findViewById(R.id.richie_section);
         richieProcessing      = findViewById(R.id.richie_processing);
+        richieProcessingLogo  = findViewById(R.id.richie_processing_logo);
+
+        // Spinning app logo for the "Richie is reviewing" state — same drawable +
+        // rotation pattern as the list-loading spinner.
+        richieProcessingSpinner = android.animation.ObjectAnimator
+                .ofFloat(richieProcessingLogo, android.view.View.ROTATION, 0f, 360f);
+        richieProcessingSpinner.setDuration(1200);
+        richieProcessingSpinner.setRepeatCount(android.animation.ObjectAnimator.INFINITE);
+        richieProcessingSpinner.setInterpolator(new android.view.animation.LinearInterpolator());
         richieReady           = findViewById(R.id.richie_ready);
         richieFailed          = findViewById(R.id.richie_failed);
         richieAnalysisText    = findViewById(R.id.richie_analysis_text);
@@ -226,6 +237,7 @@ public class DailyCheckInActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         stopAnalysisPolling();
+        stopProcessingSpinner();
         super.onDestroy();
     }
 
@@ -897,6 +909,7 @@ public class DailyCheckInActivity extends AppCompatActivity {
         richieProcessing.setVisibility(View.VISIBLE);
         richieReady.setVisibility(View.GONE);
         richieFailed.setVisibility(View.GONE);
+        startProcessingSpinner();
     }
 
     private void showRichieReady() {
@@ -905,6 +918,7 @@ public class DailyCheckInActivity extends AppCompatActivity {
         richieProcessing.setVisibility(View.GONE);
         richieReady.setVisibility(View.VISIBLE);
         richieFailed.setVisibility(View.GONE);
+        stopProcessingSpinner();
     }
 
     private void showRichieFailed() {
@@ -913,10 +927,25 @@ public class DailyCheckInActivity extends AppCompatActivity {
         richieProcessing.setVisibility(View.GONE);
         richieReady.setVisibility(View.GONE);
         richieFailed.setVisibility(View.VISIBLE);
+        stopProcessingSpinner();
     }
 
     private void hideRichie() {
         if (richieSection != null) richieSection.setVisibility(View.GONE);
+        stopProcessingSpinner();
+    }
+
+    private void startProcessingSpinner() {
+        if (richieProcessingSpinner != null && !richieProcessingSpinner.isStarted()) {
+            richieProcessingSpinner.start();
+        }
+    }
+
+    private void stopProcessingSpinner() {
+        if (richieProcessingSpinner != null && richieProcessingSpinner.isStarted()) {
+            richieProcessingSpinner.cancel();
+        }
+        if (richieProcessingLogo != null) richieProcessingLogo.setRotation(0f);
     }
 
     private int colorForStatus(String status) {
@@ -1197,7 +1226,7 @@ public class DailyCheckInActivity extends AppCompatActivity {
         CompletionRingView(Context c) {
             super(c);
             float d = c.getResources().getDisplayMetrics().density;
-            strokeW = 6f * d;
+            strokeW = 4f * d;
 
             bgPaint.setStyle(Paint.Style.STROKE);
             bgPaint.setStrokeWidth(strokeW);
