@@ -101,23 +101,147 @@
                     android:textSize="13sp"
                     android:layout_marginBottom="12dp" />
 
-                <!-- Check-in history bar chart -->
-                <com.github.mikephil.charting.charts.BarChart
-                    android:id="@+id/checkin_chart"
-                    android:layout_width="match_parent"
-                    android:layout_height="160dp"
-                    android:layout_marginTop="4dp" />
-
-                <TextView
-                    android:id="@+id/checkin_chart_subtitle"
+                <!-- ═══ STREAK + CONSISTENCY (built from session list) ═══ -->
+                <LinearLayout
+                    android:id="@+id/streak_section"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Complete your first check-in to see history"
-                    android:textColor="#808080"
-                    android:textSize="11sp"
-                    android:gravity="center"
+                    android:orientation="vertical"
                     android:layout_marginTop="4dp"
-                    android:layout_marginBottom="8dp" />
+                    android:layout_marginBottom="8dp"
+                    android:visibility="gone">
+
+                    <!-- Streak count -->
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="14dp">
+
+                        <TextView
+                            android:id="@+id/streak_flame"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="🔥"
+                            android:textSize="30sp"
+                            android:layout_marginEnd="10dp"
+                            android:contentDescription="@null" />
+
+                        <TextView
+                            android:id="@+id/streak_number"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0"
+                            android:textColor="@color/white"
+                            android:textSize="34sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/streak_label"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="check-in streak"
+                            android:textColor="#999999"
+                            android:textSize="14sp"
+                            android:layout_marginStart="8dp" />
+                    </LinearLayout>
+
+                    <!-- Consistency grid — populated programmatically, oldest → newest -->
+                    <LinearLayout
+                        android:id="@+id/consistency_grid"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="10dp" />
+
+                    <!-- Legend (color is paired with a label for accessibility) -->
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <View
+                            android:layout_width="10dp"
+                            android:layout_height="10dp"
+                            android:background="@drawable/checkin_dot_bg"
+                            android:backgroundTint="#008b8b" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Completed"
+                            android:textColor="#999999"
+                            android:textSize="11sp"
+                            android:layout_marginStart="5dp" />
+
+                        <View
+                            android:layout_width="10dp"
+                            android:layout_height="10dp"
+                            android:background="@drawable/checkin_dot_bg"
+                            android:backgroundTint="#E53935"
+                            android:layout_marginStart="14dp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Missed"
+                            android:textColor="#999999"
+                            android:textSize="11sp"
+                            android:layout_marginStart="5dp" />
+
+                        <View
+                            android:layout_width="10dp"
+                            android:layout_height="10dp"
+                            android:background="@drawable/checkin_dot_bg"
+                            android:backgroundTint="#FFA500"
+                            android:layout_marginStart="14dp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="In progress"
+                            android:textColor="#999999"
+                            android:textSize="11sp"
+                            android:layout_marginStart="5dp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- ═══ YOUR LAST CHECK-IN (answer summary chips) ═══ -->
+                <LinearLayout
+                    android:id="@+id/last_checkin_section"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_marginBottom="12dp"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Your last check-in"
+                        android:textColor="@color/white"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/last_checkin_date"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text=""
+                        android:textColor="#999999"
+                        android:textSize="12sp"
+                        android:layout_marginTop="2dp"
+                        android:layout_marginBottom="8dp" />
+
+                    <com.google.android.material.chip.ChipGroup
+                        android:id="@+id/last_checkin_chips"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        app:chipSpacingHorizontal="6dp"
+                        app:chipSpacingVertical="2dp" />
+                </LinearLayout>
 
             </LinearLayout>
 

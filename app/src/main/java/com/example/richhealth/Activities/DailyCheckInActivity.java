@@ -2,10 +2,12 @@ package com.example.richhealth.Activities;
 import Utils.Utilities;
 
 import android.app.Dialog;
+import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
@@ -26,12 +28,9 @@ import com.android.volley.Request;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 import com.example.richhealth.R;
-import com.github.mikephil.charting.charts.BarChart;
-import com.github.mikephil.charting.data.BarData;
-import com.github.mikephil.charting.data.BarDataSet;
-import com.github.mikephil.charting.data.BarEntry;
-import com.github.mikephil.charting.formatter.ValueFormatter;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -40,6 +39,7 @@ import org.json.JSONObject;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -71,8 +71,20 @@ public class DailyCheckInActivity extends AppCompatActivity {
     private boolean isDue = false;
     private String nextDueDate = null;
 
-    private BarChart checkinChart;
-    private TextView checkinChartSubtitle;
+    // Summary views (replaces old bar chart)
+    private LinearLayout streakSection;
+    private TextView streakNumber;
+    private TextView streakLabel;
+    private LinearLayout consistencyGrid;
+    private LinearLayout lastCheckinSection;
+    private TextView lastCheckinDate;
+    private ChipGroup lastCheckinChips;
+
+    // Status colors — paired with legend labels in the layout
+    private static final int COLOR_COMPLETED   = 0xFF008B8B; // teal
+    private static final int COLOR_MISSED      = 0xFFE53935; // red
+    private static final int COLOR_IN_PROGRESS = 0xFFFFA500; // orange
+    private static final int MAX_CELLS = 12;
 
     private final List<SessionItem> sessionItems = new ArrayList<>();
     private SessionListAdapter listAdapter;
@@ -111,9 +123,13 @@ public class DailyCheckInActivity extends AppCompatActivity {
         checkinRecycler.setNestedScrollingEnabled(false);
         checkinRecycler.setAdapter(listAdapter);
 
-        checkinChart = findViewById(R.id.checkin_chart);
-        checkinChartSubtitle = findViewById(R.id.checkin_chart_subtitle);
-        setupCheckInChart();
+        streakSection      = findViewById(R.id.streak_section);
+        streakNumber       = findViewById(R.id.streak_number);
+        streakLabel        = findViewById(R.id.streak_label);
+        consistencyGrid    = findViewById(R.id.consistency_grid);
+        lastCheckinSection = findViewById(R.id.last_checkin_section);
+        lastCheckinDate    = findViewById(R.id.last_checkin_date);
+        lastCheckinChips   = findViewById(R.id.last_checkin_chips);
 
         fetchCheckInList();
     }
@@ -461,8 +477,8 @@ public class DailyCheckInActivity extends AppCompatActivity {
         if (!isDue && emptySubtitle != null && nextDueDate != null) {
             emptySubtitle.setText("Your next check-in will be ready on " + formatDate(nextDueDate, ""));
         }
-        // Chart shows empty state — no sessions yet
-        populateCheckInChart(sessionItems);
+        // No sessions yet — hide the summary
+        populateSummary(sessionItems);
     }
 
     private void showList() {
@@ -474,121 +490,159 @@ public class DailyCheckInActivity extends AppCompatActivity {
         emptyState.setVisibility(View.GONE);
         checkinRecycler.setVisibility(View.VISIBLE);
         listAdapter.notifyDataSetChanged();
-        populateCheckInChart(sessionItems);
+        populateSummary(sessionItems);
     }
 
-    // ─── Check-in chart ───────────────────────────────────────────────────────
+    // ─── Check-in summary (streak + consistency grid + last check-in) ───────────
 
-    private void setupCheckInChart() {
-        if (checkinChart == null) return;
-        checkinChart.getDescription().setEnabled(false);
-        checkinChart.getLegend().setEnabled(false);
-        checkinChart.setDrawGridBackground(false);
-        checkinChart.setDrawBorders(false);
-        checkinChart.setBackgroundColor(Color.TRANSPARENT);
-        checkinChart.setTouchEnabled(false);
-        checkinChart.setHighlightPerTapEnabled(false);
-        checkinChart.setNoDataText("Complete your first check-in to see history");
-        checkinChart.setNoDataTextColor(Color.parseColor("#808080"));
-        checkinChart.getXAxis().setEnabled(false);
-        checkinChart.getAxisLeft().setEnabled(false);
-        checkinChart.getAxisRight().setEnabled(false);
-        checkinChart.setExtraOffsets(0f, 8f, 0f, 4f);
-        checkinChart.invalidate();
-    }
-
-    private void populateCheckInChart(List<SessionItem> items) {
-        if (checkinChart == null) return;
-
+    /**
+     * Rebuilds the streak/consistency section and the "last check-in" chips
+     * from the already-parsed session list. Fully client-side, deterministic.
+     */
+    private void populateSummary(List<SessionItem> items) {
         if (items == null || items.isEmpty()) {
-            checkinChart.clear();
-            checkinChart.invalidate();
-            if (checkinChartSubtitle != null) {
-                checkinChartSubtitle.setText("Complete your first check-in to see history");
-            }
+            if (streakSection != null) streakSection.setVisibility(View.GONE);
+            if (lastCheckinSection != null) lastCheckinSection.setVisibility(View.GONE);
             return;
         }
 
-        // Count statuses across all sessions
-        int completed = 0, missed = 0, inProgress = 0;
-        for (SessionItem s : items) {
-            switch (s.status) {
-                case "completed": completed++; break;
-                case "missed":    missed++;    break;
-                case "in_progress":
-                case "pending":   inProgress++; break;
+        // Chronological order (oldest → newest); stable, deterministic.
+        List<SessionItem> sorted = new ArrayList<>(items);
+        Collections.sort(sorted, (a, b) -> Long.compare(sessionTime(a), sessionTime(b)));
+
+        // (A) Streak + consistency grid
+        if (streakSection != null) {
+            streakSection.setVisibility(View.VISIBLE);
+            int streak = computeStreak(sorted);
+            if (streakNumber != null) streakNumber.setText(String.valueOf(streak));
+            if (streakLabel != null) {
+                streakLabel.setText(streak == 0 ? "Start your streak" : "check-in streak");
+            }
+            buildConsistencyGrid(sorted);
+        }
+
+        // (B) Your last check-in
+        SessionItem last = latestCompletedWithResponses(sorted);
+        if (last == null || lastCheckinSection == null) {
+            if (lastCheckinSection != null) lastCheckinSection.setVisibility(View.GONE);
+        } else {
+            lastCheckinSection.setVisibility(View.VISIBLE);
+            if (lastCheckinDate != null) {
+                String dateStr = (last.completedAt != null && !last.completedAt.isEmpty())
+                        ? formatDate(last.completedAt, "")
+                        : formatDate(last.scheduledFor, last.period);
+                lastCheckinDate.setText(dateStr);
+            }
+            buildLastCheckinChips(last);
+        }
+    }
+
+    /**
+     * Number of consecutive completed cycles counting back from the most recent.
+     * A single leading still-open (pending/in_progress) cycle is skipped without
+     * breaking the streak; the first "missed" (or a gap after counting starts)
+     * stops it. Input must be sorted oldest → newest.
+     */
+    private int computeStreak(List<SessionItem> sortedAsc) {
+        int streak = 0;
+        for (int i = sortedAsc.size() - 1; i >= 0; i--) {
+            String status = sortedAsc.get(i).status;
+            if ("completed".equals(status)) {
+                streak++;
+            } else if ("pending".equals(status) || "in_progress".equals(status)) {
+                if (streak == 0) continue; // leading open cycle — skip, don't break
+                break;                      // open cycle after a run — stop counting
+            } else { // missed / unknown
+                break;
             }
         }
-        int total = items.size();
+        return streak;
+    }
 
-        // Build bars: one bar per status category (completed, missed, in-progress)
-        List<BarEntry> entries = new ArrayList<>();
-        List<Integer> colors = new ArrayList<>();
-
-        if (completed > 0) {
-            entries.add(new BarEntry(0, completed));
-            colors.add(Color.parseColor("#008b8b")); // teal
-        }
-        if (missed > 0) {
-            entries.add(new BarEntry(entries.size(), missed));
-            colors.add(Color.parseColor("#E53935")); // red
-        }
-        if (inProgress > 0) {
-            entries.add(new BarEntry(entries.size(), inProgress));
-            colors.add(Color.parseColor("#FF9800")); // orange
-        }
-
-        if (entries.isEmpty()) {
-            checkinChart.clear();
-            checkinChart.invalidate();
-            return;
-        }
-
-        BarDataSet dataSet = new BarDataSet(entries, "Check-ins");
-        dataSet.setColors(colors);
-        dataSet.setDrawValues(true);
-        dataSet.setValueTextColor(Color.WHITE);
-        dataSet.setValueTextSize(13f);
-        dataSet.setValueFormatter(new ValueFormatter() {
-            @Override
-            public String getFormattedValue(float value) {
-                return String.valueOf((int) value);
+    /** Most recent completed session that actually has responses; null if none. */
+    private SessionItem latestCompletedWithResponses(List<SessionItem> sortedAsc) {
+        for (int i = sortedAsc.size() - 1; i >= 0; i--) {
+            SessionItem s = sortedAsc.get(i);
+            if ("completed".equals(s.status) && s.responses != null && !s.responses.isEmpty()) {
+                return s;
             }
-        });
+        }
+        return null;
+    }
 
-        // Custom x-axis labels
-        final List<String> labels = new ArrayList<>();
-        if (completed > 0) labels.add("Completed");
-        if (missed > 0)    labels.add("Missed");
-        if (inProgress > 0) labels.add("In Progress");
+    /** Populates the consistency grid: last up to MAX_CELLS cycles, oldest → newest. */
+    private void buildConsistencyGrid(List<SessionItem> sortedAsc) {
+        if (consistencyGrid == null) return;
+        consistencyGrid.removeAllViews();
 
-        checkinChart.getXAxis().setEnabled(true);
-        checkinChart.getXAxis().setPosition(com.github.mikephil.charting.components.XAxis.XAxisPosition.BOTTOM);
-        checkinChart.getXAxis().setGranularity(1f);
-        checkinChart.getXAxis().setTextColor(Color.parseColor("#AAAAAA"));
-        checkinChart.getXAxis().setTextSize(11f);
-        checkinChart.getXAxis().setDrawGridLines(false);
-        checkinChart.getXAxis().setDrawAxisLine(false);
-        checkinChart.getXAxis().setValueFormatter(new ValueFormatter() {
-            @Override
-            public String getFormattedValue(float value) {
-                int idx = (int) value;
-                return idx >= 0 && idx < labels.size() ? labels.get(idx) : "";
-            }
-        });
+        int start = Math.max(0, sortedAsc.size() - MAX_CELLS);
+        int cellSize = dpToPx(17);
+        int gap = dpToPx(4);
 
-        BarData barData = new BarData(dataSet);
-        barData.setBarWidth(0.45f);
-        checkinChart.setData(barData);
-        checkinChart.animateY(500);
-        checkinChart.invalidate();
+        for (int i = start; i < sortedAsc.size(); i++) {
+            SessionItem s = sortedAsc.get(i);
+            int color = colorForStatus(s.status);
 
-        // Update subtitle with total summary
-        if (checkinChartSubtitle != null) {
-            checkinChartSubtitle.setText(
-                total + " total check-in" + (total == 1 ? "" : "s")
-                + "  •  " + completed + " completed  •  " + missed + " missed"
-            );
+            View cell = new View(this);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(cellSize, cellSize);
+            if (i > start) lp.setMarginStart(gap);
+            cell.setLayoutParams(lp);
+            cell.setBackgroundResource(R.drawable.checkin_cell_bg);
+            cell.setBackgroundTintList(ColorStateList.valueOf(color));
+            cell.setContentDescription(statusLabel(s.status));
+            consistencyGrid.addView(cell);
+        }
+    }
+
+    /** Builds the answer chips for the most recent completed check-in. */
+    private void buildLastCheckinChips(SessionItem item) {
+        if (lastCheckinChips == null) return;
+        lastCheckinChips.removeAllViews();
+        if (item.responses == null) return;
+
+        for (JSONObject r : item.responses) {
+            String emoji = r.optString("selectedEmoji", "");
+            String label = r.optString("selectedLabel", "");
+            if (label.isEmpty()) label = r.optString("selectedValue", "");
+            String text = emoji.isEmpty() ? label : emoji + " " + label;
+            if (text.trim().isEmpty()) continue;
+
+            Chip chip = new Chip(this);
+            chip.setText(text);
+            chip.setClickable(false);
+            chip.setCheckable(false);
+            chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+            chip.setChipBackgroundColor(ColorStateList.valueOf(0xFF0A2828));
+            chip.setTextColor(COLOR_COMPLETED);
+            chip.setEnsureMinTouchTargetSize(false);
+            lastCheckinChips.addView(chip);
+        }
+    }
+
+    private int colorForStatus(String status) {
+        if ("completed".equals(status)) return COLOR_COMPLETED;
+        if ("missed".equals(status)) return COLOR_MISSED;
+        return COLOR_IN_PROGRESS; // pending / in_progress / unknown
+    }
+
+    private String statusLabel(String status) {
+        if ("completed".equals(status)) return "Completed";
+        if ("missed".equals(status)) return "Missed";
+        return "In progress";
+    }
+
+    /** Parses a session's date to epoch millis for ordering; 0 when unparseable. */
+    private long sessionTime(SessionItem s) {
+        String iso = s.scheduledFor;
+        if (iso == null || iso.isEmpty()) return 0L;
+        try {
+            SimpleDateFormat parser = new SimpleDateFormat(
+                    "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault());
+            parser.setTimeZone(TimeZone.getTimeZone("UTC"));
+            Date d = parser.parse(iso);
+            return d == null ? 0L : d.getTime();
+        } catch (Exception e) {
+            return 0L;
         }
     }
 

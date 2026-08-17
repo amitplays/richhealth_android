@@ -1,3 +1,6 @@
+## [2026-08-17] Health Check-In redesign (meaningful summary)
+- Removed the meaningless session-status BarChart (MPAndroidChart) on the Health Check-In screen. Added two client-only widgets from the existing session list: a streak + per-cycle consistency heatmap grid (status-colored cells + accessible legend) and a "Your last check-in" Material chip summary of the latest completed answers. New drawables checkin_cell_bg / checkin_dot_bg. No backend change.
+
 # AI Change Log — RichHealth Android
 # This file is maintained by AI. Every change made to the codebase must be logged here
 # with a datestamp, affected files, what changed, and why. Keep entries short and factual.
