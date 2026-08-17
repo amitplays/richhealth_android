@@ -4149,6 +4149,7 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         ChipGroup chipGroupDays;
         LinearLayout timesContainer;
         final List<int[]> times = new ArrayList<>();   // each {hour,minute}
+        boolean suppressSwitchCallback = false;        // guards programmatic setChecked
 
         boolean isReady() {
             return switchReminders != null && section != null && cadenceDropdown != null
@@ -4173,14 +4174,26 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
 
         buildWeekdayChips(st);
 
-        st.switchReminders.setOnCheckedChangeListener((b, checked) ->
-                st.section.setVisibility(checked ? View.VISIBLE : View.GONE));
+        st.switchReminders.setOnCheckedChangeListener((buttonView, checked) -> {
+            // Ignore the callback we trigger ourselves when reverting the switch.
+            if (st.suppressSwitchCallback) return;
+            // Only gate turning ON — turning OFF always works.
+            if (checked) {
+                Context ctx = getContext();
+                if (ctx != null && !notificationsWillReach(ctx)) {
+                    handleRemindersBlocked(st, ctx);
+                    return;
+                }
+            }
+            st.section.setVisibility(checked ? View.VISIBLE : View.GONE);
+        });
 
         st.cadenceDropdown.setOnItemClickListener((parent, view, position, id) ->
                 applyCadence(st, REMINDER_CADENCES[position], true, null));
 
         boolean enabled = existing != null && existing.isRemindersEnabled();
-        st.switchReminders.setChecked(enabled);
+        // Prefill is not a user action, so set it silently (no permission gating here).
+        setSwitchCheckedSilently(st, enabled);
         st.section.setVisibility(enabled ? View.VISIBLE : View.GONE);
 
         if (enabled) {
@@ -4192,6 +4205,70 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
             applyCadence(st, CAD_DAILY, true, null);
         }
         return st;
+    }
+
+    /**
+     * True only when a medication reminder would actually reach the user: the
+     * POST_NOTIFICATIONS runtime permission is held (always so below API 33), app-level
+     * notifications are on, and the reminder channel is not muted. Mirrors the check style
+     * in {@link Utils.CheckInNotificationHelper#areRemindersVisible}.
+     */
+    private boolean notificationsWillReach(Context ctx) {
+        if (ctx == null) return false;
+        if (!Utils.NotificationPermissionHelper.hasPermission(ctx)) return false;
+        if (!androidx.core.app.NotificationManagerCompat.from(ctx).areNotificationsEnabled()) {
+            return false;
+        }
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            android.app.NotificationManager mgr =
+                    (android.app.NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (mgr == null) return false;
+            android.app.NotificationChannel ch =
+                    mgr.getNotificationChannel(Utils.MedicationReminderHelper.CHANNEL_ID);
+            // No channel yet just means nothing has been posted — not "muted".
+            if (ch != null && ch.getImportance() == android.app.NotificationManager.IMPORTANCE_NONE) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Reminders were toggled on but notifications can't reach the user. Revert the switch,
+     * keep the section hidden, then either ask for the runtime permission (API 33+ when it
+     * simply hasn't been requested) or route the user to notification settings.
+     */
+    private void handleRemindersBlocked(ReminderUiState st, Context ctx) {
+        setSwitchCheckedSilently(st, false);
+        st.section.setVisibility(View.GONE);
+
+        boolean api33 = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU;
+        if (api33 && !Utils.NotificationPermissionHelper.hasPermission(ctx)
+                && !Utils.NotificationPermissionHelper.isPermanentlyDenied(this)) {
+            // Runtime permission just hasn't been asked yet — ask now. The user can flip
+            // the switch again once it's granted.
+            Utils.NotificationPermissionHelper.requestIfNeeded(this);
+        } else {
+            showNotificationsOffDialog(ctx);
+        }
+    }
+
+    /** Flip the switch without re-entering its listener (prevents a gate/revert loop). */
+    private void setSwitchCheckedSilently(ReminderUiState st, boolean checked) {
+        st.suppressSwitchCallback = true;
+        st.switchReminders.setChecked(checked);
+        st.suppressSwitchCallback = false;
+    }
+
+    private void showNotificationsOffDialog(Context ctx) {
+        if (ctx == null) return;
+        new AlertDialog.Builder(ctx)
+                .setTitle("Notifications are off")
+                .setMessage("Turn on notifications for RichHealth to get medication reminders.")
+                .setPositiveButton("Open Settings",
+                        (d, w) -> Utils.NotificationPermissionHelper.openNotificationSettings(ctx))
+                .setNegativeButton("Not now", null)
+                .show();
     }
 
     private void buildWeekdayChips(ReminderUiState st) {
