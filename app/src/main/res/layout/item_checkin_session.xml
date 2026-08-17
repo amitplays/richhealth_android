@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Past-reads timeline entry: left dot + connecting line, then content. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal">
@@ -92,7 +93,7 @@
             app:cornerRadius="8dp"
             android:visibility="gone" />
 
-        <!-- Accordion header: "See what you shared" (completed w/ responses) -->
+        <!-- Toggle: "See Richie's read" / "Hide" (completed sessions) -->
         <LinearLayout
             android:id="@+id/accordion_header"
             android:layout_width="wrap_content"
@@ -104,9 +105,10 @@
             android:layout_marginTop="5dp">
 
             <TextView
+                android:id="@+id/read_toggle_label"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="See what you shared"
+                android:text="See Richie's read"
                 android:textColor="#008b8b"
                 android:textSize="12.5sp"
                 android:textStyle="bold" />
@@ -123,16 +125,87 @@
                 android:contentDescription="@null" />
         </LinearLayout>
 
-        <!-- Accordion body: responses (GONE by default) -->
+        <!-- Richie's read body (GONE by default) — replaces the raw Q&A dump. -->
         <LinearLayout
-            android:id="@+id/responses_container"
+            android:id="@+id/read_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:background="@drawable/checkin_watch_bg"
             android:padding="12dp"
             android:layout_marginTop="10dp"
-            android:visibility="gone" />
+            android:visibility="gone">
+
+            <!-- processing row: spinning app logo + reviewing label -->
+            <LinearLayout
+                android:id="@+id/read_processing"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:visibility="gone">
+
+                <ImageView
+                    android:id="@+id/read_processing_logo"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/ic_launcher"
+                    android:contentDescription="@null" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Richie is reviewing this check-in…"
+                    android:textColor="#C7C9CE"
+                    android:textSize="13sp"
+                    android:layout_marginStart="10dp" />
+            </LinearLayout>
+
+            <!-- headline -->
+            <TextView
+                android:id="@+id/read_headline"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text=""
+                android:textColor="@color/white"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:visibility="gone" />
+
+            <!-- analysis body -->
+            <TextView
+                android:id="@+id/read_analysis"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text=""
+                android:textColor="#C7C9CE"
+                android:textSize="14sp"
+                android:lineSpacingExtra="2dp"
+                android:layout_marginTop="6dp"
+                android:visibility="gone" />
+
+            <!-- flagged signals -->
+            <TextView
+                android:id="@+id/read_flagged"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text=""
+                android:textColor="#008b8b"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:layout_marginTop="8dp"
+                android:visibility="gone" />
+
+            <!-- failed -->
+            <TextView
+                android:id="@+id/read_failed"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Couldn't generate a read for this check-in."
+                android:textColor="#9E9E9E"
+                android:textSize="13sp"
+                android:visibility="gone" />
+        </LinearLayout>
 
     </LinearLayout>
 </LinearLayout>

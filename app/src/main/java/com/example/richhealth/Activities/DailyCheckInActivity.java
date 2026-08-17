@@ -138,6 +138,15 @@ public class DailyCheckInActivity extends AppCompatActivity {
     private static final long ANALYSIS_POLL_TIMEOUT_MS  = 90000L;
     private static final String TAG_ANALYSIS = "checkin_analysis";
 
+    // Past reads — per-row "Richie's read" fetch + bounded poll (independent of the hero).
+    private final Map<String, JSONObject> sessionAnalysisCache = new HashMap<>();
+    private final Handler pastReadHandler = new Handler(Looper.getMainLooper());
+    private RequestQueue pastReadQueue;
+    private final List<android.animation.ObjectAnimator> pastReadSpinners = new ArrayList<>();
+    private static final long PAST_READ_POLL_INTERVAL_MS = 4000L;
+    private static final int  PAST_READ_MAX_TRIES = 6;
+    private static final String TAG_PAST_READ = "checkin_past_read";
+
     // Status colors — paired with legend labels in the layout
     private static final int COLOR_COMPLETED   = 0xFF008B8B; // teal
     private static final int COLOR_MISSED      = 0xFFE53935; // red
@@ -262,6 +271,7 @@ public class DailyCheckInActivity extends AppCompatActivity {
     protected void onDestroy() {
         stopAnalysisPolling();
         stopProcessingSpinner();
+        stopPastReadWork();
         super.onDestroy();
     }
 
@@ -863,6 +873,144 @@ public class DailyCheckInActivity extends AppCompatActivity {
         if (analysisQueue != null) analysisQueue.cancelAll(TAG_ANALYSIS);
     }
 
+    // ─── Past reads: per-session stored analysis ("Richie's read") ──────────────
+
+    /** Delivers a parsed past-read; {@code data} may be null or carry a non-ready status. */
+    interface PastReadCallback { void onResult(String sessionId, JSONObject data); }
+
+    private RequestQueue getPastReadQueue() {
+        if (pastReadQueue == null) pastReadQueue = Volley.newRequestQueue(getApplicationContext());
+        return pastReadQueue;
+    }
+
+    /**
+     * Loads a completed session's stored analysis for the expanded past-read row.
+     * Serves a cached ready result instantly; otherwise fetches and, while the read
+     * is still generating, polls a bounded number of times before giving up.
+     */
+    private void loadPastRead(String sessionId, PastReadCallback cb) {
+        if (sessionId == null || sessionId.isEmpty()) {
+            if (cb != null) cb.onResult(sessionId, null);
+            return;
+        }
+        JSONObject cached = sessionAnalysisCache.get(sessionId);
+        if (cached != null) { if (cb != null) cb.onResult(sessionId, cached); return; }
+        fetchPastRead(sessionId, 0, cb);
+    }
+
+    private void fetchPastRead(String sessionId, int attempt, PastReadCallback cb) {
+        String token = tokenManager != null ? tokenManager.getToken() : null;
+        if (token == null) { if (cb != null) cb.onResult(sessionId, null); return; }
+
+        String url = ApiConfig.BASE_URL + "/api/checkin/sessions/" + sessionId + "/analysis";
+        StringRequest req = new StringRequest(Request.Method.GET, url,
+                response -> handlePastReadResponse(sessionId, attempt, response, cb),
+                error -> handlePastReadError(sessionId, attempt, cb)) {
+            @Override
+            public Map<String, String> getHeaders() throws AuthFailureError {
+                Map<String, String> h = new HashMap<>();
+                h.put("Authorization", "Bearer " + token);
+                return h;
+            }
+        };
+        req.setTag(TAG_PAST_READ);
+        req.setRetryPolicy(new DefaultRetryPolicy(15000, 1, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
+        getPastReadQueue().add(req);
+    }
+
+    private void handlePastReadResponse(String sessionId, int attempt, String response, PastReadCallback cb) {
+        JSONObject data = parsePastRead(response);
+        String status = data != null ? data.optString("status", "none") : "none";
+        if ("ready".equals(status)) {
+            sessionAnalysisCache.put(sessionId, data);
+            if (cb != null) cb.onResult(sessionId, data);
+            return;
+        }
+        if ("failed".equals(status)) {
+            if (cb != null) cb.onResult(sessionId, data);
+            return;
+        }
+        // processing / none — surface the interim state, then poll (bounded).
+        if (cb != null) cb.onResult(sessionId, data);
+        if (attempt + 1 >= PAST_READ_MAX_TRIES) {
+            if (cb != null) cb.onResult(sessionId, failedPastRead()); // gave up → stop spinning
+            return;
+        }
+        schedulePastReadPoll(sessionId, attempt + 1, cb);
+    }
+
+    private void handlePastReadError(String sessionId, int attempt, PastReadCallback cb) {
+        Log.e(TAG, "Past-read fetch error", null);
+        if (attempt + 1 >= PAST_READ_MAX_TRIES) {
+            if (cb != null) cb.onResult(sessionId, failedPastRead());
+            return;
+        }
+        schedulePastReadPoll(sessionId, attempt + 1, cb); // transient — keep trying (bounded)
+    }
+
+    private void schedulePastReadPoll(String sessionId, int nextAttempt, PastReadCallback cb) {
+        Runnable r = () -> fetchPastRead(sessionId, nextAttempt, cb);
+        pastReadHandler.postDelayed(r, PAST_READ_POLL_INTERVAL_MS);
+    }
+
+    /** Null-safe parse of just the fields the past-read row renders. */
+    private JSONObject parsePastRead(String response) {
+        if (response == null) return null;
+        try {
+            JSONObject src = new JSONObject(response);
+            JSONObject out = new JSONObject();
+            out.put("status", nn(src.optString("status", "none")));
+            out.put("headline", nn(src.optString("headline", "")));
+            out.put("analysis", nn(src.optString("analysis", "")));
+            JSONArray wl = src.optJSONArray("watchlist");
+            JSONArray flagged = new JSONArray();
+            if (wl != null) {
+                for (int i = 0; i < wl.length(); i++) {
+                    JSONObject w = wl.optJSONObject(i);
+                    if (w == null) continue;
+                    String signal = nn(w.optString("signal", "")).trim();
+                    if (!signal.isEmpty()) flagged.put(signal);
+                }
+            }
+            out.put("flagged", flagged);
+            return out;
+        } catch (JSONException e) {
+            Log.e(TAG, "Past-read parse error", e);
+            return null;
+        }
+    }
+
+    private JSONObject failedPastRead() {
+        JSONObject o = new JSONObject();
+        try { o.put("status", "failed"); } catch (JSONException ignored) {}
+        return o;
+    }
+
+    /** Joins non-empty flagged signals with ", ". Empty when none. */
+    private String joinFlagged(JSONArray flagged) {
+        if (flagged == null || flagged.length() == 0) return "";
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < flagged.length(); i++) {
+            String s = nn(flagged.optString(i, "")).trim();
+            if (s.isEmpty()) continue;
+            if (sb.length() > 0) sb.append(", ");
+            sb.append(s);
+        }
+        return sb.toString();
+    }
+
+    /** Normalizes the literal string "null" (from optString) to empty. */
+    private static String nn(String s) { return (s == null || "null".equals(s)) ? "" : s; }
+
+    private void stopPastReadWork() {
+        pastReadHandler.removeCallbacksAndMessages(null);
+        if (pastReadQueue != null) pastReadQueue.cancelAll(TAG_PAST_READ);
+        for (android.animation.ObjectAnimator sp : pastReadSpinners) {
+            if (sp != null && sp.isStarted()) sp.cancel();
+        }
+        pastReadSpinners.clear();
+    }
+
     private void renderAnalysisReady(JSONObject json) {
         showRichieReady();
 
@@ -1434,8 +1582,17 @@ public class DailyCheckInActivity extends AppCompatActivity {
             final MaterialButton btnAction;
             final LinearLayout accordionHeader;
             final TextView accordionChevron;
-            final LinearLayout responsesContainer;
+            final TextView readToggleLabel;
+            final LinearLayout readContainer;
+            final LinearLayout readProcessing;
+            final android.widget.ImageView readProcessingLogo;
+            final TextView readHeadline;
+            final TextView readAnalysis;
+            final TextView readFlagged;
+            final TextView readFailed;
+            final android.animation.ObjectAnimator readSpinner;
             boolean expanded = false;
+            String boundSessionId = null;
 
             VH(View v) {
                 super(v);
@@ -1446,13 +1603,29 @@ public class DailyCheckInActivity extends AppCompatActivity {
                 btnAction          = v.findViewById(R.id.btn_action);
                 accordionHeader    = v.findViewById(R.id.accordion_header);
                 accordionChevron   = v.findViewById(R.id.accordion_chevron);
-                responsesContainer = v.findViewById(R.id.responses_container);
+                readToggleLabel    = v.findViewById(R.id.read_toggle_label);
+                readContainer      = v.findViewById(R.id.read_container);
+                readProcessing     = v.findViewById(R.id.read_processing);
+                readProcessingLogo = v.findViewById(R.id.read_processing_logo);
+                readHeadline       = v.findViewById(R.id.read_headline);
+                readAnalysis       = v.findViewById(R.id.read_analysis);
+                readFlagged        = v.findViewById(R.id.read_flagged);
+                readFailed         = v.findViewById(R.id.read_failed);
+
+                // Spinning app logo for the "Richie is reviewing" row — same pattern
+                // as the hero/list spinners. Tracked so onDestroy can cancel it.
+                readSpinner = android.animation.ObjectAnimator
+                        .ofFloat(readProcessingLogo, android.view.View.ROTATION, 0f, 360f);
+                readSpinner.setDuration(1200);
+                readSpinner.setRepeatCount(android.animation.ObjectAnimator.INFINITE);
+                readSpinner.setInterpolator(new android.view.animation.LinearInterpolator());
+                pastReadSpinners.add(readSpinner);
             }
 
             void bind(SessionItem item) {
                 expanded = false;
-                responsesContainer.setVisibility(View.GONE);
-                responsesContainer.removeAllViews();
+                boundSessionId = item.sessionId; // recycling guard for async callbacks
+                collapseRead();
                 if (accordionChevron != null) accordionChevron.setRotation(90f);
                 itemView.setAlpha(1f);
                 btnAction.setVisibility(View.GONE);
@@ -1490,16 +1663,10 @@ public class DailyCheckInActivity extends AppCompatActivity {
                     case "completed":
                         sessionSummary.setText(summaryLine(item));
                         applyPill(statusPill, "Completed", 0xFF4CAF50);
-                        if (!item.responses.isEmpty()) {
-                            accordionHeader.setVisibility(View.VISIBLE);
-                            buildResponseRows(item);
-                            accordionHeader.setOnClickListener(v -> {
-                                expanded = !expanded;
-                                responsesContainer.setVisibility(expanded ? View.VISIBLE : View.GONE);
-                                if (accordionChevron != null)
-                                    accordionChevron.setRotation(expanded ? 270f : 90f);
-                            });
-                        }
+                        // Every completed session can show Richie's read on demand.
+                        accordionHeader.setVisibility(View.VISIBLE);
+                        if (readToggleLabel != null) readToggleLabel.setText("See Richie's read");
+                        accordionHeader.setOnClickListener(v -> toggleRead(item.sessionId));
                         break;
 
                     case "missed":
@@ -1515,38 +1682,100 @@ public class DailyCheckInActivity extends AppCompatActivity {
                 }
             }
 
-            private void buildResponseRows(SessionItem item) {
-                responsesContainer.removeAllViews();
-                if (item.responses.isEmpty()) return;
+            /** Expand → show Richie's read (fetch/poll); collapse → hide + stop spinner. */
+            private void toggleRead(String sessionId) {
+                expanded = !expanded;
+                if (accordionChevron != null) accordionChevron.setRotation(expanded ? 270f : 90f);
+                if (!expanded) {
+                    collapseRead();
+                    if (readToggleLabel != null) readToggleLabel.setText("See Richie's read");
+                    return;
+                }
+                if (readToggleLabel != null) readToggleLabel.setText("Hide");
+                showReadProcessing();
+                loadPastRead(sessionId, (sid, data) -> {
+                    // Stale-callback guard: row recycled/collapsed or now bound elsewhere.
+                    if (!expanded) return;
+                    if (boundSessionId == null || !boundSessionId.equals(sid)) return;
+                    renderRead(data);
+                });
+            }
 
-                int n = 0;
-                for (JSONObject r : item.responses) {
-                    LinearLayout block = new LinearLayout(DailyCheckInActivity.this);
-                    block.setOrientation(LinearLayout.VERTICAL);
-                    LinearLayout.LayoutParams bp = new LinearLayout.LayoutParams(
-                            LinearLayout.LayoutParams.MATCH_PARENT,
-                            LinearLayout.LayoutParams.WRAP_CONTENT);
-                    if (n > 0) bp.topMargin = dpToPx(11);
-                    block.setLayoutParams(bp);
+            private void showReadProcessing() {
+                readContainer.setVisibility(View.VISIBLE);
+                readProcessing.setVisibility(View.VISIBLE);
+                readHeadline.setVisibility(View.GONE);
+                readAnalysis.setVisibility(View.GONE);
+                readFlagged.setVisibility(View.GONE);
+                readFailed.setVisibility(View.GONE);
+                if (!readSpinner.isStarted()) readSpinner.start();
+            }
 
-                    TextView tvQ = new TextView(DailyCheckInActivity.this);
-                    tvQ.setTextColor(0xFF9E9E9E);
-                    tvQ.setTextSize(12f);
-                    tvQ.setText(r.optString("questionText", ""));
-                    block.addView(tvQ);
+            private void stopReadSpinner() {
+                if (readSpinner.isStarted()) readSpinner.cancel();
+                if (readProcessingLogo != null) readProcessingLogo.setRotation(0f);
+            }
 
-                    TextView tvA = new TextView(DailyCheckInActivity.this);
-                    tvA.setTextColor(0xFFFFFFFF);
-                    tvA.setTextSize(14f);
-                    tvA.setPadding(0, dpToPx(2), 0, 0);
-                    String emoji = r.optString("selectedEmoji", "");
-                    String label = r.optString("selectedLabel", "");
-                    if (label.isEmpty()) label = r.optString("selectedValue", "");
-                    tvA.setText(emoji.isEmpty() ? label : emoji + " " + label);
-                    block.addView(tvA);
+            private void collapseRead() {
+                stopReadSpinner();
+                readContainer.setVisibility(View.GONE);
+                readProcessing.setVisibility(View.GONE);
+                readHeadline.setVisibility(View.GONE);
+                readAnalysis.setVisibility(View.GONE);
+                readFlagged.setVisibility(View.GONE);
+                readFailed.setVisibility(View.GONE);
+            }
 
-                    responsesContainer.addView(block);
-                    n++;
+            private void renderRead(JSONObject data) {
+                String status = data != null ? data.optString("status", "none") : "none";
+                if (status.isEmpty() || "processing".equals(status) || "none".equals(status)) {
+                    showReadProcessing(); // still generating → keep the spinning-logo row
+                    return;
+                }
+                // Terminal states stop the spinner.
+                stopReadSpinner();
+                readProcessing.setVisibility(View.GONE);
+
+                if (data == null || "failed".equals(status)) {
+                    readHeadline.setVisibility(View.GONE);
+                    readAnalysis.setVisibility(View.GONE);
+                    readFlagged.setVisibility(View.GONE);
+                    readFailed.setText("Couldn't generate a read for this check-in.");
+                    readFailed.setVisibility(View.VISIBLE);
+                    return;
+                }
+
+                // ready
+                readFailed.setVisibility(View.GONE);
+                String headline = nn(data.optString("headline", "")).trim();
+                String analysis = nn(data.optString("analysis", "")).trim();
+                String flagged  = joinFlagged(data.optJSONArray("flagged"));
+
+                if (!headline.isEmpty()) {
+                    readHeadline.setText(headline);
+                    readHeadline.setVisibility(View.VISIBLE);
+                } else {
+                    readHeadline.setVisibility(View.GONE);
+                }
+
+                if (!analysis.isEmpty()) {
+                    readAnalysis.setText(analysis);
+                    readAnalysis.setVisibility(View.VISIBLE);
+                } else {
+                    readAnalysis.setVisibility(View.GONE);
+                }
+
+                if (!flagged.isEmpty()) {
+                    readFlagged.setText("Flagged: " + flagged);
+                    readFlagged.setVisibility(View.VISIBLE);
+                } else {
+                    readFlagged.setVisibility(View.GONE);
+                }
+
+                // Nothing substantive → a gentle placeholder in the analysis slot.
+                if (headline.isEmpty() && analysis.isEmpty() && flagged.isEmpty()) {
+                    readAnalysis.setText("No notable read for this check-in.");
+                    readAnalysis.setVisibility(View.VISIBLE);
                 }
             }
         }
