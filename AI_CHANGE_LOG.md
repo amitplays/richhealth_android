@@ -1,5 +1,8 @@
 ## [2026-08-17] Health Check-In redesign (meaningful summary)
 
+## [2026-08-17] Android Check-In rebuilt to Richie's Brief (mirrors iOS)
+- Same intelligence-led sections + order; parses overall/headline/focus/wins/watchlist/logSuggestions/safety null-safe; hero gains safety banner + overall chip + headline; timeline past-reads; spinning app-logo processing. New drawables checkin_hero/watch/loop/chip_teal/safety_bg. Question dialog/poll/notify unchanged; every section View.GONE when empty.
+
 ## [2026-08-17] Health Check-In card polish
 - CompletionRingView thinner (4dp stroke) + container 54dp (was 72); percent scaled.
 - Ring row realigned: streak primary (flame + 18sp), answered·missed secondary muted; ⓘ trailing.

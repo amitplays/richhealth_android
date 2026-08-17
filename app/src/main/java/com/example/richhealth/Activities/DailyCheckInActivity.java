@@ -2,12 +2,8 @@ package com.example.richhealth.Activities;
 import Utils.Utilities;
 
 import android.app.Dialog;
-import android.content.Context;
 import android.content.res.ColorStateList;
-import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.Paint;
-import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
@@ -17,14 +13,12 @@ import android.util.Log;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
-import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -80,23 +74,40 @@ public class DailyCheckInActivity extends AppCompatActivity {
     private boolean isDue = false;
     private String nextDueDate = null;
 
-    // Summary views (replaces old bar chart)
-    private LinearLayout streakSection;
-    private TextView streakNumber;
-    private TextView streakLabel;
-    private LinearLayout consistencyGrid;
-    private FrameLayout ringContainer;
-    private CompletionRingView completionRing;
-    private TextView completionSummary;
-    private ImageButton checkinInfoBtn;
+    // (2) Focus this week — single teal-tinted highlighted row.
+    private LinearLayout focusSection;
+    private TextView focusTitle;
+    private TextView focusWhy;
 
-    // "What Richie thinks" section
+    // (3) What's going well — win rows.
+    private LinearLayout winsSection;
+    private LinearLayout winsContainer;
+
+    // (5) Sharpen your care ("Worth logging") — log-suggestion rows.
+    private LinearLayout sharpenSection;
+    private LinearLayout sharpenContainer;
+
+    // (6) Rhythm — slim streak/completion row + sparkline.
+    private LinearLayout rhythmSection;
+    private TextView rhythmText;
+    private LinearLayout rhythmSpark;
+
+    // (7) Past reads — timeline list.
+    private LinearLayout pastReadsSection;
+
+    // (1) HERO — "Richie's read on you"
     private LinearLayout richieSection;
+    private LinearLayout richieSafetyBanner;
+    private TextView richieSafetyText;
+    private TextView richieHeadline;
+    private TextView richieOverallChip;
     private LinearLayout richieProcessing;
     private android.widget.ImageView richieProcessingLogo;
     private android.animation.ObjectAnimator richieProcessingSpinner;
     private LinearLayout richieReady;
     private LinearLayout richieFailed;
+    private TextView richieUpdated;
+    private TextView richieCouncilBadge;
     private TextView richieAnalysisText;
     private LinearLayout richieCouncilSection;
     private LinearLayout richieCouncilHeader;
@@ -107,6 +118,13 @@ public class DailyCheckInActivity extends AppCompatActivity {
     private TextView richieReasoningText;
     private TextView richieReasoningChevron;
     private MaterialButton richieRetryBtn;
+
+    // (2) What Richie's watching — watchlist container.
+    private LinearLayout watchlistSection;
+    private LinearLayout watchlistContainer;
+
+    /** Date shown in the hero header when generatedAt is absent. */
+    private String lastCompletedDate = null;
 
     // Analysis polling
     private final Handler analysisHandler = new Handler(Looper.getMainLooper());
@@ -163,25 +181,29 @@ public class DailyCheckInActivity extends AppCompatActivity {
         checkinRecycler.setNestedScrollingEnabled(false);
         checkinRecycler.setAdapter(listAdapter);
 
-        streakSection      = findViewById(R.id.streak_section);
-        streakNumber       = findViewById(R.id.streak_number);
-        streakLabel        = findViewById(R.id.streak_label);
-        consistencyGrid    = findViewById(R.id.consistency_grid);
-        ringContainer      = findViewById(R.id.ring_container);
-        completionSummary  = findViewById(R.id.completion_summary);
-        checkinInfoBtn     = findViewById(R.id.checkin_info_btn);
+        // (6) Rhythm, (7) Past reads
+        rhythmSection      = findViewById(R.id.rhythm_section);
+        rhythmText         = findViewById(R.id.rhythm_text);
+        rhythmSpark        = findViewById(R.id.rhythm_spark);
+        pastReadsSection   = findViewById(R.id.past_reads_section);
 
-        // Completion ring is drawn programmatically into its container.
-        completionRing = new CompletionRingView(this);
-        ringContainer.addView(completionRing,
-                new FrameLayout.LayoutParams(
-                        FrameLayout.LayoutParams.MATCH_PARENT,
-                        FrameLayout.LayoutParams.MATCH_PARENT));
+        // (2) Focus, (3) Wins, (4) Watchlist, (5) Sharpen your care
+        focusSection       = findViewById(R.id.focus_section);
+        focusTitle         = findViewById(R.id.focus_title);
+        focusWhy           = findViewById(R.id.focus_why);
+        winsSection        = findViewById(R.id.wins_section);
+        winsContainer      = findViewById(R.id.wins_container);
+        watchlistSection   = findViewById(R.id.watchlist_section);
+        watchlistContainer = findViewById(R.id.watchlist_container);
+        sharpenSection     = findViewById(R.id.sharpen_section);
+        sharpenContainer   = findViewById(R.id.sharpen_container);
 
-        if (checkinInfoBtn != null) checkinInfoBtn.setOnClickListener(v -> showCheckinInfoDialog());
-
-        // "What Richie thinks" views
+        // (1) HERO — "Richie's read on you"
         richieSection         = findViewById(R.id.richie_section);
+        richieSafetyBanner    = findViewById(R.id.richie_safety_banner);
+        richieSafetyText      = findViewById(R.id.richie_safety_text);
+        richieHeadline        = findViewById(R.id.richie_headline);
+        richieOverallChip     = findViewById(R.id.richie_overall_chip);
         richieProcessing      = findViewById(R.id.richie_processing);
         richieProcessingLogo  = findViewById(R.id.richie_processing_logo);
 
@@ -194,6 +216,8 @@ public class DailyCheckInActivity extends AppCompatActivity {
         richieProcessingSpinner.setInterpolator(new android.view.animation.LinearInterpolator());
         richieReady           = findViewById(R.id.richie_ready);
         richieFailed          = findViewById(R.id.richie_failed);
+        richieUpdated         = findViewById(R.id.richie_updated);
+        richieCouncilBadge    = findViewById(R.id.richie_council_badge);
         richieAnalysisText    = findViewById(R.id.richie_analysis_text);
         richieCouncilSection  = findViewById(R.id.richie_council_section);
         richieCouncilHeader   = findViewById(R.id.richie_council_header);
@@ -239,15 +263,6 @@ public class DailyCheckInActivity extends AppCompatActivity {
         stopAnalysisPolling();
         stopProcessingSpinner();
         super.onDestroy();
-    }
-
-    private void showCheckinInfoDialog() {
-        new AlertDialog.Builder(this)
-                .setTitle("Why check in?")
-                .setMessage("Your check-in answers tune Richie — they sharpen your "
-                        + "chat replies, health analysis, and the questions you get next.")
-                .setPositiveButton("Got it", null)
-                .show();
     }
 
     // ─── Network ──────────────────────────────────────────────────────────────
@@ -564,63 +579,87 @@ public class DailyCheckInActivity extends AppCompatActivity {
 
     private void showLoadingList() {
         listLoadingSpinner.start();
-        startBanner.setVisibility(View.GONE);
         listLoadingState.setVisibility(View.VISIBLE);
         noAccessState.setVisibility(View.GONE);
+        startBanner.setVisibility(View.GONE);
         emptyState.setVisibility(View.GONE);
-        checkinRecycler.setVisibility(View.GONE);
+        // Hide all content sections while the first fetch is in flight.
+        richieSection.setVisibility(View.GONE);
+        focusSection.setVisibility(View.GONE);
+        winsSection.setVisibility(View.GONE);
+        watchlistSection.setVisibility(View.GONE);
+        sharpenSection.setVisibility(View.GONE);
+        rhythmSection.setVisibility(View.GONE);
+        pastReadsSection.setVisibility(View.GONE);
     }
 
     private void showNoAccess() {
         listLoadingSpinner.cancel();
-        startBanner.setVisibility(View.GONE);
         listLoadingState.setVisibility(View.GONE);
         noAccessState.setVisibility(View.VISIBLE);
+        startBanner.setVisibility(View.GONE);
         emptyState.setVisibility(View.GONE);
-        checkinRecycler.setVisibility(View.GONE);
+        richieSection.setVisibility(View.GONE);
+        focusSection.setVisibility(View.GONE);
+        winsSection.setVisibility(View.GONE);
+        watchlistSection.setVisibility(View.GONE);
+        sharpenSection.setVisibility(View.GONE);
+        rhythmSection.setVisibility(View.GONE);
+        pastReadsSection.setVisibility(View.GONE);
     }
 
     private void showEmpty() {
         listLoadingSpinner.cancel();
-        // isDue=true + no history → show start banner, hide empty text
-        // isDue=false + no history → hide start banner, show "all caught up"
-        startBanner.setVisibility(isDue ? View.VISIBLE : View.GONE);
         listLoadingState.setVisibility(View.GONE);
         noAccessState.setVisibility(View.GONE);
+        // (0) Action zone: start banner when due; otherwise a quiet "no reads yet".
+        startBanner.setVisibility(isDue ? View.VISIBLE : View.GONE);
         emptyState.setVisibility(isDue ? View.GONE : View.VISIBLE);
-        checkinRecycler.setVisibility(View.GONE);
-
-        if (!isDue && emptySubtitle != null && nextDueDate != null) {
-            emptySubtitle.setText("Your next check-in will be ready on " + formatDate(nextDueDate, ""));
+        if (!isDue && emptySubtitle != null) {
+            emptySubtitle.setText(nextDueDate != null
+                    ? "Your next check-in will be ready on " + formatDate(nextDueDate, "")
+                    : "Your first check-in will appear here when it's ready.");
         }
-        // No sessions yet — hide the summary
+        // No sessions → no hero / focus / wins / watchlist / sharpen / rhythm / past reads.
+        pastReadsSection.setVisibility(View.GONE);
+        rhythmSection.setVisibility(View.GONE);
         populateSummary(sessionItems);
     }
 
     private void showList() {
         listLoadingSpinner.cancel();
-        // Always show start banner at top when due, even alongside the history list
-        startBanner.setVisibility(isDue ? View.VISIBLE : View.GONE);
         listLoadingState.setVisibility(View.GONE);
         noAccessState.setVisibility(View.GONE);
         emptyState.setVisibility(View.GONE);
-        checkinRecycler.setVisibility(View.VISIBLE);
+        // (0) Action zone: start banner at top when due, even alongside history.
+        startBanner.setVisibility(isDue ? View.VISIBLE : View.GONE);
+        // (7) Past reads — newest-first timeline.
+        pastReadsSection.setVisibility(View.VISIBLE);
+        sortSessionsDescending();
         listAdapter.notifyDataSetChanged();
+        // Builds hero (1), watchlist (2), rhythm (4) from real data.
         populateSummary(sessionItems);
+    }
+
+    /** Orders the adapter-backing list newest → oldest for the timeline. */
+    private void sortSessionsDescending() {
+        Collections.sort(sessionItems, (a, b) -> Long.compare(sessionTime(b), sessionTime(a)));
     }
 
     // ─── Check-in summary (streak + consistency grid + last check-in) ───────────
 
     /**
-     * Rebuilds the streak/consistency section and the "last check-in" chips
-     * from the already-parsed session list. Fully client-side, deterministic.
+     * Rebuilds the rhythm row (4) and drives the hero analysis (1) from the
+     * already-parsed session list. Fully client-side, deterministic.
+     * Watchlist (2) is populated later from the analysis response.
      */
     private void populateSummary(List<SessionItem> items) {
         if (items == null || items.isEmpty()) {
-            if (streakSection != null) streakSection.setVisibility(View.GONE);
+            if (rhythmSection != null) rhythmSection.setVisibility(View.GONE);
             hideRichie();
             stopAnalysisPolling();
             analysisSessionId = null;
+            lastCompletedDate = null;
             return;
         }
 
@@ -628,50 +667,69 @@ public class DailyCheckInActivity extends AppCompatActivity {
         List<SessionItem> sorted = new ArrayList<>(items);
         Collections.sort(sorted, (a, b) -> Long.compare(sessionTime(a), sessionTime(b)));
 
-        // (A) Completion ring + streak + consistency grid
-        if (streakSection != null) {
-            streakSection.setVisibility(View.VISIBLE);
-            int streak = computeStreak(sorted);
-            if (streakNumber != null) streakNumber.setText(String.valueOf(streak));
-            if (streakLabel != null) {
-                streakLabel.setText(streak == 0 ? "Start your streak" : "check-in streak");
-            }
-            updateCompletionRing(sorted);
-            buildConsistencyGrid(sorted);
-        }
+        // (4) RHYTHM — slim streak + completion + sparkline.
+        buildRhythm(sorted);
 
-        // (B) What Richie thinks — only when there's a completed session.
+        // (1) HERO — only when there's a completed session Richie can review.
         SessionItem lastCompleted = latestCompleted(sorted);
         if (lastCompleted == null) {
             hideRichie();
             stopAnalysisPolling();
             analysisSessionId = null;
+            lastCompletedDate = null;
         } else {
+            lastCompletedDate = (lastCompleted.completedAt != null && !lastCompleted.completedAt.isEmpty())
+                    ? lastCompleted.completedAt : lastCompleted.scheduledFor;
             syncAnalysis(lastCompleted.sessionId);
         }
     }
 
-    /** Completed vs missed ratio → tinted arc + centered percent. */
-    private void updateCompletionRing(List<SessionItem> sortedAsc) {
+    /** Rhythm row: "{streak} in a row · {pct}% kept" + a capped status sparkline. */
+    private void buildRhythm(List<SessionItem> sortedAsc) {
+        if (rhythmSection == null) return;
+        rhythmSection.setVisibility(View.VISIBLE);
+
+        int streak = computeStreak(sortedAsc);
         int completed = 0, missed = 0;
         for (SessionItem s : sortedAsc) {
             if ("completed".equals(s.status)) completed++;
             else if ("missed".equals(s.status)) missed++;
         }
-        int denom = Math.max(1, completed + missed);
-        float rate = (float) completed / denom;
-        int pct = Math.round(rate * 100f);
-
-        int color;
-        if (rate >= 0.85f)      color = 0xFF4CAF50; // green
-        else if (rate >= 0.70f) color = 0xFFFFC107; // amber
-        else if (rate >= 0.50f) color = 0xFFFF9800; // orange
-        else                    color = 0xFFE53935; // red
-
-        if (completionRing != null) completionRing.setRing(rate, pct, color);
-        if (completionSummary != null) {
-            completionSummary.setText(completed + " answered · " + missed + " missed");
+        int denom = completed + missed;
+        int pct = denom == 0 ? 0 : Math.round((float) completed / denom * 100f);
+        if (rhythmText != null) {
+            rhythmText.setText(streak + " in a row · " + pct + "% kept");
         }
+        buildSparkline(sortedAsc);
+    }
+
+    /** Small colored bars from the most recent statuses, capped at MAX_CELLS. */
+    private void buildSparkline(List<SessionItem> sortedAsc) {
+        if (rhythmSpark == null) return;
+        rhythmSpark.removeAllViews();
+
+        int start = Math.max(0, sortedAsc.size() - MAX_CELLS);
+        int barW = dpToPx(8);
+        int barH = dpToPx(18);
+        int gap = dpToPx(4);
+
+        for (int i = start; i < sortedAsc.size(); i++) {
+            SessionItem s = sortedAsc.get(i);
+            View bar = new View(this);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(barW, barH);
+            if (i > start) lp.setMarginStart(gap);
+            bar.setLayoutParams(lp);
+            bar.setBackgroundResource(R.drawable.checkin_cell_bg);
+            bar.setBackgroundTintList(ColorStateList.valueOf(sparkColor(s.status)));
+            bar.setContentDescription(sessionStatusLabel(s.status));
+            rhythmSpark.addView(bar);
+        }
+    }
+
+    private int sparkColor(String status) {
+        if ("completed".equals(status)) return COLOR_COMPLETED; // teal
+        if ("missed".equals(status))    return COLOR_MISSED;    // red
+        return 0xFFFFC107;                                      // amber (pending/in_progress)
     }
 
     /**
@@ -705,30 +763,6 @@ public class DailyCheckInActivity extends AppCompatActivity {
             }
         }
         return null;
-    }
-
-    /** Populates the consistency grid: last up to MAX_CELLS cycles, oldest → newest. */
-    private void buildConsistencyGrid(List<SessionItem> sortedAsc) {
-        if (consistencyGrid == null) return;
-        consistencyGrid.removeAllViews();
-
-        int start = Math.max(0, sortedAsc.size() - MAX_CELLS);
-        int cellSize = dpToPx(17);
-        int gap = dpToPx(4);
-
-        for (int i = start; i < sortedAsc.size(); i++) {
-            SessionItem s = sortedAsc.get(i);
-            int color = colorForStatus(s.status);
-
-            View cell = new View(this);
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(cellSize, cellSize);
-            if (i > start) lp.setMarginStart(gap);
-            cell.setLayoutParams(lp);
-            cell.setBackgroundResource(R.drawable.checkin_cell_bg);
-            cell.setBackgroundTintList(ColorStateList.valueOf(color));
-            cell.setContentDescription(statusLabel(s.status));
-            consistencyGrid.addView(cell);
-        }
     }
 
     // ─── What Richie thinks: analysis fetch + poll ──────────────────────────────
@@ -832,11 +866,54 @@ public class DailyCheckInActivity extends AppCompatActivity {
     private void renderAnalysisReady(JSONObject json) {
         showRichieReady();
 
+        // Urgent safety banner at the top of the hero (only when safety.urgent).
+        applySafety(json.optJSONObject("safety"));
+
+        // Overall health chip (distinct from lifecycle status).
+        applyOverallChip(json.optString("overall", ""));
+
+        // Prominent headline above the analysis body.
+        String headline = json.optString("headline", "");
+        if ("null".equals(headline)) headline = "";
+        if (richieHeadline != null) {
+            if (!headline.trim().isEmpty()) {
+                richieHeadline.setText(headline.trim());
+                richieHeadline.setVisibility(View.VISIBLE);
+            } else {
+                richieHeadline.setVisibility(View.GONE);
+            }
+        }
+
         String analysis = json.optString("analysis", "");
         if (richieAnalysisText != null) richieAnalysisText.setText(analysis);
 
+        // Header subline: "Updated · {date}" from generatedAt, else the completion date.
+        if (richieUpdated != null) {
+            String generatedAt = json.optString("generatedAt", "");
+            if ("null".equals(generatedAt)) generatedAt = "";
+            String src = !generatedAt.isEmpty() ? generatedAt : lastCompletedDate;
+            String when = formatDate(src, "");
+            String line = (when != null && !when.isEmpty()) ? "Updated · " + when : "Updated";
+            // When not due, fold the next-due date into the hero subline.
+            if (!isDue && nextDueDate != null) {
+                String next = formatDate(nextDueDate, "");
+                if (next != null && !next.isEmpty()) line += "  ·  Next " + next;
+            }
+            richieUpdated.setText(line);
+        }
+
         boolean isCouncil = json.optBoolean("isCouncil", false);
         JSONArray council = json.optJSONArray("council");
+
+        // Council badge: "◆ N perspectives" when a council was used.
+        if (richieCouncilBadge != null) {
+            if (isCouncil && council != null && council.length() > 0) {
+                richieCouncilBadge.setText("◆ " + council.length() + " perspectives");
+                richieCouncilBadge.setVisibility(View.VISIBLE);
+            } else {
+                richieCouncilBadge.setVisibility(View.GONE);
+            }
+        }
 
         if (isCouncil && council != null && council.length() > 0) {
             richieReasoningSection.setVisibility(View.GONE);
@@ -855,11 +932,326 @@ public class DailyCheckInActivity extends AppCompatActivity {
             }
         }
 
+        // (2) FOCUS — single highlighted "focus this week" row.
+        buildFocus(json.optJSONObject("focus"));
+
+        // (3) WINS — "what's going well" rows.
+        buildWins(json.optJSONArray("wins"));
+
+        // (4) WHAT RICHIE'S WATCHING — built from the analysis watchlist array.
+        buildWatchlist(json.optJSONArray("watchlist"));
+
+        // (5) SHARPEN YOUR CARE — "worth logging" rows (display-only).
+        buildLogSuggestions(json.optJSONArray("logSuggestions"));
+
         // Notify only if the review finished while the screen wasn't in the foreground.
         if (!isForeground && !analysisNotified) {
             analysisNotified = true;
             CheckInNotificationHelper.fireAnalysisReady(this);
         }
+    }
+
+    /**
+     * (2) Builds the watchlist rows in code. Hidden entirely when empty/null so
+     * the section never renders as a hollow box.
+     */
+    private void buildWatchlist(JSONArray watchlist) {
+        if (watchlistSection == null || watchlistContainer == null) return;
+        watchlistContainer.removeAllViews();
+
+        if (watchlist == null || watchlist.length() == 0) {
+            watchlistSection.setVisibility(View.GONE);
+            return;
+        }
+
+        int rows = 0;
+        for (int i = 0; i < watchlist.length(); i++) {
+            JSONObject w = watchlist.optJSONObject(i);
+            if (w == null) continue;
+            String signal = w.optString("signal", "").trim();
+            String note   = w.optString("note", "").trim();
+            String status = w.optString("status", "watch").trim().toLowerCase(Locale.US);
+            if (signal.isEmpty()) continue;
+
+            int color;
+            String tag;
+            if ("ok".equals(status))            { color = 0xFF4CAF50; tag = "On track"; }
+            else if ("attention".equals(status)){ color = 0xFFE53935; tag = "Attention"; }
+            else                                { color = 0xFFFFC107; tag = "Watch"; }
+
+            if (rows > 0) {
+                View divider = new View(this);
+                LinearLayout.LayoutParams dl = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, dpToPx(1));
+                divider.setLayoutParams(dl);
+                divider.setBackgroundColor(0xFF2A2A2A);
+                watchlistContainer.addView(divider);
+            }
+
+            LinearLayout row = new LinearLayout(this);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setGravity(android.view.Gravity.TOP);
+            LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            row.setLayoutParams(rp);
+            row.setPadding(dpToPx(14), dpToPx(14), dpToPx(14), dpToPx(14));
+
+            // status dot (paired with the tag label below for accessibility)
+            View dot = new View(this);
+            LinearLayout.LayoutParams dp = new LinearLayout.LayoutParams(dpToPx(9), dpToPx(9));
+            dp.topMargin = dpToPx(5);
+            dp.setMarginEnd(dpToPx(12));
+            dot.setLayoutParams(dp);
+            dot.setBackgroundResource(R.drawable.checkin_dot_bg);
+            dot.setBackgroundTintList(ColorStateList.valueOf(color));
+            dot.setContentDescription(tag);
+            row.addView(dot);
+
+            // body: signal + note
+            LinearLayout body = new LinearLayout(this);
+            body.setOrientation(LinearLayout.VERTICAL);
+            body.setLayoutParams(new LinearLayout.LayoutParams(
+                    0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+
+            TextView sig = new TextView(this);
+            sig.setText(signal);
+            sig.setTextColor(0xFFFFFFFF);
+            sig.setTextSize(14.5f);
+            sig.setTypeface(null, Typeface.BOLD);
+            body.addView(sig);
+
+            if (!note.isEmpty()) {
+                TextView nt = new TextView(this);
+                nt.setText(note);
+                nt.setTextColor(0xFF9E9E9E);
+                nt.setTextSize(13f);
+                nt.setLineSpacing(dpToPx(1), 1f);
+                nt.setPadding(0, dpToPx(2), 0, 0);
+                body.addView(nt);
+            }
+            row.addView(body);
+
+            // status tag chip
+            TextView chip = makeStatusChip(tag, color);
+            LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            cp.setMarginStart(dpToPx(10));
+            chip.setLayoutParams(cp);
+            row.addView(chip);
+
+            watchlistContainer.addView(row);
+            rows++;
+        }
+
+        watchlistSection.setVisibility(rows > 0 ? View.VISIBLE : View.GONE);
+    }
+
+    /** A small rounded status chip: color-tinted low-alpha fill + colored bold text. */
+    private TextView makeStatusChip(String text, int color) {
+        TextView chip = new TextView(this);
+        chip.setText(text);
+        chip.setTextColor(color);
+        chip.setTextSize(11f);
+        chip.setTypeface(null, Typeface.BOLD);
+        chip.setAllCaps(true);
+        chip.setPadding(dpToPx(8), dpToPx(3), dpToPx(8), dpToPx(3));
+
+        android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
+        bg.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+        bg.setCornerRadius(dpToPx(999));
+        bg.setColor((color & 0x00FFFFFF) | 0x24000000); // ~14% alpha of the status color
+        chip.setBackground(bg);
+        return chip;
+    }
+
+    /**
+     * Urgent safety banner at the top of the hero. Shown only when the safety
+     * object exists, is flagged urgent, and carries a non-empty message.
+     */
+    private void applySafety(JSONObject safety) {
+        if (richieSafetyBanner == null) return;
+        boolean urgent = safety != null && safety.optBoolean("urgent", false);
+        String message = safety != null ? safety.optString("message", "") : "";
+        if ("null".equals(message)) message = "";
+        if (urgent && !message.trim().isEmpty()) {
+            if (richieSafetyText != null) richieSafetyText.setText(message.trim());
+            richieSafetyBanner.setVisibility(View.VISIBLE);
+        } else {
+            richieSafetyBanner.setVisibility(View.GONE);
+        }
+    }
+
+    /**
+     * Overall health chip: good→green "On track", steady→teal "Steady",
+     * watch→amber "Watch", attention→red "Attention". Hidden when unknown/empty.
+     */
+    private void applyOverallChip(String overall) {
+        if (richieOverallChip == null) return;
+        String o = overall == null ? "" : overall.trim().toLowerCase(Locale.US);
+        String label;
+        int color;
+        switch (o) {
+            case "good":      label = "On track";  color = 0xFF4CAF50; break; // green
+            case "steady":    label = "Steady";    color = 0xFF008B8B; break; // teal
+            case "watch":     label = "Watch";     color = 0xFFFFC107; break; // amber
+            case "attention": label = "Attention"; color = 0xFFE53935; break; // red
+            default:
+                richieOverallChip.setVisibility(View.GONE);
+                return;
+        }
+        applyPill(richieOverallChip, label, color);
+        richieOverallChip.setVisibility(View.VISIBLE);
+    }
+
+    /**
+     * (2) FOCUS — single teal-tinted highlighted row. Hidden entirely when the
+     * focus object is missing or its title is empty.
+     */
+    private void buildFocus(JSONObject focus) {
+        if (focusSection == null) return;
+        String title = focus != null ? focus.optString("title", "").trim() : "";
+        String why   = focus != null ? focus.optString("why", "").trim() : "";
+        if (focus == null || title.isEmpty()) {
+            focusSection.setVisibility(View.GONE);
+            return;
+        }
+        if (focusTitle != null) focusTitle.setText(title);
+        if (focusWhy != null) {
+            if (!why.isEmpty()) {
+                focusWhy.setText(why);
+                focusWhy.setVisibility(View.VISIBLE);
+            } else {
+                focusWhy.setVisibility(View.GONE);
+            }
+        }
+        focusSection.setVisibility(View.VISIBLE);
+    }
+
+    /**
+     * (3) WINS — "what's going well" rows (green check + text). Hidden entirely
+     * when the array is null/empty or holds no usable strings.
+     */
+    private void buildWins(JSONArray wins) {
+        if (winsSection == null || winsContainer == null) return;
+        winsContainer.removeAllViews();
+        if (wins == null || wins.length() == 0) {
+            winsSection.setVisibility(View.GONE);
+            return;
+        }
+
+        int rows = 0;
+        for (int i = 0; i < wins.length(); i++) {
+            String win = wins.optString(i, "").trim();
+            if (win.isEmpty()) continue;
+
+            LinearLayout row = new LinearLayout(this);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setGravity(android.view.Gravity.TOP);
+            LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            if (rows > 0) rp.topMargin = dpToPx(6);
+            row.setLayoutParams(rp);
+
+            TextView check = new TextView(this);
+            check.setText("✓"); // ✓
+            check.setTextColor(0xFF4CAF50); // green
+            check.setTextSize(14f);
+            check.setTypeface(null, Typeface.BOLD);
+            LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            cp.setMarginEnd(dpToPx(10));
+            check.setLayoutParams(cp);
+            row.addView(check);
+
+            TextView txt = new TextView(this);
+            txt.setText(win);
+            txt.setTextColor(0xFFC7C9CE);
+            txt.setTextSize(14f);
+            txt.setLineSpacing(dpToPx(2), 1f);
+            txt.setLayoutParams(new LinearLayout.LayoutParams(
+                    0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+            row.addView(txt);
+
+            winsContainer.addView(row);
+            rows++;
+        }
+        winsSection.setVisibility(rows > 0 ? View.VISIBLE : View.GONE);
+    }
+
+    /**
+     * (5) SHARPEN YOUR CARE — "worth logging" rows built from logSuggestions.
+     * Display-only (no tap navigation). Hidden entirely when empty.
+     */
+    private void buildLogSuggestions(JSONArray logSuggestions) {
+        if (sharpenSection == null || sharpenContainer == null) return;
+        sharpenContainer.removeAllViews();
+        if (logSuggestions == null || logSuggestions.length() == 0) {
+            sharpenSection.setVisibility(View.GONE);
+            return;
+        }
+
+        int rows = 0;
+        for (int i = 0; i < logSuggestions.length(); i++) {
+            JSONObject s = logSuggestions.optJSONObject(i);
+            if (s == null) continue;
+            String label = s.optString("label", "").trim();
+            String why   = s.optString("why", "").trim();
+            if (label.isEmpty()) continue;
+
+            LinearLayout row = new LinearLayout(this);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+            LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            if (rows > 0) rp.topMargin = dpToPx(9);
+            row.setLayoutParams(rp);
+            row.setPadding(dpToPx(13), dpToPx(11), dpToPx(13), dpToPx(11));
+
+            // Neutral rounded surface with a hairline border (matches the mock).
+            android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
+            bg.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+            bg.setCornerRadius(dpToPx(12));
+            bg.setColor(0xFF0E0E0F);
+            bg.setStroke(dpToPx(1), 0xFF2A2A2A);
+            row.setBackground(bg);
+
+            TextView icon = new TextView(this);
+            icon.setText("＋"); // ＋
+            icon.setTextColor(0xFF008B8B); // teal
+            icon.setTextSize(14f);
+            icon.setTypeface(null, Typeface.BOLD);
+            LinearLayout.LayoutParams ip = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            ip.setMarginEnd(dpToPx(10));
+            icon.setLayoutParams(ip);
+            row.addView(icon);
+
+            LinearLayout body = new LinearLayout(this);
+            body.setOrientation(LinearLayout.VERTICAL);
+            body.setLayoutParams(new LinearLayout.LayoutParams(
+                    0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+
+            TextView lbl = new TextView(this);
+            lbl.setText(label);
+            lbl.setTextColor(0xFFFFFFFF);
+            lbl.setTextSize(14f);
+            body.addView(lbl);
+
+            if (!why.isEmpty()) {
+                TextView nt = new TextView(this);
+                nt.setText(why);
+                nt.setTextColor(0xFF9E9E9E);
+                nt.setTextSize(12f);
+                nt.setLineSpacing(dpToPx(1), 1f);
+                nt.setPadding(0, dpToPx(1), 0, 0);
+                body.addView(nt);
+            }
+            row.addView(body);
+
+            sharpenContainer.addView(row);
+            rows++;
+        }
+        sharpenSection.setVisibility(rows > 0 ? View.VISIBLE : View.GONE);
     }
 
     private void buildCouncil(JSONArray council) {
@@ -909,6 +1301,8 @@ public class DailyCheckInActivity extends AppCompatActivity {
         richieProcessing.setVisibility(View.VISIBLE);
         richieReady.setVisibility(View.GONE);
         richieFailed.setVisibility(View.GONE);
+        // Focus / wins / watchlist / sharpen arrive with the ready analysis — nothing yet.
+        hideAnalysisSections();
         startProcessingSpinner();
     }
 
@@ -927,12 +1321,22 @@ public class DailyCheckInActivity extends AppCompatActivity {
         richieProcessing.setVisibility(View.GONE);
         richieReady.setVisibility(View.GONE);
         richieFailed.setVisibility(View.VISIBLE);
+        hideAnalysisSections();
         stopProcessingSpinner();
     }
 
     private void hideRichie() {
         if (richieSection != null) richieSection.setVisibility(View.GONE);
+        hideAnalysisSections();
         stopProcessingSpinner();
+    }
+
+    /** Hides every section fed by the ready analysis (focus/wins/watchlist/sharpen). */
+    private void hideAnalysisSections() {
+        if (focusSection != null) focusSection.setVisibility(View.GONE);
+        if (winsSection != null) winsSection.setVisibility(View.GONE);
+        if (watchlistSection != null) watchlistSection.setVisibility(View.GONE);
+        if (sharpenSection != null) sharpenSection.setVisibility(View.GONE);
     }
 
     private void startProcessingSpinner() {
@@ -948,16 +1352,11 @@ public class DailyCheckInActivity extends AppCompatActivity {
         if (richieProcessingLogo != null) richieProcessingLogo.setRotation(0f);
     }
 
-    private int colorForStatus(String status) {
-        if ("completed".equals(status)) return COLOR_COMPLETED;
-        if ("missed".equals(status)) return COLOR_MISSED;
-        return COLOR_IN_PROGRESS; // pending / in_progress / unknown
-    }
-
-    private String statusLabel(String status) {
+    private String sessionStatusLabel(String status) {
         if ("completed".equals(status)) return "Completed";
         if ("missed".equals(status)) return "Missed";
-        return "In progress";
+        if ("in_progress".equals(status)) return "In Progress";
+        return "Pending";
     }
 
     /** Parses a session's date to epoch millis for ordering; 0 when unparseable. */
@@ -1028,10 +1427,10 @@ public class DailyCheckInActivity extends AppCompatActivity {
         public int getItemCount() { return items.size(); }
 
         class VH extends RecyclerView.ViewHolder {
-            final TextView periodBadge;
-            final TextView statusBadge;
-            final TextView sessionDate;
-            final TextView sessionSubInfo;
+            final View timelineDot;
+            final TextView sessionWhen;
+            final TextView sessionSummary;
+            final TextView statusPill;
             final MaterialButton btnAction;
             final LinearLayout accordionHeader;
             final TextView accordionChevron;
@@ -1040,10 +1439,10 @@ public class DailyCheckInActivity extends AppCompatActivity {
 
             VH(View v) {
                 super(v);
-                periodBadge        = v.findViewById(R.id.period_badge);
-                statusBadge        = v.findViewById(R.id.status_badge);
-                sessionDate        = v.findViewById(R.id.session_date);
-                sessionSubInfo     = v.findViewById(R.id.session_sub_info);
+                timelineDot        = v.findViewById(R.id.timeline_dot);
+                sessionWhen        = v.findViewById(R.id.session_when);
+                sessionSummary     = v.findViewById(R.id.session_summary);
+                statusPill         = v.findViewById(R.id.status_pill);
                 btnAction          = v.findViewById(R.id.btn_action);
                 accordionHeader    = v.findViewById(R.id.accordion_header);
                 accordionChevron   = v.findViewById(R.id.accordion_chevron);
@@ -1056,68 +1455,62 @@ public class DailyCheckInActivity extends AppCompatActivity {
                 responsesContainer.removeAllViews();
                 if (accordionChevron != null) accordionChevron.setRotation(90f);
                 itemView.setAlpha(1f);
+                btnAction.setVisibility(View.GONE);
+                accordionHeader.setVisibility(View.GONE);
 
-                periodBadge.setText(periodLabel(item.period));
-                sessionDate.setText(formatDate(item.scheduledFor, item.period));
+                // Timeline dot color: teal completed / red missed / amber otherwise.
+                timelineDot.setBackgroundTintList(ColorStateList.valueOf(sparkColor(item.status)));
+
+                // "period \u00b7 date"
+                String period = periodLabel(item.period);
+                String date = formatDate(item.scheduledFor, item.period);
+                sessionWhen.setText(date.isEmpty() ? period : period + " \u00b7 " + date);
 
                 switch (item.status) {
                     case "pending":
-                        statusBadge.setText("Pending");
-                        statusBadge.setTextColor(0xFF808080);
-                        sessionSubInfo.setText(item.totalQuestions + " question"
-                                + (item.totalQuestions != 1 ? "s" : ""));
-                        sessionSubInfo.setTextColor(0xFF808080);
+                        sessionSummary.setText(item.totalQuestions > 0
+                                ? item.totalQuestions + " question"
+                                        + (item.totalQuestions != 1 ? "s" : "") + " waiting"
+                                : "Not started");
+                        applyPill(statusPill, "Pending", 0xFF9E9E9E);
                         btnAction.setVisibility(View.VISIBLE);
                         btnAction.setText("Start");
-                        accordionHeader.setVisibility(View.GONE);
                         btnAction.setOnClickListener(v -> openSession(item.sessionId));
                         break;
 
                     case "in_progress":
-                        statusBadge.setText("In Progress");
-                        statusBadge.setTextColor(0xFFFFA500);
-                        sessionSubInfo.setText((item.totalQuestions - item.answeredCount)
+                        sessionSummary.setText((item.totalQuestions - item.answeredCount)
                                 + " of " + item.totalQuestions + " remaining");
-                        sessionSubInfo.setTextColor(0xFF808080);
+                        applyPill(statusPill, "In Progress", 0xFFFFC107);
                         btnAction.setVisibility(View.VISIBLE);
                         btnAction.setText("Continue");
-                        accordionHeader.setVisibility(View.GONE);
                         btnAction.setOnClickListener(v -> openSession(item.sessionId));
                         break;
 
                     case "completed":
-                        statusBadge.setText("\u2713 Completed");
-                        statusBadge.setTextColor(0xFF4CAF50);
-                        sessionSubInfo.setText(item.totalQuestions + " question"
-                                + (item.totalQuestions != 1 ? "s" : "") + " answered");
-                        sessionSubInfo.setTextColor(0xFF606060);
-                        btnAction.setVisibility(View.GONE);
-                        accordionHeader.setVisibility(View.VISIBLE);
-                        buildResponseRows(item);
-                        accordionHeader.setOnClickListener(v -> {
-                            expanded = !expanded;
-                            responsesContainer.setVisibility(expanded ? View.VISIBLE : View.GONE);
-                            if (accordionChevron != null)
-                                accordionChevron.setRotation(expanded ? 270f : 90f);
-                        });
+                        sessionSummary.setText(summaryLine(item));
+                        applyPill(statusPill, "Completed", 0xFF4CAF50);
+                        if (!item.responses.isEmpty()) {
+                            accordionHeader.setVisibility(View.VISIBLE);
+                            buildResponseRows(item);
+                            accordionHeader.setOnClickListener(v -> {
+                                expanded = !expanded;
+                                responsesContainer.setVisibility(expanded ? View.VISIBLE : View.GONE);
+                                if (accordionChevron != null)
+                                    accordionChevron.setRotation(expanded ? 270f : 90f);
+                            });
+                        }
                         break;
 
                     case "missed":
-                        statusBadge.setText("\u2717 Missed");
-                        statusBadge.setTextColor(0xFFE53935);
-                        sessionSubInfo.setText("This check-in was not completed in time");
-                        sessionSubInfo.setTextColor(0xFF606060);
-                        btnAction.setVisibility(View.GONE);
-                        accordionHeader.setVisibility(View.GONE);
+                        sessionSummary.setText("No read \u2014 cycle missed");
+                        applyPill(statusPill, "Missed", 0xFFE53935);
                         itemView.setAlpha(0.6f);
                         break;
 
                     default:
-                        statusBadge.setText(item.status);
-                        statusBadge.setTextColor(0xFF808080);
-                        sessionSubInfo.setText("");
-                        btnAction.setVisibility(View.GONE);
-                        accordionHeader.setVisibility(View.GONE);
+                        sessionSummary.setText(sessionStatusLabel(item.status));
+                        applyPill(statusPill, sessionStatusLabel(item.status), 0xFF9E9E9E);
                         break;
                 }
             }
@@ -1126,45 +1519,91 @@ public class DailyCheckInActivity extends AppCompatActivity {
                 responsesContainer.removeAllViews();
                 if (item.responses.isEmpty()) return;
 
-                View divider = new View(DailyCheckInActivity.this);
-                LinearLayout.LayoutParams dp = new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT, dpToPx(1));
-                dp.topMargin = dpToPx(8);
-                dp.bottomMargin = dpToPx(10);
-                divider.setLayoutParams(dp);
-                divider.setBackgroundColor(0xFF2A2A2A);
-                responsesContainer.addView(divider);
-
+                int n = 0;
                 for (JSONObject r : item.responses) {
-                    LinearLayout row = new LinearLayout(DailyCheckInActivity.this);
-                    row.setOrientation(LinearLayout.HORIZONTAL);
-                    LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(
+                    LinearLayout block = new LinearLayout(DailyCheckInActivity.this);
+                    block.setOrientation(LinearLayout.VERTICAL);
+                    LinearLayout.LayoutParams bp = new LinearLayout.LayoutParams(
                             LinearLayout.LayoutParams.MATCH_PARENT,
                             LinearLayout.LayoutParams.WRAP_CONTENT);
-                    rp.bottomMargin = dpToPx(8);
-                    row.setLayoutParams(rp);
+                    if (n > 0) bp.topMargin = dpToPx(11);
+                    block.setLayoutParams(bp);
 
                     TextView tvQ = new TextView(DailyCheckInActivity.this);
-                    tvQ.setLayoutParams(new LinearLayout.LayoutParams(
-                            0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
-                    tvQ.setTextColor(0xFFCCCCCC);
-                    tvQ.setTextSize(13f);
+                    tvQ.setTextColor(0xFF9E9E9E);
+                    tvQ.setTextSize(12f);
                     tvQ.setText(r.optString("questionText", ""));
-                    row.addView(tvQ);
+                    block.addView(tvQ);
 
                     TextView tvA = new TextView(DailyCheckInActivity.this);
-                    tvA.setTextColor(0xFF008b8b);
-                    tvA.setTextSize(13f);
-                    tvA.setPadding(dpToPx(8), 0, 0, 0);
+                    tvA.setTextColor(0xFFFFFFFF);
+                    tvA.setTextSize(14f);
+                    tvA.setPadding(0, dpToPx(2), 0, 0);
                     String emoji = r.optString("selectedEmoji", "");
                     String label = r.optString("selectedLabel", "");
+                    if (label.isEmpty()) label = r.optString("selectedValue", "");
                     tvA.setText(emoji.isEmpty() ? label : emoji + " " + label);
-                    row.addView(tvA);
+                    block.addView(tvA);
 
-                    responsesContainer.addView(row);
+                    responsesContainer.addView(block);
+                    n++;
                 }
             }
         }
+    }
+
+    /**
+     * Past-reads summary line for a completed session: up to 3 distinct response
+     * categories, title-cased, joined with " · ". Falls back to a count when no
+     * categories are present. Purely from real response data.
+     */
+    private String summaryLine(SessionItem item) {
+        List<String> cats = new ArrayList<>();
+        for (JSONObject r : item.responses) {
+            String c = r.optString("category", "").trim();
+            if (c.isEmpty()) continue;
+            String tc = titleCase(c);
+            boolean dup = false;
+            for (String existing : cats) if (existing.equalsIgnoreCase(tc)) { dup = true; break; }
+            if (!dup) cats.add(tc);
+            if (cats.size() >= 3) break;
+        }
+        if (!cats.isEmpty()) {
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < cats.size(); i++) {
+                if (i > 0) sb.append(" · ");
+                sb.append(cats.get(i));
+            }
+            return sb.toString();
+        }
+        int n = item.answeredCount > 0 ? item.answeredCount : item.totalQuestions;
+        return n + " answered";
+    }
+
+    /** Title-cases a category token: "medication_adherence" → "Medication Adherence". */
+    private String titleCase(String s) {
+        String cleaned = s.replace('_', ' ').replace('-', ' ').trim();
+        if (cleaned.isEmpty()) return cleaned;
+        String[] words = cleaned.split("\\s+");
+        StringBuilder sb = new StringBuilder();
+        for (String w : words) {
+            if (w.isEmpty()) continue;
+            if (sb.length() > 0) sb.append(' ');
+            sb.append(Character.toUpperCase(w.charAt(0)));
+            if (w.length() > 1) sb.append(w.substring(1).toLowerCase(Locale.US));
+        }
+        return sb.toString();
+    }
+
+    /** Styles an existing pill TextView: colored bold text on a low-alpha rounded fill. */
+    private void applyPill(TextView pill, String text, int color) {
+        pill.setText(text);
+        pill.setTextColor(color);
+        android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
+        bg.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+        bg.setCornerRadius(dpToPx(999));
+        bg.setColor((color & 0x00FFFFFF) | 0x24000000); // ~14% alpha
+        pill.setBackground(bg);
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -1210,62 +1649,5 @@ public class DailyCheckInActivity extends AppCompatActivity {
 
     private int dpToPx(int dp) {
         return Math.round(dp * getResources().getDisplayMetrics().density);
-    }
-
-    // ─── Completion ring (thin arc + centered percent) ──────────────────────────
-
-    static class CompletionRingView extends View {
-        private final Paint bgPaint   = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint arcPaint  = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final RectF oval = new RectF();
-        private float sweep = 0f;          // 0..1
-        private String centerText = "0%";
-        private final float strokeW;
-
-        CompletionRingView(Context c) {
-            super(c);
-            float d = c.getResources().getDisplayMetrics().density;
-            strokeW = 4f * d;
-
-            bgPaint.setStyle(Paint.Style.STROKE);
-            bgPaint.setStrokeWidth(strokeW);
-            bgPaint.setColor(0xFF2A2A2A);
-
-            arcPaint.setStyle(Paint.Style.STROKE);
-            arcPaint.setStrokeWidth(strokeW);
-            arcPaint.setStrokeCap(Paint.Cap.ROUND);
-            arcPaint.setColor(0xFF008B8B);
-
-            textPaint.setColor(0xFFFFFFFF);
-            textPaint.setTextAlign(Paint.Align.CENTER);
-            textPaint.setTextSize(16f * d);
-            textPaint.setFakeBoldText(true);
-        }
-
-        void setRing(float rate, int percent, int color) {
-            this.sweep = Math.max(0f, Math.min(1f, rate));
-            this.centerText = percent + "%";
-            arcPaint.setColor(color);
-            invalidate();
-        }
-
-        @Override
-        protected void onDraw(Canvas canvas) {
-            super.onDraw(canvas);
-            float pad = strokeW / 2f + dpToPx(1);
-            oval.set(pad, pad, getWidth() - pad, getHeight() - pad);
-            canvas.drawArc(oval, 0f, 360f, false, bgPaint);
-            canvas.drawArc(oval, -90f, 360f * sweep, false, arcPaint);
-
-            float cx = getWidth() / 2f;
-            float cy = getHeight() / 2f;
-            float ty = cy - (textPaint.descent() + textPaint.ascent()) / 2f;
-            canvas.drawText(centerText, cx, ty, textPaint);
-        }
-
-        private float dpToPx(int dp) {
-            return dp * getResources().getDisplayMetrics().density;
-        }
     }
 }
