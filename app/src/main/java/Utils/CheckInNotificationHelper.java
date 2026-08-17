@@ -272,4 +272,15 @@ public class CheckInNotificationHelper {
                         .setAutoCancel(true);
         mgr.notify(1002, b.build());
     }
+
+    /**
+     * Post an immediate "your check-in review is ready" notification on the same
+     * check-in channel. Called when the async analysis finishes while the app is
+     * in the background, so the user knows Richie has something to show them.
+     */
+    public static void fireAnalysisReady(Context context) {
+        fireNow(context,
+                "Your check-in review is ready",
+                "Richie finished reviewing your check-in.");
+    }
 }

@@ -2,21 +2,29 @@ package com.example.richhealth.Activities;
 import Utils.Utilities;
 
 import android.app.Dialog;
+import android.content.Context;
 import android.content.res.ColorStateList;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.RectF;
+import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
-import android.util.TypedValue;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -25,12 +33,12 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.android.volley.AuthFailureError;
 import com.android.volley.DefaultRetryPolicy;
 import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.VolleyError;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 import com.example.richhealth.R;
 import com.google.android.material.button.MaterialButton;
-import com.google.android.material.chip.Chip;
-import com.google.android.material.chip.ChipGroup;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -49,6 +57,7 @@ import java.util.TimeZone;
 
 import Models.SelectableOption;
 import Utils.ApiConfig;
+import Utils.CheckInNotificationHelper;
 import Utils.SimpleProgress;
 
 public class DailyCheckInActivity extends AppCompatActivity {
@@ -76,15 +85,44 @@ public class DailyCheckInActivity extends AppCompatActivity {
     private TextView streakNumber;
     private TextView streakLabel;
     private LinearLayout consistencyGrid;
-    private LinearLayout lastCheckinSection;
-    private TextView lastCheckinDate;
-    private ChipGroup lastCheckinChips;
+    private FrameLayout ringContainer;
+    private CompletionRingView completionRing;
+    private TextView completionSummary;
+    private ImageButton checkinInfoBtn;
+
+    // "What Richie thinks" section
+    private LinearLayout richieSection;
+    private LinearLayout richieProcessing;
+    private LinearLayout richieReady;
+    private LinearLayout richieFailed;
+    private TextView richieAnalysisText;
+    private LinearLayout richieCouncilSection;
+    private LinearLayout richieCouncilHeader;
+    private LinearLayout richieCouncilContainer;
+    private TextView richieCouncilChevron;
+    private LinearLayout richieReasoningSection;
+    private LinearLayout richieReasoningHeader;
+    private TextView richieReasoningText;
+    private TextView richieReasoningChevron;
+    private MaterialButton richieRetryBtn;
+
+    // Analysis polling
+    private final Handler analysisHandler = new Handler(Looper.getMainLooper());
+    private Runnable analysisPollRunnable;
+    private long analysisPollStart;
+    private String analysisSessionId;
+    private RequestQueue analysisQueue;
+    private boolean isForeground = true;
+    private boolean analysisNotified = false;
+    private static final long ANALYSIS_POLL_INTERVAL_MS = 4000L;
+    private static final long ANALYSIS_POLL_TIMEOUT_MS  = 90000L;
+    private static final String TAG_ANALYSIS = "checkin_analysis";
 
     // Status colors — paired with legend labels in the layout
     private static final int COLOR_COMPLETED   = 0xFF008B8B; // teal
     private static final int COLOR_MISSED      = 0xFFE53935; // red
     private static final int COLOR_IN_PROGRESS = 0xFFFFA500; // orange
-    private static final int MAX_CELLS = 12;
+    private static final int MAX_CELLS = 10;
 
     private final List<SessionItem> sessionItems = new ArrayList<>();
     private SessionListAdapter listAdapter;
@@ -127,11 +165,77 @@ public class DailyCheckInActivity extends AppCompatActivity {
         streakNumber       = findViewById(R.id.streak_number);
         streakLabel        = findViewById(R.id.streak_label);
         consistencyGrid    = findViewById(R.id.consistency_grid);
-        lastCheckinSection = findViewById(R.id.last_checkin_section);
-        lastCheckinDate    = findViewById(R.id.last_checkin_date);
-        lastCheckinChips   = findViewById(R.id.last_checkin_chips);
+        ringContainer      = findViewById(R.id.ring_container);
+        completionSummary  = findViewById(R.id.completion_summary);
+        checkinInfoBtn     = findViewById(R.id.checkin_info_btn);
+
+        // Completion ring is drawn programmatically into its container.
+        completionRing = new CompletionRingView(this);
+        ringContainer.addView(completionRing,
+                new FrameLayout.LayoutParams(
+                        FrameLayout.LayoutParams.MATCH_PARENT,
+                        FrameLayout.LayoutParams.MATCH_PARENT));
+
+        if (checkinInfoBtn != null) checkinInfoBtn.setOnClickListener(v -> showCheckinInfoDialog());
+
+        // "What Richie thinks" views
+        richieSection         = findViewById(R.id.richie_section);
+        richieProcessing      = findViewById(R.id.richie_processing);
+        richieReady           = findViewById(R.id.richie_ready);
+        richieFailed          = findViewById(R.id.richie_failed);
+        richieAnalysisText    = findViewById(R.id.richie_analysis_text);
+        richieCouncilSection  = findViewById(R.id.richie_council_section);
+        richieCouncilHeader   = findViewById(R.id.richie_council_header);
+        richieCouncilContainer= findViewById(R.id.richie_council_container);
+        richieCouncilChevron  = findViewById(R.id.richie_council_chevron);
+        richieReasoningSection= findViewById(R.id.richie_reasoning_section);
+        richieReasoningHeader = findViewById(R.id.richie_reasoning_header);
+        richieReasoningText   = findViewById(R.id.richie_reasoning_text);
+        richieReasoningChevron= findViewById(R.id.richie_reasoning_chevron);
+        richieRetryBtn        = findViewById(R.id.richie_retry_btn);
+
+        richieCouncilHeader.setOnClickListener(v -> {
+            boolean show = richieCouncilContainer.getVisibility() != View.VISIBLE;
+            richieCouncilContainer.setVisibility(show ? View.VISIBLE : View.GONE);
+            richieCouncilChevron.setRotation(show ? 270f : 90f);
+        });
+        richieReasoningHeader.setOnClickListener(v -> {
+            boolean show = richieReasoningText.getVisibility() != View.VISIBLE;
+            richieReasoningText.setVisibility(show ? View.VISIBLE : View.GONE);
+            richieReasoningChevron.setRotation(show ? 270f : 90f);
+        });
+        richieRetryBtn.setOnClickListener(v -> {
+            if (analysisSessionId != null) startAnalysisFor(analysisSessionId);
+        });
 
         fetchCheckInList();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        isForeground = true;
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        isForeground = false;
+    }
+
+    @Override
+    protected void onDestroy() {
+        stopAnalysisPolling();
+        super.onDestroy();
+    }
+
+    private void showCheckinInfoDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("Why check in?")
+                .setMessage("Your check-in answers tune Richie — they sharpen your "
+                        + "chat replies, health analysis, and the questions you get next.")
+                .setPositiveButton("Got it", null)
+                .show();
     }
 
     // ─── Network ──────────────────────────────────────────────────────────────
@@ -502,7 +606,9 @@ public class DailyCheckInActivity extends AppCompatActivity {
     private void populateSummary(List<SessionItem> items) {
         if (items == null || items.isEmpty()) {
             if (streakSection != null) streakSection.setVisibility(View.GONE);
-            if (lastCheckinSection != null) lastCheckinSection.setVisibility(View.GONE);
+            hideRichie();
+            stopAnalysisPolling();
+            analysisSessionId = null;
             return;
         }
 
@@ -510,7 +616,7 @@ public class DailyCheckInActivity extends AppCompatActivity {
         List<SessionItem> sorted = new ArrayList<>(items);
         Collections.sort(sorted, (a, b) -> Long.compare(sessionTime(a), sessionTime(b)));
 
-        // (A) Streak + consistency grid
+        // (A) Completion ring + streak + consistency grid
         if (streakSection != null) {
             streakSection.setVisibility(View.VISIBLE);
             int streak = computeStreak(sorted);
@@ -518,22 +624,41 @@ public class DailyCheckInActivity extends AppCompatActivity {
             if (streakLabel != null) {
                 streakLabel.setText(streak == 0 ? "Start your streak" : "check-in streak");
             }
+            updateCompletionRing(sorted);
             buildConsistencyGrid(sorted);
         }
 
-        // (B) Your last check-in
-        SessionItem last = latestCompletedWithResponses(sorted);
-        if (last == null || lastCheckinSection == null) {
-            if (lastCheckinSection != null) lastCheckinSection.setVisibility(View.GONE);
+        // (B) What Richie thinks — only when there's a completed session.
+        SessionItem lastCompleted = latestCompleted(sorted);
+        if (lastCompleted == null) {
+            hideRichie();
+            stopAnalysisPolling();
+            analysisSessionId = null;
         } else {
-            lastCheckinSection.setVisibility(View.VISIBLE);
-            if (lastCheckinDate != null) {
-                String dateStr = (last.completedAt != null && !last.completedAt.isEmpty())
-                        ? formatDate(last.completedAt, "")
-                        : formatDate(last.scheduledFor, last.period);
-                lastCheckinDate.setText(dateStr);
-            }
-            buildLastCheckinChips(last);
+            syncAnalysis(lastCompleted.sessionId);
+        }
+    }
+
+    /** Completed vs missed ratio → tinted arc + centered percent. */
+    private void updateCompletionRing(List<SessionItem> sortedAsc) {
+        int completed = 0, missed = 0;
+        for (SessionItem s : sortedAsc) {
+            if ("completed".equals(s.status)) completed++;
+            else if ("missed".equals(s.status)) missed++;
+        }
+        int denom = Math.max(1, completed + missed);
+        float rate = (float) completed / denom;
+        int pct = Math.round(rate * 100f);
+
+        int color;
+        if (rate >= 0.85f)      color = 0xFF4CAF50; // green
+        else if (rate >= 0.70f) color = 0xFFFFC107; // amber
+        else if (rate >= 0.50f) color = 0xFFFF9800; // orange
+        else                    color = 0xFFE53935; // red
+
+        if (completionRing != null) completionRing.setRing(rate, pct, color);
+        if (completionSummary != null) {
+            completionSummary.setText(completed + " answered · " + missed + " missed");
         }
     }
 
@@ -559,11 +684,11 @@ public class DailyCheckInActivity extends AppCompatActivity {
         return streak;
     }
 
-    /** Most recent completed session that actually has responses; null if none. */
-    private SessionItem latestCompletedWithResponses(List<SessionItem> sortedAsc) {
+    /** Most recent completed session; null if none. */
+    private SessionItem latestCompleted(List<SessionItem> sortedAsc) {
         for (int i = sortedAsc.size() - 1; i >= 0; i--) {
             SessionItem s = sortedAsc.get(i);
-            if ("completed".equals(s.status) && s.responses != null && !s.responses.isEmpty()) {
+            if ("completed".equals(s.status) && s.sessionId != null && !s.sessionId.isEmpty()) {
                 return s;
             }
         }
@@ -594,29 +719,204 @@ public class DailyCheckInActivity extends AppCompatActivity {
         }
     }
 
-    /** Builds the answer chips for the most recent completed check-in. */
-    private void buildLastCheckinChips(SessionItem item) {
-        if (lastCheckinChips == null) return;
-        lastCheckinChips.removeAllViews();
-        if (item.responses == null) return;
+    // ─── What Richie thinks: analysis fetch + poll ──────────────────────────────
 
-        for (JSONObject r : item.responses) {
-            String emoji = r.optString("selectedEmoji", "");
-            String label = r.optString("selectedLabel", "");
-            if (label.isEmpty()) label = r.optString("selectedValue", "");
-            String text = emoji.isEmpty() ? label : emoji + " " + label;
-            if (text.trim().isEmpty()) continue;
+    private RequestQueue getAnalysisQueue() {
+        if (analysisQueue == null) analysisQueue = Volley.newRequestQueue(getApplicationContext());
+        return analysisQueue;
+    }
 
-            Chip chip = new Chip(this);
-            chip.setText(text);
-            chip.setClickable(false);
-            chip.setCheckable(false);
-            chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-            chip.setChipBackgroundColor(ColorStateList.valueOf(0xFF0A2828));
-            chip.setTextColor(COLOR_COMPLETED);
-            chip.setEnsureMinTouchTargetSize(false);
-            lastCheckinChips.addView(chip);
+    /** Kick off analysis tracking for a session only if not already tracking it. */
+    private void syncAnalysis(String sessionId) {
+        if (sessionId == null || sessionId.isEmpty()) { hideRichie(); return; }
+        if (sessionId.equals(analysisSessionId)) return; // already tracking/handled
+        startAnalysisFor(sessionId);
+    }
+
+    /** (Re)start polling for the given session's analysis. */
+    private void startAnalysisFor(String sessionId) {
+        if (sessionId == null || sessionId.isEmpty()) { hideRichie(); return; }
+        stopAnalysisPolling();
+        analysisSessionId = sessionId;
+        analysisNotified = false;
+        analysisPollStart = System.currentTimeMillis();
+        showRichieProcessing();
+        fetchAnalysis(sessionId);
+    }
+
+    private void fetchAnalysis(String sessionId) {
+        String token = tokenManager != null ? tokenManager.getToken() : null;
+        if (token == null) { hideRichie(); return; }
+
+        String url = ApiConfig.BASE_URL + "/api/checkin/sessions/" + sessionId + "/analysis";
+        StringRequest req = new StringRequest(Request.Method.GET, url,
+                response -> handleAnalysisResponse(sessionId, response),
+                error -> handleAnalysisError(sessionId, error)) {
+            @Override
+            public Map<String, String> getHeaders() throws AuthFailureError {
+                Map<String, String> h = new HashMap<>();
+                h.put("Authorization", "Bearer " + token);
+                return h;
+            }
+        };
+        req.setTag(TAG_ANALYSIS);
+        req.setRetryPolicy(new DefaultRetryPolicy(15000, 1, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
+        getAnalysisQueue().add(req);
+    }
+
+    private void handleAnalysisResponse(String sessionId, String response) {
+        if (!sessionId.equals(analysisSessionId)) return; // stale response
+        try {
+            JSONObject json = new JSONObject(response);
+            String status = json.optString("status", "none");
+            switch (status) {
+                case "ready":
+                    renderAnalysisReady(json);
+                    stopAnalysisPolling();
+                    break;
+                case "failed":
+                    showRichieFailed();
+                    stopAnalysisPolling();
+                    break;
+                case "processing":
+                case "none":
+                default:
+                    showRichieProcessing();
+                    scheduleNextPoll(sessionId, status);
+                    break;
+            }
+        } catch (JSONException e) {
+            Log.e(TAG, "Analysis parse error", e);
+            scheduleNextPoll(sessionId, "processing");
         }
+    }
+
+    private void handleAnalysisError(String sessionId, VolleyError error) {
+        if (!sessionId.equals(analysisSessionId)) return;
+        Log.e(TAG, "Analysis fetch error", error);
+        scheduleNextPoll(sessionId, "processing"); // transient — keep trying until timeout
+    }
+
+    private void scheduleNextPoll(String sessionId, String lastStatus) {
+        if (System.currentTimeMillis() - analysisPollStart >= ANALYSIS_POLL_TIMEOUT_MS) {
+            // Bounded: give up quietly on "none", surface a retry otherwise.
+            if ("none".equals(lastStatus)) hideRichie();
+            else showRichieFailed();
+            stopAnalysisPolling();
+            return;
+        }
+        analysisPollRunnable = () -> fetchAnalysis(sessionId);
+        analysisHandler.postDelayed(analysisPollRunnable, ANALYSIS_POLL_INTERVAL_MS);
+    }
+
+    private void stopAnalysisPolling() {
+        if (analysisPollRunnable != null) {
+            analysisHandler.removeCallbacks(analysisPollRunnable);
+            analysisPollRunnable = null;
+        }
+        if (analysisQueue != null) analysisQueue.cancelAll(TAG_ANALYSIS);
+    }
+
+    private void renderAnalysisReady(JSONObject json) {
+        showRichieReady();
+
+        String analysis = json.optString("analysis", "");
+        if (richieAnalysisText != null) richieAnalysisText.setText(analysis);
+
+        boolean isCouncil = json.optBoolean("isCouncil", false);
+        JSONArray council = json.optJSONArray("council");
+
+        if (isCouncil && council != null && council.length() > 0) {
+            richieReasoningSection.setVisibility(View.GONE);
+            richieCouncilSection.setVisibility(View.VISIBLE);
+            buildCouncil(council);
+        } else {
+            richieCouncilSection.setVisibility(View.GONE);
+            String thinking = json.optString("thinking", "");
+            if (thinking != null && !thinking.trim().isEmpty()) {
+                richieReasoningSection.setVisibility(View.VISIBLE);
+                richieReasoningText.setText(thinking);
+                richieReasoningText.setVisibility(View.GONE); // collapsed by default
+                richieReasoningChevron.setRotation(90f);
+            } else {
+                richieReasoningSection.setVisibility(View.GONE);
+            }
+        }
+
+        // Notify only if the review finished while the screen wasn't in the foreground.
+        if (!isForeground && !analysisNotified) {
+            analysisNotified = true;
+            CheckInNotificationHelper.fireAnalysisReady(this);
+        }
+    }
+
+    private void buildCouncil(JSONArray council) {
+        if (richieCouncilContainer == null) return;
+        richieCouncilContainer.removeAllViews();
+        // Reset to collapsed state each time it's rebuilt.
+        richieCouncilContainer.setVisibility(View.GONE);
+        if (richieCouncilChevron != null) richieCouncilChevron.setRotation(90f);
+
+        for (int i = 0; i < council.length(); i++) {
+            JSONObject m = council.optJSONObject(i);
+            if (m == null) continue;
+            String label = m.optString("label", m.optString("model", ""));
+            String text  = m.optString("text", "");
+            if (label.trim().isEmpty() && text.trim().isEmpty()) continue;
+
+            LinearLayout block = new LinearLayout(this);
+            block.setOrientation(LinearLayout.VERTICAL);
+            LinearLayout.LayoutParams bp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT);
+            bp.bottomMargin = dpToPx(12);
+            block.setLayoutParams(bp);
+
+            TextView lbl = new TextView(this);
+            lbl.setText(label.toUpperCase(Locale.getDefault()));
+            lbl.setTextColor(COLOR_COMPLETED); // teal
+            lbl.setTextSize(12f);
+            lbl.setTypeface(null, Typeface.BOLD);
+            block.addView(lbl);
+
+            TextView txt = new TextView(this);
+            txt.setText(text);
+            txt.setTextColor(0xFFBBBBBB);
+            txt.setTextSize(13f);
+            txt.setLineSpacing(dpToPx(2), 1f);
+            txt.setPadding(0, dpToPx(2), 0, 0);
+            block.addView(txt);
+
+            richieCouncilContainer.addView(block);
+        }
+    }
+
+    private void showRichieProcessing() {
+        if (richieSection == null) return;
+        richieSection.setVisibility(View.VISIBLE);
+        richieProcessing.setVisibility(View.VISIBLE);
+        richieReady.setVisibility(View.GONE);
+        richieFailed.setVisibility(View.GONE);
+    }
+
+    private void showRichieReady() {
+        if (richieSection == null) return;
+        richieSection.setVisibility(View.VISIBLE);
+        richieProcessing.setVisibility(View.GONE);
+        richieReady.setVisibility(View.VISIBLE);
+        richieFailed.setVisibility(View.GONE);
+    }
+
+    private void showRichieFailed() {
+        if (richieSection == null) return;
+        richieSection.setVisibility(View.VISIBLE);
+        richieProcessing.setVisibility(View.GONE);
+        richieReady.setVisibility(View.GONE);
+        richieFailed.setVisibility(View.VISIBLE);
+    }
+
+    private void hideRichie() {
+        if (richieSection != null) richieSection.setVisibility(View.GONE);
     }
 
     private int colorForStatus(String status) {
@@ -881,5 +1181,62 @@ public class DailyCheckInActivity extends AppCompatActivity {
 
     private int dpToPx(int dp) {
         return Math.round(dp * getResources().getDisplayMetrics().density);
+    }
+
+    // ─── Completion ring (thin arc + centered percent) ──────────────────────────
+
+    static class CompletionRingView extends View {
+        private final Paint bgPaint   = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint arcPaint  = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final RectF oval = new RectF();
+        private float sweep = 0f;          // 0..1
+        private String centerText = "0%";
+        private final float strokeW;
+
+        CompletionRingView(Context c) {
+            super(c);
+            float d = c.getResources().getDisplayMetrics().density;
+            strokeW = 6f * d;
+
+            bgPaint.setStyle(Paint.Style.STROKE);
+            bgPaint.setStrokeWidth(strokeW);
+            bgPaint.setColor(0xFF2A2A2A);
+
+            arcPaint.setStyle(Paint.Style.STROKE);
+            arcPaint.setStrokeWidth(strokeW);
+            arcPaint.setStrokeCap(Paint.Cap.ROUND);
+            arcPaint.setColor(0xFF008B8B);
+
+            textPaint.setColor(0xFFFFFFFF);
+            textPaint.setTextAlign(Paint.Align.CENTER);
+            textPaint.setTextSize(16f * d);
+            textPaint.setFakeBoldText(true);
+        }
+
+        void setRing(float rate, int percent, int color) {
+            this.sweep = Math.max(0f, Math.min(1f, rate));
+            this.centerText = percent + "%";
+            arcPaint.setColor(color);
+            invalidate();
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            float pad = strokeW / 2f + dpToPx(1);
+            oval.set(pad, pad, getWidth() - pad, getHeight() - pad);
+            canvas.drawArc(oval, 0f, 360f, false, bgPaint);
+            canvas.drawArc(oval, -90f, 360f * sweep, false, arcPaint);
+
+            float cx = getWidth() / 2f;
+            float cy = getHeight() / 2f;
+            float ty = cy - (textPaint.descent() + textPaint.ascent()) / 2f;
+            canvas.drawText(centerText, cx, ty, textPaint);
+        }
+
+        private float dpToPx(int dp) {
+            return dp * getResources().getDisplayMetrics().density;
+        }
     }
 }

@@ -111,40 +111,81 @@
                     android:layout_marginBottom="8dp"
                     android:visibility="gone">
 
-                    <!-- Streak count -->
+                    <!-- Completion ring + streak count -->
                     <LinearLayout
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
                         android:layout_marginBottom="14dp">
 
-                        <TextView
-                            android:id="@+id/streak_flame"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="🔥"
-                            android:textSize="30sp"
-                            android:layout_marginEnd="10dp"
-                            android:contentDescription="@null" />
+                        <!-- Completion ring (drawn programmatically into this container) -->
+                        <FrameLayout
+                            android:id="@+id/ring_container"
+                            android:layout_width="72dp"
+                            android:layout_height="72dp" />
 
-                        <TextView
-                            android:id="@+id/streak_number"
-                            android:layout_width="wrap_content"
+                        <LinearLayout
+                            android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:text="0"
-                            android:textColor="@color/white"
-                            android:textSize="34sp"
-                            android:textStyle="bold" />
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:layout_marginStart="14dp">
 
-                        <TextView
-                            android:id="@+id/streak_label"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="check-in streak"
-                            android:textColor="#999999"
-                            android:textSize="14sp"
-                            android:layout_marginStart="8dp" />
+                            <TextView
+                                android:id="@+id/completion_summary"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="0 answered · 0 missed"
+                                android:textColor="@color/white"
+                                android:textSize="14sp" />
+
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical"
+                                android:layout_marginTop="6dp">
+
+                                <TextView
+                                    android:id="@+id/streak_flame"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="🔥"
+                                    android:textSize="22sp"
+                                    android:layout_marginEnd="8dp"
+                                    android:contentDescription="@null" />
+
+                                <TextView
+                                    android:id="@+id/streak_number"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="0"
+                                    android:textColor="@color/white"
+                                    android:textSize="26sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:id="@+id/streak_label"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="check-in streak"
+                                    android:textColor="#999999"
+                                    android:textSize="13sp"
+                                    android:layout_marginStart="6dp" />
+                            </LinearLayout>
+                        </LinearLayout>
+
+                        <!-- Info affordance: explains what check-ins are for -->
+                        <ImageButton
+                            android:id="@+id/checkin_info_btn"
+                            android:layout_width="34dp"
+                            android:layout_height="34dp"
+                            android:padding="6dp"
+                            android:src="@drawable/ic_info_outline"
+                            android:background="@drawable/bg_circle_info_btn"
+                            app:tint="#999999"
+                            android:contentDescription="About check-ins" />
                     </LinearLayout>
 
                     <!-- Consistency grid — populated programmatically, oldest → newest -->
@@ -208,9 +249,9 @@
                     </LinearLayout>
                 </LinearLayout>
 
-                <!-- ═══ YOUR LAST CHECK-IN (answer summary chips) ═══ -->
+                <!-- ═══ WHAT RICHIE THINKS (server-generated check-in analysis) ═══ -->
                 <LinearLayout
-                    android:id="@+id/last_checkin_section"
+                    android:id="@+id/richie_section"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
@@ -220,27 +261,200 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Your last check-in"
+                        android:text="What Richie thinks"
                         android:textColor="@color/white"
                         android:textSize="15sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:id="@+id/last_checkin_date"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text=""
-                        android:textColor="#999999"
-                        android:textSize="12sp"
-                        android:layout_marginTop="2dp"
+                        android:textStyle="bold"
                         android:layout_marginBottom="8dp" />
 
-                    <com.google.android.material.chip.ChipGroup
-                        android:id="@+id/last_checkin_chips"
+                    <!-- processing state -->
+                    <LinearLayout
+                        android:id="@+id/richie_processing"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        app:chipSpacingHorizontal="6dp"
-                        app:chipSpacingVertical="2dp" />
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:visibility="gone">
+
+                        <ProgressBar
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            style="?android:attr/progressBarStyleSmall"
+                            android:indeterminateTint="#008b8b" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Richie is reviewing your check-in…"
+                            android:textColor="#999999"
+                            android:textSize="13sp"
+                            android:layout_marginStart="10dp" />
+                    </LinearLayout>
+
+                    <!-- ready state -->
+                    <LinearLayout
+                        android:id="@+id/richie_ready"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="RICHIE'S TAKE"
+                            android:textColor="#008b8b"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:textAllCaps="true" />
+
+                        <TextView
+                            android:id="@+id/richie_analysis_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text=""
+                            android:textColor="@color/white"
+                            android:textSize="14sp"
+                            android:lineSpacingExtra="3dp"
+                            android:layout_marginTop="4dp" />
+
+                        <!-- The Council (collapsible) -->
+                        <LinearLayout
+                            android:id="@+id/richie_council_section"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:layout_marginTop="14dp"
+                            android:visibility="gone">
+
+                            <LinearLayout
+                                android:id="@+id/richie_council_header"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical"
+                                android:background="?attr/selectableItemBackground"
+                                android:paddingVertical="4dp">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="COUNCIL"
+                                    android:textColor="#008b8b"
+                                    android:textSize="10sp"
+                                    android:textStyle="bold"
+                                    android:textAllCaps="true"
+                                    android:background="@drawable/rounded_category_bg"
+                                    android:backgroundTint="#0A2828"
+                                    android:paddingHorizontal="8dp"
+                                    android:paddingVertical="3dp" />
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="The Council"
+                                    android:textColor="@color/white"
+                                    android:textSize="13sp"
+                                    android:textStyle="bold"
+                                    android:layout_marginStart="8dp" />
+
+                                <TextView
+                                    android:id="@+id/richie_council_chevron"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="›"
+                                    android:textColor="#999999"
+                                    android:textSize="18sp"
+                                    android:rotation="90"
+                                    android:contentDescription="@null" />
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:id="@+id/richie_council_container"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical"
+                                android:layout_marginTop="8dp"
+                                android:visibility="gone" />
+                        </LinearLayout>
+
+                        <!-- Richie's reasoning (free tier, collapsible) -->
+                        <LinearLayout
+                            android:id="@+id/richie_reasoning_section"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:layout_marginTop="14dp"
+                            android:visibility="gone">
+
+                            <LinearLayout
+                                android:id="@+id/richie_reasoning_header"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical"
+                                android:background="?attr/selectableItemBackground"
+                                android:paddingVertical="4dp">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="Richie's reasoning"
+                                    android:textColor="@color/white"
+                                    android:textSize="13sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:id="@+id/richie_reasoning_chevron"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="›"
+                                    android:textColor="#999999"
+                                    android:textSize="18sp"
+                                    android:rotation="90"
+                                    android:contentDescription="@null" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/richie_reasoning_text"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text=""
+                                android:textColor="#BBBBBB"
+                                android:textSize="13sp"
+                                android:lineSpacingExtra="2dp"
+                                android:layout_marginTop="8dp"
+                                android:visibility="gone" />
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <!-- failed state -->
+                    <LinearLayout
+                        android:id="@+id/richie_failed"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Couldn't generate an analysis this time."
+                            android:textColor="#999999"
+                            android:textSize="13sp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/richie_retry_btn"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Try again"
+                            android:textColor="@color/white"
+                            android:layout_marginTop="8dp"
+                            app:backgroundTint="#008b8b"
+                            app:cornerRadius="10dp" />
+                    </LinearLayout>
                 </LinearLayout>
 
             </LinearLayout>

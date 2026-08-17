@@ -1,4 +1,9 @@
 ## [2026-08-17] Health Check-In redesign (meaningful summary)
+
+## [2026-08-17] Health Check-In — analysis section (Council), completion ring, notify
+- New "What Richie thinks" section fetches GET /api/checkin/sessions/{latestCompletedId}/analysis (Bearer Volley, polled 4s/90s while processing): processing / ready (analysis + collapsible COUNCIL for pro or "Richie's reasoning" for free) / failed+retry.
+- Streak block now leads with a code-drawn CompletionRingView (rate-colored % ring) + answered·missed + streak; consistency grid capped to 10; ⓘ explainer dialog.
+- CheckInNotificationHelper.fireAnalysisReady fires when the poll reaches ready while backgrounded (onResume/onPause); poll bounded + torn down in onDestroy. Reminder scheduling verified already-working, unchanged.
 - Removed the meaningless session-status BarChart (MPAndroidChart) on the Health Check-In screen. Added two client-only widgets from the existing session list: a streak + per-cycle consistency heatmap grid (status-colored cells + accessible legend) and a "Your last check-in" Material chip summary of the latest completed answers. New drawables checkin_cell_bg / checkin_dot_bg. No backend change.
 
 # AI Change Log — RichHealth Android
