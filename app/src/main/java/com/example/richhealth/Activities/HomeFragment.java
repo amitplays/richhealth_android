@@ -4194,6 +4194,11 @@ public class HomeFragment extends Fragment {
         // nothing retried. Schedule from the last known tier up front; the success
         // handler refines the cadence if and when the response actually lands.
         Utils.CheckInNotificationHelper.scheduleFromStoredTier(context);
+        // Medication reminders are equally independent of any network call: reschedule
+        // from the local store and flush any dose events queued while offline.
+        Utils.MedicationReminderHelper.ensureChannel(context);
+        Utils.MedicationReminderHelper.rescheduleAll(context);
+        Utils.MedicationReminderHelper.flushDoseQueue(context);
         Utils.NotificationPermissionHelper.requestIfNeeded(this);
 
         String url = ApiConfig.BASE_URL + "/api/checkin/home-card";

@@ -24,6 +24,11 @@ public class MedicationModel {
     private List<String> sideEffects = new ArrayList<>();
     private double adherenceRate = -1;
 
+    // Reminders (mirror backend remindersEnabled / reminderDays / reminderTimes)
+    private boolean remindersEnabled = false;
+    private List<Integer> reminderDays = new ArrayList<>();   // 0=Sun..6=Sat, empty = daily
+    private List<int[]> reminderTimes = new ArrayList<>();    // each int[]{hour,minute}
+
     public MedicationModel() {
         // Default constructor
     }
@@ -148,6 +153,21 @@ public class MedicationModel {
 
     public double getAdherenceRate() { return adherenceRate; }
     public void setAdherenceRate(double adherenceRate) { this.adherenceRate = adherenceRate; }
+
+    // Reminder fields (mirrors backend remindersEnabled / reminderDays / reminderTimes).
+    // reminderDays: 0=Sun..6=Sat, empty = every day. reminderTimes: each int[]{hour,minute}.
+    public boolean isRemindersEnabled() { return remindersEnabled; }
+    public void setRemindersEnabled(boolean remindersEnabled) { this.remindersEnabled = remindersEnabled; }
+
+    public List<Integer> getReminderDays() { return reminderDays; }
+    public void setReminderDays(List<Integer> reminderDays) {
+        this.reminderDays = reminderDays != null ? reminderDays : new ArrayList<>();
+    }
+
+    public List<int[]> getReminderTimes() { return reminderTimes; }
+    public void setReminderTimes(List<int[]> reminderTimes) {
+        this.reminderTimes = reminderTimes != null ? reminderTimes : new ArrayList<>();
+    }
 
     // Helper method to determine if medication is current
     public boolean isCurrent() {

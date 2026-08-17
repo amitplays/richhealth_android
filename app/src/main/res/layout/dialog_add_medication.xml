@@ -217,6 +217,102 @@
                 android:textSize="12sp"
                 android:textStyle="italic"/>
 
+            <!-- Reminders toggle -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Remind me to take this"
+                    android:textColor="@color/white"
+                    android:textSize="14sp"/>
+
+                <com.google.android.material.switchmaterial.SwitchMaterial
+                    android:id="@+id/switch_reminders"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="false"
+                    app:thumbTint="@color/rh_accent"
+                    app:trackTint="#33008b8b"/>
+            </LinearLayout>
+
+            <!-- Reminders configuration (shown only when the switch is on) -->
+            <LinearLayout
+                android:id="@+id/reminders_section"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <!-- Cadence -->
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:textColorHint="#757575"
+                    app:hintTextColor="@color/rh_accent"
+                    app:boxStrokeColor="@color/rh_accent"
+                    app:boxBackgroundColor="#1E1E1E"
+                    app:boxCornerRadiusTopStart="8dp"
+                    app:boxCornerRadiusTopEnd="8dp"
+                    app:boxCornerRadiusBottomStart="8dp"
+                    app:boxCornerRadiusBottomEnd="8dp"
+                    app:boxStrokeWidth="1dp">
+
+                    <AutoCompleteTextView
+                        android:id="@+id/spinner_reminder_cadence"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Reminder frequency"
+                        android:inputType="none"
+                        android:textColor="@color/white"
+                        android:focusable="false"/>
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Weekday selector (shown only for "Twice a week") -->
+                <TextView
+                    android:id="@+id/reminder_days_label"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="6dp"
+                    android:text="Which days?"
+                    android:textColor="@color/rh_text_secondary"
+                    android:textSize="13sp"
+                    android:visibility="gone"/>
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/chip_group_days"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:visibility="gone"
+                    app:singleLine="false"/>
+
+                <!-- Times -->
+                <TextView
+                    android:id="@+id/reminder_times_label"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="6dp"
+                    android:text="Reminder times"
+                    android:textColor="@color/rh_text_secondary"
+                    android:textSize="13sp"/>
+
+                <LinearLayout
+                    android:id="@+id/reminder_times_container"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"/>
+            </LinearLayout>
+
             <!-- Purpose -->
             <com.google.android.material.textfield.TextInputLayout
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"

@@ -55,6 +55,7 @@ import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -357,7 +358,20 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         sentRequestsRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
         sentRequestsRecyclerView.setAdapter(relationshipAdapter);
 
-        // Add actions now live in the panel header "+" dropdown (see showFamilyAddMenu()).
+        // Setup add dependent button
+        MaterialButton addDependentButton = rootView.findViewById(R.id.add_dependent_button);
+        if (addDependentButton != null) {
+            addDependentButton.setOnClickListener(v -> {
+                Intent intent = new Intent(requireContext(), AddDependentActivity.class);
+                startActivity(intent);
+            });
+        }
+
+        // Setup connect family member button
+        MaterialButton addFamilyMemberButton = rootView.findViewById(R.id.add_family_member_button);
+        addFamilyMemberButton.setOnClickListener(v -> {
+            showAddFamilyMemberDialog();
+        });
     }
 
     private void initViews(View view) {
@@ -539,6 +553,7 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         symptomsPanel.getWindow().getAttributes().windowAnimations = R.style.DialogAnimationSlideRight;
 
         // Close button
+        symptomsPanel.findViewById(R.id.close_panel_button).setOnClickListener(v -> symptomsPanel.dismiss());
 
         // Setup RecyclerView
         RecyclerView symptomsRecycler = symptomsPanel.findViewById(R.id.symptoms_recycler);
@@ -572,7 +587,7 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         }
 
         // Setup Add Symptom Button
-        View addSymptomButton = symptomsPanel.findViewById(R.id.add_symptom_button);
+        MaterialButton addSymptomButton = symptomsPanel.findViewById(R.id.add_symptom_button);
         addSymptomButton.setOnClickListener(v -> {
             showAddSymptomDialog();
         });
@@ -598,6 +613,7 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         measurementsPanel.getWindow().getAttributes().windowAnimations = R.style.DialogAnimationSlideRight;
 
         // Close button
+        measurementsPanel.findViewById(R.id.close_panel_button).setOnClickListener(v -> measurementsPanel.dismiss());
 
         // Setup RecyclerView
         RecyclerView measurementsRecycler = measurementsPanel.findViewById(R.id.measurements_recycler);
@@ -632,7 +648,7 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         }
 
         // Setup Add Measurement Button
-        View addMeasurementButton = measurementsPanel.findViewById(R.id.add_measurement_button);
+        MaterialButton addMeasurementButton = measurementsPanel.findViewById(R.id.add_measurement_button);
         addMeasurementButton.setOnClickListener(v -> {
             showAddMeasurementDialog();
         });
@@ -707,6 +723,7 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         periodLogsPanel.getWindow().getAttributes().windowAnimations = R.style.DialogAnimationSlideRight;
 
         // Close button
+        periodLogsPanel.findViewById(R.id.close_panel_button).setOnClickListener(v -> periodLogsPanel.dismiss());
 
         // Setup RecyclerView
         RecyclerView periodLogsRecycler = periodLogsPanel.findViewById(R.id.period_logs_recycler);
@@ -740,7 +757,7 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         }
 
         // Setup Add Period Log Button
-        View addPeriodLogButton = periodLogsPanel.findViewById(R.id.add_period_log_button);
+        MaterialButton addPeriodLogButton = periodLogsPanel.findViewById(R.id.add_period_log_button);
         addPeriodLogButton.setOnClickListener(v -> {
             showAddPeriodLogDialog();
         });
@@ -767,6 +784,7 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         medicalReportsPanel.getWindow().getAttributes().windowAnimations = R.style.DialogAnimationSlideRight;
 
         // Close button
+        medicalReportsPanel.findViewById(R.id.close_panel_button).setOnClickListener(v -> medicalReportsPanel.dismiss());
 
         // Initialize views (header is now a search field — no title/subtitle)
         com.google.android.material.button.MaterialButton addReportButton = medicalReportsPanel.findViewById(R.id.add_medical_report_button);
@@ -835,9 +853,10 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         medicationsPanel.getWindow().getAttributes().windowAnimations = R.style.DialogAnimationSlideRight;
 
         // Close button
+        medicationsPanel.findViewById(R.id.close_panel_button).setOnClickListener(v -> medicationsPanel.dismiss());
 
         // Setup Add Medication button
-        View addMedicationButton = medicationsPanel.findViewById(R.id.add_medication_button);
+        MaterialButton addMedicationButton = medicationsPanel.findViewById(R.id.add_medication_button);
         addMedicationButton.setOnClickListener(v -> {
             showAddMedicationDialog();
         });
@@ -881,6 +900,7 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         familyMembersPanel.getWindow().getAttributes().windowAnimations = R.style.DialogAnimationSlideRight;
 
         // Close button
+        familyMembersPanel.findViewById(R.id.close_panel_button).setOnClickListener(v -> familyMembersPanel.dismiss());
 
         // Setup RecyclerView for family relationships
         sentRequestsRecyclerView = familyMembersPanel.findViewById(R.id.family_relationships_recycler);
@@ -888,11 +908,18 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         sentRequestsRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
         sentRequestsRecyclerView.setAdapter(relationshipAdapter);
 
-        // Header "+" → native dropdown (Add dependent / Connect family member).
-        View familyAddButton = familyMembersPanel.findViewById(R.id.family_add_menu_button);
-        if (familyAddButton != null) {
-            familyAddButton.setOnClickListener(this::showFamilyAddMenu);
-        }
+        // Setup Add Dependent button
+        MaterialButton addDependentButton = familyMembersPanel.findViewById(R.id.add_dependent_button);
+        addDependentButton.setOnClickListener(v -> {
+            Intent intent = new Intent(requireContext(), AddDependentActivity.class);
+            startActivity(intent);
+        });
+
+        // Setup Connect Family Member button
+        MaterialButton addFamilyMemberButton = familyMembersPanel.findViewById(R.id.add_family_member_button);
+        addFamilyMemberButton.setOnClickListener(v -> {
+            showAddFamilyMemberDialog();
+        });
 
 
         // Show empty state initially, will be updated when data loads
@@ -1081,6 +1108,7 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
                             }
 
                             applyMedicationFilter();
+                            syncRemindersFromMedications(context);
 
                             // Hide progress and show panel only after data is loaded
                             progress.hide();
@@ -1155,6 +1183,7 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
                         }
 
                         applyMedicationFilter();
+                        syncRemindersFromMedications(context);
 
                     } catch (JSONException e) {
                         Log.e(TAG, "Error parsing medications response", e);
@@ -1179,6 +1208,31 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
 
         RequestQueue queue = Volley.newRequestQueue(context);
         queue.add(request);
+    }
+
+    /**
+     * Mirror the freshly-fetched medications into the local reminder store so reminders
+     * survive reinstall / reboot and stay in sync with the server. Only called after a
+     * successful fetch. {@link Utils.MedicationReminderHelper#setForMedication} upserts
+     * enabled ones and drops disabled / discontinued ones.
+     */
+    private void syncRemindersFromMedications(Context context) {
+        if (context == null) return;
+        for (MedicationModel m : allMedications) {
+            if (m == null || m.getServerId() == null) continue;
+            boolean effectiveEnabled = m.isRemindersEnabled() && m.isActive();
+
+            List<Integer> dayList = m.getReminderDays();
+            int[] days = new int[dayList != null ? dayList.size() : 0];
+            for (int i = 0; dayList != null && i < dayList.size(); i++) days[i] = dayList.get(i);
+
+            List<int[]> timeList = m.getReminderTimes();
+            int[][] times = new int[timeList != null ? timeList.size() : 0][];
+            for (int i = 0; timeList != null && i < timeList.size(); i++) times[i] = timeList.get(i);
+
+            Utils.MedicationReminderHelper.setForMedication(context, m.getServerId(),
+                    m.getName(), m.getDosage(), effectiveEnabled, days, times);
+        }
     }
 
     private MedicationModel parseMedicationFromJson(JSONObject json) {
@@ -1244,6 +1298,29 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
             if (json.has("adherenceRate") && !json.isNull("adherenceRate")) {
                 medication.setAdherenceRate(json.getDouble("adherenceRate"));
             }
+
+            // Reminder fields (mirror backend remindersEnabled / reminderDays / reminderTimes)
+            medication.setRemindersEnabled(json.optBoolean("remindersEnabled", false));
+
+            java.util.List<Integer> reminderDays = new ArrayList<>();
+            JSONArray daysArr = json.optJSONArray("reminderDays");
+            if (daysArr != null) {
+                for (int d = 0; d < daysArr.length(); d++) {
+                    reminderDays.add(daysArr.optInt(d, -1));
+                }
+            }
+            medication.setReminderDays(reminderDays);
+
+            java.util.List<int[]> reminderTimes = new ArrayList<>();
+            JSONArray timesArr = json.optJSONArray("reminderTimes");
+            if (timesArr != null) {
+                for (int t = 0; t < timesArr.length(); t++) {
+                    JSONObject to = timesArr.optJSONObject(t);
+                    if (to == null) continue;
+                    reminderTimes.add(new int[]{to.optInt("hour", 8), to.optInt("minute", 0)});
+                }
+            }
+            medication.setReminderTimes(reminderTimes);
 
             return medication;
         } catch (JSONException e) {
@@ -2012,6 +2089,8 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         Button cancelButton = dialog.findViewById(R.id.cancel_button);
         Button saveButton = dialog.findViewById(R.id.save_button);
 
+        final ReminderUiState reminderState = setupReminderSection(dialog, medication);
+
         final boolean[] isStillTaking = {medication.isActive()};
         endDateInput.setVisibility(isStillTaking[0] ? View.GONE : View.VISIBLE);
         disclaimerText.setVisibility(isStillTaking[0] ? View.VISIBLE : View.GONE);
@@ -2140,8 +2219,25 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
             String medicationType = medicationTypeDropdown.getText().toString().trim();
             String administrationMethod = administrationMethodDropdown.getText().toString().trim();
 
+            // Reminder state
+            boolean remindersEnabled = reminderState.isReady() && reminderState.switchReminders.isChecked();
+            int[] reminderDays = new int[0];
+            int[][] reminderTimes = new int[0][];
+            if (remindersEnabled) {
+                String cadence = reminderState.cadenceDropdown.getText().toString().trim();
+                reminderTimes = readTimes(reminderState);
+                if (CAD_TWICE_WEEK.equals(cadence)) {
+                    reminderDays = readSelectedDays(reminderState);
+                    if (reminderDays.length != 2) {
+                        Utilities.toast(requireContext(), "Please pick two days for a twice-a-week reminder");
+                        return;
+                    }
+                }
+            }
+
             saveMedicationToAPI(medication, name, dosage, frequency, finalStartDate, finalEndDate, notes, isStillTaking[0],
-                    purpose, prescribedBy, medicationType, administrationMethod, shareSwitch.isChecked());
+                    purpose, prescribedBy, medicationType, administrationMethod, shareSwitch.isChecked(),
+                    remindersEnabled, reminderDays, reminderTimes);
             dialog.dismiss();
         });
 
@@ -2170,6 +2266,10 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         StringRequest request = new StringRequest(Request.Method.DELETE, url,
                 response -> {
                     ApiConfig.logRestCall(url, true, "Medication deleted");
+                    // Cancel any local reminders for the deleted medication.
+                    if (medication != null) {
+                        Utils.MedicationReminderHelper.removeForMedication(context, medication.getServerId());
+                    }
                     // Remove from the master list by id, then re-apply the current filter
                     // so both the master and the displayed list stay in sync.
                     String delId = medication != null ? medication.getServerId() : null;
@@ -2233,6 +2333,8 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         JsonObjectRequest request = new JsonObjectRequest(Request.Method.PATCH, url, requestBody,
                 response -> {
                     ApiConfig.logRestCall(url, true, "Medication discontinued");
+                    // A discontinued medication should stop reminding.
+                    Utils.MedicationReminderHelper.removeForMedication(context, medication.getServerId());
                     medication.setEndDate(today);
                     medication.setActive(false);
                     if (medicationsAdapter != null) {
@@ -3628,6 +3730,8 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         Button cancelButton = dialog.findViewById(R.id.cancel_button);
         Button saveButton = dialog.findViewById(R.id.save_button);
 
+        final ReminderUiState reminderState = setupReminderSection(dialog, null);
+
         final boolean[] isStillTaking = {true};
         endDateInput.setVisibility(View.GONE);
         disclaimerText.setVisibility(View.VISIBLE);
@@ -3728,8 +3832,25 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
             String medicationType = medicationTypeDropdown.getText().toString().trim();
             String administrationMethod = administrationMethodDropdown.getText().toString().trim();
 
+            // Reminder state
+            boolean remindersEnabled = reminderState.isReady() && reminderState.switchReminders.isChecked();
+            int[] reminderDays = new int[0];
+            int[][] reminderTimes = new int[0][];
+            if (remindersEnabled) {
+                String cadence = reminderState.cadenceDropdown.getText().toString().trim();
+                reminderTimes = readTimes(reminderState);
+                if (CAD_TWICE_WEEK.equals(cadence)) {
+                    reminderDays = readSelectedDays(reminderState);
+                    if (reminderDays.length != 2) {
+                        Utilities.toast(requireContext(), "Please pick two days for a twice-a-week reminder");
+                        return;
+                    }
+                }
+            }
+
             saveMedicationToAPI(null, name, dosage, frequency, finalStartDate, finalEndDate, notes, isStillTaking[0],
-                    purpose, prescribedBy, medicationType, administrationMethod, shareSwitch.isChecked());
+                    purpose, prescribedBy, medicationType, administrationMethod, shareSwitch.isChecked(),
+                    remindersEnabled, reminderDays, reminderTimes);
             dialog.dismiss();
         });
 
@@ -3740,14 +3861,14 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
                                      String startDateString, String endDateString,
                                      String notes, boolean isStillTaking) {
         saveMedicationToAPI(null, name, dosage, frequency, startDateString, endDateString, notes, isStillTaking,
-                null, null, null, null, false);
+                null, null, null, null, false, false, new int[0], new int[0][]);
     }
 
     private void saveMedicationToAPI(MedicationModel existingMedication, String name, String dosage, String frequency,
                                      String startDateString, String endDateString,
                                      String notes, boolean isStillTaking) {
         saveMedicationToAPI(existingMedication, name, dosage, frequency, startDateString, endDateString, notes, isStillTaking,
-                null, null, null, null, false);
+                null, null, null, null, false, false, new int[0], new int[0][]);
     }
 
     private void saveMedicationToAPI(MedicationModel existingMedication, String name, String dosage, String frequency,
@@ -3755,6 +3876,17 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
                                      String notes, boolean isStillTaking,
                                      String purpose, String prescribedBy, String medicationType,
                                      String administrationMethod, boolean shareWithFamily) {
+        saveMedicationToAPI(existingMedication, name, dosage, frequency, startDateString, endDateString, notes, isStillTaking,
+                purpose, prescribedBy, medicationType, administrationMethod, shareWithFamily,
+                false, new int[0], new int[0][]);
+    }
+
+    private void saveMedicationToAPI(MedicationModel existingMedication, String name, String dosage, String frequency,
+                                     String startDateString, String endDateString,
+                                     String notes, boolean isStillTaking,
+                                     String purpose, String prescribedBy, String medicationType,
+                                     String administrationMethod, boolean shareWithFamily,
+                                     boolean remindersEnabled, int[] reminderDays, int[][] reminderTimes) {
 
         Context context = getContext();
         if (context == null) return; // Fragment detached, skip operation safely
@@ -3835,6 +3967,27 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
             }
             requestBody.put("shareWithFamily", shareWithFamily);
 
+            // Reminder fields (backend: remindersEnabled / reminderDays / reminderTimes)
+            requestBody.put("remindersEnabled", remindersEnabled);
+
+            JSONArray reminderDaysJson = new JSONArray();
+            if (reminderDays != null) {
+                for (int d : reminderDays) reminderDaysJson.put(d);
+            }
+            requestBody.put("reminderDays", reminderDaysJson);
+
+            JSONArray reminderTimesJson = new JSONArray();
+            if (reminderTimes != null) {
+                for (int[] hm : reminderTimes) {
+                    if (hm == null || hm.length < 2) continue;
+                    JSONObject t = new JSONObject();
+                    t.put("hour", hm[0]);
+                    t.put("minute", hm[1]);
+                    reminderTimesJson.put(t);
+                }
+            }
+            requestBody.put("reminderTimes", reminderTimesJson);
+
         } catch (JSONException e) {
             progress.hide();
             Log.e(TAG, "Error creating request body", e);
@@ -3851,6 +4004,25 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
                     String successMessage = isUpdate ? "Medication updated successfully" : "Medication saved successfully";
                     Utilities.toast(requireContext(), successMessage);
 
+                    // Schedule (or clear) local reminders from the saved state. Reminders
+                    // only make sense while the medication is ongoing.
+                    boolean effectiveEnabled = remindersEnabled && isStillTaking;
+                    String reminderServerId;
+                    if (isUpdate && existingMedication != null) {
+                        reminderServerId = existingMedication.getServerId();
+                    } else {
+                        JSONObject medObj = response.optJSONObject("medication");
+                        String parsedId = medObj != null ? medObj.optString("_id", null) : null;
+                        if (parsedId == null || parsedId.isEmpty()) {
+                            parsedId = response.optString("_id", null);
+                        }
+                        reminderServerId = parsedId;
+                    }
+                    if (reminderServerId != null && !reminderServerId.isEmpty()) {
+                        Utils.MedicationReminderHelper.setForMedication(context, reminderServerId,
+                                name, dosage, effectiveEnabled, reminderDays, reminderTimes);
+                    }
+
                     if (isUpdate && existingMedication != null) {
                         // Update the existing medication object with new values
                         existingMedication.setName(name);
@@ -3859,6 +4031,15 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
                         existingMedication.setActive(isStillTaking);
                         existingMedication.setNotes(notes);
                         existingMedication.setShareWithFamily(shareWithFamily);
+                        existingMedication.setRemindersEnabled(remindersEnabled);
+                        java.util.List<Integer> updDays = new ArrayList<>();
+                        if (reminderDays != null) for (int d : reminderDays) updDays.add(d);
+                        existingMedication.setReminderDays(updDays);
+                        java.util.List<int[]> updTimes = new ArrayList<>();
+                        if (reminderTimes != null) for (int[] hm : reminderTimes) {
+                            if (hm != null && hm.length >= 2) updTimes.add(new int[]{hm[0], hm[1]});
+                        }
+                        existingMedication.setReminderTimes(updTimes);
 
                         // Parse and set dates
                         SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy", Locale.US);
@@ -3949,6 +4130,208 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
     }
 
 
+    // ─── Reminder UI (medication reminders) ─────────────────────────────────────
+
+    private static final String CAD_DAILY      = "Every day";
+    private static final String CAD_TWICE_DAY  = "Twice a day";
+    private static final String CAD_THREE_DAY  = "Three times a day";
+    private static final String CAD_TWICE_WEEK = "Twice a week";
+    private static final String[] REMINDER_CADENCES =
+            { CAD_DAILY, CAD_TWICE_DAY, CAD_THREE_DAY, CAD_TWICE_WEEK };
+    private static final String[] WEEKDAY_LABELS = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+
+    /** Holds the reminder section views + editable state for one open dialog. */
+    private static class ReminderUiState {
+        SwitchMaterial switchReminders;
+        View section;
+        AutoCompleteTextView cadenceDropdown;
+        TextView daysLabel;
+        ChipGroup chipGroupDays;
+        LinearLayout timesContainer;
+        final List<int[]> times = new ArrayList<>();   // each {hour,minute}
+
+        boolean isReady() {
+            return switchReminders != null && section != null && cadenceDropdown != null
+                    && chipGroupDays != null && timesContainer != null;
+        }
+    }
+
+    private ReminderUiState setupReminderSection(Dialog dialog, MedicationModel existing) {
+        ReminderUiState st = new ReminderUiState();
+        st.switchReminders = dialog.findViewById(R.id.switch_reminders);
+        st.section         = dialog.findViewById(R.id.reminders_section);
+        st.cadenceDropdown = dialog.findViewById(R.id.spinner_reminder_cadence);
+        st.daysLabel       = dialog.findViewById(R.id.reminder_days_label);
+        st.chipGroupDays   = dialog.findViewById(R.id.chip_group_days);
+        st.timesContainer  = dialog.findViewById(R.id.reminder_times_container);
+
+        if (!st.isReady()) return st; // layout missing — degrade gracefully
+
+        ArrayAdapter<String> cadenceAdapter = new ArrayAdapter<>(
+                requireContext(), android.R.layout.simple_dropdown_item_1line, REMINDER_CADENCES);
+        st.cadenceDropdown.setAdapter(cadenceAdapter);
+
+        buildWeekdayChips(st);
+
+        st.switchReminders.setOnCheckedChangeListener((b, checked) ->
+                st.section.setVisibility(checked ? View.VISIBLE : View.GONE));
+
+        st.cadenceDropdown.setOnItemClickListener((parent, view, position, id) ->
+                applyCadence(st, REMINDER_CADENCES[position], true, null));
+
+        boolean enabled = existing != null && existing.isRemindersEnabled();
+        st.switchReminders.setChecked(enabled);
+        st.section.setVisibility(enabled ? View.VISIBLE : View.GONE);
+
+        if (enabled) {
+            String cadence = inferCadence(existing);
+            st.cadenceDropdown.setText(cadence, false);
+            applyCadence(st, cadence, false, existing);
+        } else {
+            st.cadenceDropdown.setText(CAD_DAILY, false);
+            applyCadence(st, CAD_DAILY, true, null);
+        }
+        return st;
+    }
+
+    private void buildWeekdayChips(ReminderUiState st) {
+        st.chipGroupDays.removeAllViews();
+        float density = getResources().getDisplayMetrics().density;
+        for (int i = 0; i < 7; i++) {
+            Chip chip = new Chip(requireContext());
+            chip.setText(WEEKDAY_LABELS[i]);
+            chip.setTag(i);
+            chip.setCheckable(true);
+            chip.setTextColor(Color.WHITE);
+            chip.setChipBackgroundColor(android.content.res.ColorStateList.valueOf(
+                    ContextCompat.getColor(requireContext(), R.color.rh_accent_dim)));
+            chip.setChipStrokeColor(android.content.res.ColorStateList.valueOf(
+                    ContextCompat.getColor(requireContext(), R.color.rh_accent)));
+            chip.setChipStrokeWidth(density);
+            st.chipGroupDays.addView(chip);
+        }
+    }
+
+    /**
+     * Apply a cadence: toggle the weekday selector and, when {@code recompute}, auto-space
+     * the times evenly across 24h from the first time. When !recompute the times/days are
+     * taken from the existing medication (prefill).
+     */
+    private void applyCadence(ReminderUiState st, String cadence, boolean recompute, MedicationModel existing) {
+        boolean weekly = CAD_TWICE_WEEK.equals(cadence);
+        st.daysLabel.setVisibility(weekly ? View.VISIBLE : View.GONE);
+        st.chipGroupDays.setVisibility(weekly ? View.VISIBLE : View.GONE);
+
+        int count = timesCountFor(cadence);
+
+        if (!recompute && existing != null && existing.getReminderTimes() != null
+                && !existing.getReminderTimes().isEmpty()) {
+            st.times.clear();
+            for (int[] hm : existing.getReminderTimes()) {
+                if (hm != null && hm.length >= 2) st.times.add(new int[]{hm[0], hm[1]});
+            }
+            while (st.times.size() < count) st.times.add(new int[]{8, 0});
+            while (st.times.size() > count) st.times.remove(st.times.size() - 1);
+            if (weekly) applyExistingDays(st, existing);
+        } else {
+            int[] first = st.times.isEmpty() ? new int[]{8, 0} : st.times.get(0);
+            st.times.clear();
+            int step = 24 * 60 / count;
+            int firstMinutes = first[0] * 60 + first[1];
+            for (int k = 0; k < count; k++) {
+                int m = (firstMinutes + k * step) % (24 * 60);
+                st.times.add(new int[]{m / 60, m % 60});
+            }
+        }
+
+        renderTimeRows(st);
+    }
+
+    private void applyExistingDays(ReminderUiState st, MedicationModel existing) {
+        List<Integer> days = existing.getReminderDays();
+        for (int i = 0; i < st.chipGroupDays.getChildCount(); i++) {
+            View v = st.chipGroupDays.getChildAt(i);
+            if (v instanceof Chip) {
+                Integer tag = (Integer) v.getTag();
+                ((Chip) v).setChecked(days != null && tag != null && days.contains(tag));
+            }
+        }
+    }
+
+    private int timesCountFor(String cadence) {
+        if (CAD_TWICE_DAY.equals(cadence)) return 2;
+        if (CAD_THREE_DAY.equals(cadence)) return 3;
+        return 1; // Every day, Twice a week
+    }
+
+    private String inferCadence(MedicationModel med) {
+        List<Integer> days = med.getReminderDays();
+        if (days != null && !days.isEmpty()) return CAD_TWICE_WEEK;
+        int n = med.getReminderTimes() != null ? med.getReminderTimes().size() : 1;
+        if (n >= 3) return CAD_THREE_DAY;
+        if (n == 2) return CAD_TWICE_DAY;
+        return CAD_DAILY;
+    }
+
+    private void renderTimeRows(ReminderUiState st) {
+        st.timesContainer.removeAllViews();
+        for (int idx = 0; idx < st.times.size(); idx++) {
+            final int rowIndex = idx;
+            MaterialButton row = new MaterialButton(requireContext());
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            lp.bottomMargin = (int) (8 * getResources().getDisplayMetrics().density);
+            row.setLayoutParams(lp);
+            row.setAllCaps(false);
+            row.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+            row.setTextColor(Color.WHITE);
+            row.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+                    Color.parseColor("#1E1E1E")));
+            row.setText(formatTime(st.times.get(rowIndex)));
+            row.setIconResource(R.drawable.ic_date);
+            row.setIconTint(android.content.res.ColorStateList.valueOf(
+                    ContextCompat.getColor(requireContext(), R.color.rh_accent)));
+            row.setOnClickListener(v -> {
+                int[] hm = st.times.get(rowIndex);
+                TimePickerDialog tp = new TimePickerDialog(requireContext(),
+                        (view, hourOfDay, minute) -> {
+                            st.times.set(rowIndex, new int[]{hourOfDay, minute});
+                            row.setText(formatTime(st.times.get(rowIndex)));
+                        }, hm[0], hm[1], false);
+                tp.show();
+            });
+            st.timesContainer.addView(row);
+        }
+    }
+
+    private String formatTime(int[] hm) {
+        Calendar c = Calendar.getInstance();
+        c.set(Calendar.HOUR_OF_DAY, hm[0]);
+        c.set(Calendar.MINUTE, hm[1]);
+        return new SimpleDateFormat("h:mm a", Locale.US).format(c.getTime());
+    }
+
+    /** Selected weekdays (0=Sun..6=Sat) from the chip group. */
+    private int[] readSelectedDays(ReminderUiState st) {
+        List<Integer> sel = new ArrayList<>();
+        for (int i = 0; i < st.chipGroupDays.getChildCount(); i++) {
+            View v = st.chipGroupDays.getChildAt(i);
+            if (v instanceof Chip && ((Chip) v).isChecked()) {
+                Integer tag = (Integer) v.getTag();
+                if (tag != null) sel.add(tag);
+            }
+        }
+        int[] out = new int[sel.size()];
+        for (int i = 0; i < sel.size(); i++) out[i] = sel.get(i);
+        return out;
+    }
+
+    private int[][] readTimes(ReminderUiState st) {
+        int[][] out = new int[st.times.size()][];
+        for (int i = 0; i < st.times.size(); i++) out[i] = st.times.get(i);
+        return out;
+    }
+
     private void showDatePickerDialog(final TextInputEditText dateInput) {
         showDatePickerDialog((TextView) dateInput);
     }
@@ -3974,51 +4357,6 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         datePickerDialog.show();
     }
 
-    /** Family panel "+" → native PopupMenu (Add dependent / Connect family member). */
-    private void showFamilyAddMenu(View anchor) {
-        androidx.appcompat.widget.PopupMenu popup =
-                new androidx.appcompat.widget.PopupMenu(requireContext(), anchor);
-        popup.getMenuInflater().inflate(R.menu.family_add_menu, popup.getMenu());
-        try {
-            java.lang.reflect.Method m = popup.getClass().getMethod("setForceShowIcon", boolean.class);
-            m.invoke(popup, true);
-        } catch (Throwable ignored) {}
-        popup.setOnMenuItemClickListener(item -> {
-            int id = item.getItemId();
-            if (id == R.id.menu_add_dependent) {
-                startActivity(new Intent(requireContext(), AddDependentActivity.class));
-                return true;
-            } else if (id == R.id.menu_connect_family) {
-                showAddFamilyMemberDialog();
-                return true;
-            }
-            return false;
-        });
-        popup.show();
-    }
-
-    /**
-     * The one relationship list used by both the add and the edit dialog, ordered
-     * oldest generation first. Kept identical to the iOS picker in
-     * FamilySheetView.swift, and every entry is covered by the backend's
-     * reciprocal map (userController.getReciprocalRelationship) so accepting an
-     * invite always produces a usable label on the other side.
-     *
-     * The value the user picks describes THEMSELVES — "I am their ..." — which is
-     * what the backend stores for the recipient.
-     */
-    private static final String[] RELATIONSHIP_OPTIONS = new String[] {
-            "Grandfather", "Grandmother",
-            "Father", "Mother",
-            "Paternal Uncle", "Paternal Aunt",
-            "Maternal Uncle", "Maternal Aunt",
-            "Spouse", "Brother", "Sister", "Cousin",
-            "Son", "Daughter",
-            "Nephew", "Niece",
-            "Grandson", "Granddaughter",
-            "Other"
-    };
-
     private void showAddFamilyMemberDialog() {
         Dialog dialog = new Dialog(requireContext(), R.style.DialogTheme);
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
@@ -4033,7 +4371,14 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         Button sendButton = dialog.findViewById(R.id.send_button);
 
         // Setup relationship dropdown
-        String[] relationships = RELATIONSHIP_OPTIONS;
+        String[] relationships = new String[] {
+                "Father", "Mother", "Brother", "Sister",
+                "Grandfather", "Grandmother",
+                "Paternal Uncle", "Paternal Aunt",
+                "Maternal Uncle", "Maternal Aunt",
+                "Son", "Daughter", "Grandson", "Granddaughter",
+                "Nephew", "Niece"
+        };
 
         ArrayAdapter<String> adapter = new ArrayAdapter<>(
                 requireContext(),
@@ -4291,7 +4636,14 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         emailInput.setEnabled(false);
         emailInput.setAlpha(0.6f);
 
-        String[] relationships = RELATIONSHIP_OPTIONS;
+        String[] relationships = new String[] {
+                "Father", "Mother", "Brother", "Sister",
+                "Grandfather", "Grandmother",
+                "Paternal Uncle", "Paternal Aunt",
+                "Maternal Uncle", "Maternal Aunt",
+                "Son", "Daughter", "Grandson", "Granddaughter",
+                "Nephew", "Niece", "Cousin", "Spouse"
+        };
 
         ArrayAdapter<String> adapter = new ArrayAdapter<>(
                 requireContext(),
