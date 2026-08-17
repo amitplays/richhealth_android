@@ -13,7 +13,7 @@ import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -42,7 +42,8 @@ public class AddWorkout extends Activity {
     // Change these variables
     private MaterialButton saveButton;
     private MaterialCardView addExerciseBtn;
-    private ImageButton selectExerciseButton;
+    private MaterialCardView selectExerciseCard;
+    private ImageView selectExerciseAddIcon;
     private Exercise selectedExercise;
     private DatabaseHelper dbHelper;
     private RecyclerView exercisesRecycler;
@@ -63,6 +64,8 @@ public class AddWorkout extends Activity {
 
     private void initViews() {
         selectedExerciseText = findViewById(R.id.selected_exercise_text);
+        selectExerciseCard = findViewById(R.id.select_exercise_card);
+        selectExerciseAddIcon = findViewById(R.id.select_exercise_add_icon);
         setsInput = findViewById(R.id.sets_input);
         repsInput = findViewById(R.id.reps_input);
         weightInput = findViewById(R.id.weight_input);
@@ -108,7 +111,12 @@ public class AddWorkout extends Activity {
     }
 
     private void setupClickListeners() {
-        selectedExerciseText.setOnClickListener(v -> showExerciseSelectionDialog());
+        // A tap anywhere on the select row (text, the "+" icon, or the surrounding card)
+        // opens the exercise picker — previously only the text itself was tappable.
+        View.OnClickListener openPicker = v -> showExerciseSelectionDialog();
+        selectedExerciseText.setOnClickListener(openPicker);
+        if (selectExerciseCard != null) selectExerciseCard.setOnClickListener(openPicker);
+        if (selectExerciseAddIcon != null) selectExerciseAddIcon.setOnClickListener(openPicker);
 
         addExerciseBtn.setOnClickListener(view -> {
             if (selectedExercise != null && !isEmpty(setsInput) && !isEmpty(repsInput) && !isEmpty(weightInput)) {
@@ -190,7 +198,8 @@ public class AddWorkout extends Activity {
         EditText searchInput = dialog.findViewById(R.id.exercise_search_bar);
         AutoCompleteTextView categoryFilter = dialog.findViewById(R.id.category_filter);
 
-        List<Exercise> exercises = Utilities.loadExercisesFromJson(this);
+        // Cached, no-DB-seed load so re-opening the picker is instant (RH-13 lag fix).
+        List<Exercise> exercises = Utilities.loadExercisesFromJsonCached(this);
 
         // Setup category filter
         Set<String> categories = new HashSet<>();
@@ -212,8 +221,7 @@ public class AddWorkout extends Activity {
 
         // Setup RecyclerView
         exerciseRecyclerView.setLayoutManager(new LinearLayoutManager(this));
-        ExerciseAdapter adapter = new ExerciseAdapter(exercises, this, position -> {
-            Exercise exercise = exercises.get(position);
+        ExerciseAdapter adapter = new ExerciseAdapter(exercises, this, exercise -> {
             selectedExercise = exercise;
             selectedExerciseText.setText(exercise.getName());
             dialog.dismiss();

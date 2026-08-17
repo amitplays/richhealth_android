@@ -48,6 +48,7 @@ import Utils.SimpleProgress;
 public class OnboardingActivity extends AppCompatActivity implements CardStepHost {
 
     private static final String TAG = "OnboardingActivity";
+    private static final int ACCOUNT_FRAGMENT_INDEX = 0;
     private static final int MENSTRUAL_FRAGMENT_INDEX = 2;
     // Conditional follow-up steps (see rebuildActiveSteps / isStepActive).
     private static final int SMOKING_DETAIL_FRAGMENT_INDEX = 13;
@@ -273,8 +274,15 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
                                         new SelectableOption("Mental Health",    R.drawable.ic_signup_mental_health, "Improve Mental Health"),
                                         SelectableOption.other("Other — you tell us", R.drawable.ic_edit)
                                 ),
-                                false, true, 2,
-                                (data, value) -> data.primaryGoal = (String) value
+                                true, true, 2,
+                                (data, value) -> {
+                                    @SuppressWarnings("unchecked")
+                                    List<Object> selected = (List<Object>) value;
+                                    List<String> goals = new ArrayList<>();
+                                    for (Object o : selected) goals.add((String) o);
+                                    data.specificGoals = goals;
+                                    data.primaryGoal = goals.isEmpty() ? "" : goals.get(0);
+                                }
                         ),
                         new StepConfig.SectionConfig(
                                 "Has your weight changed recently?",
@@ -575,7 +583,7 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
                         ),
                         new StepConfig.SectionConfig(
                                 "Who in your family?",
-                                "Closer relatives (parents, siblings) weigh more in risk than distant ones.",
+                                "Pick the relatives who had the condition(s) you selected above — closer relatives (parents, siblings) carry more weight than distant ones.",
                                 Arrays.asList(
                                         new SelectableOption("Parent(s)",      R.drawable.ic_signup_family, "Parent"),
                                         new SelectableOption("Grandparent(s)", R.drawable.ic_signup_family, "Grandparent"),
@@ -859,10 +867,10 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
                         new StepConfig.SectionConfig(
                                 null,
                                 Arrays.asList(
-                                        new SelectableOption("South Asian",       R.drawable.ic_signup_family, "South Asian"),
-                                        new SelectableOption("East Asian",        R.drawable.ic_signup_family, "East Asian"),
-                                        new SelectableOption("Southeast Asian",   R.drawable.ic_signup_family, "Southeast Asian"),
-                                        new SelectableOption("Middle Eastern",    R.drawable.ic_signup_family, "Middle Eastern"),
+                                        new SelectableOption("South Asian (India, Pakistan, Bangladesh, Sri Lanka, Nepal)", R.drawable.ic_signup_family, "South Asian"),
+                                        new SelectableOption("East Asian (China, Japan, Korea)",        R.drawable.ic_signup_family, "East Asian"),
+                                        new SelectableOption("Southeast Asian (Indonesia, Philippines, Vietnam, Thailand)",   R.drawable.ic_signup_family, "Southeast Asian"),
+                                        new SelectableOption("Middle Eastern (Arab, Persian, Turkish)",    R.drawable.ic_signup_family, "Middle Eastern"),
                                         new SelectableOption("White/European",    R.drawable.ic_signup_family, "White/European"),
                                         new SelectableOption("Black/African",     R.drawable.ic_signup_family, "Black/African"),
                                         new SelectableOption("Hispanic/Latino",   R.drawable.ic_signup_family, "Hispanic/Latino"),
@@ -959,6 +967,18 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
 
         current.collectData(onboardingData);
 
+        // On the account step, verify the email isn't already registered before
+        // advancing. This is async, so advance only in its callback.
+        if (fragmentIndex == ACCOUNT_FRAGMENT_INDEX && current instanceof OnboardingAccountFragment) {
+            checkEmailThenAdvance((OnboardingAccountFragment) current, fragmentIndex);
+            return;
+        }
+
+        advanceAfterStep(fragmentIndex);
+    }
+
+    /** Shared post-step navigation (rebuild conditionals, then advance or submit). */
+    private void advanceAfterStep(int fragmentIndex) {
         // Rebuild active steps whenever an answer decides a later conditional
         // step: personal (gender→menstrual), habits (smoking/alcohol→details),
         // and blood+conditions (conditions→condition detail).
@@ -974,6 +994,71 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
             // Final step → create the account, then verify the email.
             submitSignup();
         }
+    }
+
+    /**
+     * Duplicate-email guard for onboarding step 1. Calls POST /api/auth/check-email
+     * (mirrors the submitSignup networking) and only advances on {available:true}.
+     * On {available:false} it flags the email field and stays put. On any network
+     * or parse error it fails OPEN (advances) so a backend hiccup can't block
+     * onboarding — the final signup still rejects duplicates.
+     */
+    private boolean checkingEmail = false;
+
+    private void checkEmailThenAdvance(OnboardingAccountFragment accountFragment, int fragmentIndex) {
+        if (checkingEmail) return; // guard against double-fire
+        checkingEmail = true;
+
+        final JSONObject body = new JSONObject();
+        try {
+            body.put("email", onboardingData.email);
+        } catch (JSONException e) {
+            checkingEmail = false;
+            advanceAfterStep(fragmentIndex); // fail open
+            return;
+        }
+
+        showLoading(true);
+        StringRequest request = new StringRequest(
+                Request.Method.POST,
+                ApiConfig.BASE_URL + "/api/auth/check-email",
+                response -> {
+                    checkingEmail = false;
+                    showLoading(false);
+                    boolean available;
+                    try {
+                        available = new JSONObject(response).optBoolean("available", true);
+                    } catch (JSONException e) {
+                        available = true; // fail open on parse error
+                    }
+                    ApiConfig.logRestCall("/api/auth/check-email", true, "available=" + available);
+                    if (available) {
+                        advanceAfterStep(fragmentIndex);
+                    } else {
+                        accountFragment.setEmailError("Email already registered");
+                    }
+                },
+                error -> {
+                    // Fail open — a backend hiccup shouldn't block onboarding.
+                    checkingEmail = false;
+                    showLoading(false);
+                    ApiConfig.logRestCall("/api/auth/check-email", false, error.toString());
+                    advanceAfterStep(fragmentIndex);
+                }
+        ) {
+            @Override
+            public byte[] getBody() {
+                return body.toString().getBytes(StandardCharsets.UTF_8);
+            }
+
+            @Override
+            public String getBodyContentType() {
+                return "application/json; charset=utf-8";
+            }
+        };
+
+        request.setRetryPolicy(new DefaultRetryPolicy(15000, 0, 1f));
+        Volley.newRequestQueue(this).add(request);
     }
 
     private void handleBack() {
@@ -1252,6 +1337,9 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
 
         // Goal + Activity
         p.put("primaryGoal",    d.primaryGoal);
+        JSONArray specificGoalsArr = new JSONArray();
+        for (String g : d.specificGoals) specificGoalsArr.put(g);
+        p.put("specificGoals",  specificGoalsArr);
         p.put("activityLevel",  d.activityLevel);
         p.put("occupationType", d.occupationType);
 
@@ -1351,6 +1439,7 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
             profile.setWeight(d.weightKg);
             profile.setWaistCircumference(d.waistCircumferenceCm);
             profile.setPrimaryGoal(d.primaryGoal);
+            profile.setSpecificGoals(d.specificGoals != null ? d.specificGoals : new ArrayList<>());
             profile.setActivityLevel(d.activityLevel);
             profile.setDietType(d.dietType);
             profile.setSleepHours(d.sleepHours);

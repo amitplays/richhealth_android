@@ -9,6 +9,7 @@ import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.view.Window;
 import android.view.WindowManager;
 import android.util.Log;
@@ -1354,6 +1355,7 @@ public class ProfileFragment extends Fragment {
         if (u.has("bloodType") && !u.isNull("bloodType")) profile.setBloodType(u.optString("bloodType"));
         if (u.has("dietType") && !u.isNull("dietType")) profile.setDietType(u.optString("dietType"));
         if (u.has("primaryGoal") && !u.isNull("primaryGoal")) profile.setPrimaryGoal(u.optString("primaryGoal"));
+        if (u.has("specificGoals") && !u.isNull("specificGoals")) profile.setSpecificGoals(jsonArrToList(u.optJSONArray("specificGoals")));
 
         if (u.has("dateOfBirth") && !u.isNull("dateOfBirth")) {
             try {
@@ -1477,9 +1479,14 @@ public class ProfileFragment extends Fragment {
 
             fetchAndShowAqi();
 
-            // Fitness Goals
-            primaryGoal.setText(userProfile.getPrimaryGoal() != null && !userProfile.getPrimaryGoal().isEmpty() ?
-                    userProfile.getPrimaryGoal() : "Not set");
+            // Fitness Goals — show all selected goals, falling back to primaryGoal.
+            List<String> allGoals = userProfile.getSpecificGoals();
+            if (allGoals != null && !allGoals.isEmpty()) {
+                primaryGoal.setText(TextUtils.join(", ", allGoals));
+            } else {
+                primaryGoal.setText(userProfile.getPrimaryGoal() != null && !userProfile.getPrimaryGoal().isEmpty() ?
+                        userProfile.getPrimaryGoal() : "Not set");
+            }
 
             if (userProfile.getWeeklyGoal() > 0) {
                 weeklyGoal.setText(String.format("Target: %.1f kg/week", userProfile.getWeeklyGoal()));
@@ -1875,6 +1882,8 @@ public class ProfileFragment extends Fragment {
             // Heart rate & blood pressure are owned by the Health Data screen; the
             // profile no longer sends them (avoids overwriting real measurements with 0).
             profileData.put("primaryGoal", profile.getPrimaryGoal());
+            profileData.put("specificGoals", new JSONArray(
+                    profile.getSpecificGoals() != null ? profile.getSpecificGoals() : new ArrayList<>()));
             profileData.put("weeklyGoal", profile.getWeeklyGoal());
             profileData.put("activityLevel", profile.getActivityLevel());
             profileData.put("sleepHours", profile.getSleepHours());

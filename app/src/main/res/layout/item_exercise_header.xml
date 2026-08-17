@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/exercise_header_title"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="8dp"
+    android:paddingTop="16dp"
+    android:paddingBottom="8dp"
+    android:paddingHorizontal="8dp"
+    android:textColor="#008b8b"
+    android:textSize="16sp"
+    android:textStyle="bold"
+    android:textAllCaps="true"
+    android:letterSpacing="0.05" />

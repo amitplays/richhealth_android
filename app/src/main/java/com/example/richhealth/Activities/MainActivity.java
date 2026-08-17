@@ -366,21 +366,19 @@ public class MainActivity extends AppCompatActivity implements PaymentResultWith
         }
 
         // ── Step 2 ─────────────────────────────────────────────────────────────────
-        // If we are NOT on the landing tab (Richie/AI), navigate there first.
-        // Also flush any stale back-stack entries left by sub-navigation so they
-        // don't fire unexpectedly after we switch back.
-        if (!(currentFragment instanceof AIFragment)) {
-            getSupportFragmentManager().popBackStack(
-                    null, androidx.fragment.app.FragmentManager.POP_BACK_STACK_INCLUSIVE);
-            bottomNav.setSelectedItemId(R.id.navigation_ai);
+        // If a sub-fragment was pushed onto the back stack (e.g. WorkoutsFragment or
+        // ExercisesFragment via HomeFragment.navigateToFragment), pop it FIRST so back
+        // returns the user to where they came from instead of throwing them to a tab.
+        if (getSupportFragmentManager().getBackStackEntryCount() > 0) {
+            getSupportFragmentManager().popBackStack();
             return;
         }
 
         // ── Step 3 ─────────────────────────────────────────────────────────────────
-        // We ARE on the landing tab. If a sub-fragment was pushed onto the back
-        // stack, pop it first.
-        if (getSupportFragmentManager().getBackStackEntryCount() > 0) {
-            getSupportFragmentManager().popBackStack();
+        // Nothing left on the back stack. If we are NOT on the landing tab (Richie/AI),
+        // navigate there before falling back to the double-press-to-exit logic.
+        if (!(currentFragment instanceof AIFragment)) {
+            bottomNav.setSelectedItemId(R.id.navigation_ai);
             return;
         }
 

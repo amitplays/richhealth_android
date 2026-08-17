@@ -16,12 +16,12 @@ import com.example.richhealth.R;
 
 /**
  * Host for the "Services" tab. Shows a two-tab pill switcher:
- *   Feed  → HealthFeedFragment (Health Intel), shown first / by default
- *   Tools → HomeFragment (all the health tools / service cards)
+ *   Tools → HomeFragment (all the health tools / service cards), shown first / by default
+ *   Feed  → HealthFeedFragment (Health Intel)
  *
  * Both children are added once and toggled with show/hide so each keeps its
  * state when switching. Implements BackPressHandler so back on this tab first
- * lets the active child consume it, then returns Tools → Feed before the
+ * lets the active child consume it, then returns Feed → Tools before the
  * activity falls back to the landing (Richie) tab.
  */
 public class ServicesFragment extends Fragment implements BackPressHandler {
@@ -31,7 +31,7 @@ public class ServicesFragment extends Fragment implements BackPressHandler {
     private android.widget.ImageView tabIconFeed, tabIconTools;
     private HealthFeedFragment feedFragment;
     private HomeFragment toolsFragment;
-    private int currentTab = 0; // 0 = Feed, 1 = Tools
+    private int currentTab = 1; // 0 = Feed, 1 = Tools (Tools is the default)
 
     @Nullable
     @Override
@@ -59,13 +59,13 @@ public class ServicesFragment extends Fragment implements BackPressHandler {
             getChildFragmentManager().beginTransaction()
                     .add(R.id.services_container, feedFragment, "feed")
                     .add(R.id.services_container, toolsFragment, "tools")
-                    .hide(toolsFragment)
+                    .hide(feedFragment)
                     .commit();
-            currentTab = 0;
+            currentTab = 1;
         } else {
             feedFragment = (HealthFeedFragment) getChildFragmentManager().findFragmentByTag("feed");
             toolsFragment = (HomeFragment) getChildFragmentManager().findFragmentByTag("tools");
-            currentTab = savedInstanceState.getInt("current_tab", 0);
+            currentTab = savedInstanceState.getInt("current_tab", 1);
         }
 
         selectTab(currentTab);
@@ -112,12 +112,12 @@ public class ServicesFragment extends Fragment implements BackPressHandler {
         if (active instanceof BackPressHandler && ((BackPressHandler) active).handleBackPress()) {
             return true;
         }
-        // 2) If we're on Tools, returning to Feed is the natural "up" step.
-        if (currentTab != 0) {
-            selectTab(0);
+        // 2) If we're on Feed, returning to Tools (the home tab) is the natural "up" step.
+        if (currentTab != 1) {
+            selectTab(1);
             return true;
         }
-        // 3) On Feed with nothing to close — let the activity handle exit.
+        // 3) On Tools with nothing to close — let the activity handle exit.
         return false;
     }
 }

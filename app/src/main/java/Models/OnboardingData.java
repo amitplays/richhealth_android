@@ -39,6 +39,8 @@ public class OnboardingData {
 
     // Step: Goal
     public String primaryGoal = "Maintain Health";
+    // Multi-select goals (primaryGoal kept as the first selection for back-compat).
+    public List<String> specificGoals = new ArrayList<>();
 
     // Step: Activity Level (split from Occupation)
     public int activityLevel = 2;

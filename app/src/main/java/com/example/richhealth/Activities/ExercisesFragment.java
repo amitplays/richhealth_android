@@ -126,10 +126,8 @@ public class ExercisesFragment extends Fragment {
                 requireContext(), R.anim.layout_animation_slide_bottom);
         exercisesRecyclerView.setLayoutAnimation(animation);
 
-        exerciseAdapter = new ExerciseAdapter(exerciseList, requireContext(), position -> {
-            Exercise selectedExercise = exerciseList.get(position);
-            showExerciseDetailsDialog(selectedExercise);
-        });
+        exerciseAdapter = new ExerciseAdapter(exerciseList, requireContext(), exercise ->
+                showExerciseDetailsDialog(exercise));
         exercisesRecyclerView.setAdapter(exerciseAdapter);
         exercisesCount.setText(exerciseList.size() + " exercises");
 

@@ -250,8 +250,7 @@ public class WorkoutAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         exerciseRecycler.setLayoutManager(new LinearLayoutManager(context));
 
         List<Exercise> exercises = Utilities.loadExercisesFromJson(context);
-        ExerciseAdapter exerciseAdapter = new ExerciseAdapter(exercises, context, position -> {
-            Exercise exercise = exercises.get(position);
+        ExerciseAdapter exerciseAdapter = new ExerciseAdapter(exercises, context, exercise -> {
             workout.addExercise(new WorkoutExercise(exercise, 3, 12, 0));
             adapter.notifyDataSetChanged();
             dialog.dismiss();

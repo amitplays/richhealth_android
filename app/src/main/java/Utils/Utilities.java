@@ -80,6 +80,53 @@ public class Utilities {
         return exerciseList;
     }
 
+    // In-memory cache for the parsed exercise list. Populated once by
+    // loadExercisesFromJsonCached and reused on every subsequent call so the
+    // exercise picker opens instantly instead of re-parsing the asset (and,
+    // critically, WITHOUT re-seeding the database) on every open.
+    private static List<Exercise> cachedExercises;
+
+    /**
+     * Returns the exercise catalogue parsed from res/raw/exercises.json, cached in memory.
+     * Unlike {@link #loadExercisesFromJson(Context)} this does NOT write anything to the
+     * database — use it for read-only paths like the exercise picker where the per-open
+     * DB seeding was the source of UI-thread lag. The first call parses the asset; later
+     * calls return the cached list immediately.
+     */
+    public static List<Exercise> loadExercisesFromJsonCached(Context context) {
+        if (cachedExercises != null) {
+            return cachedExercises;
+        }
+        List<Exercise> exerciseList = new ArrayList<>();
+        try {
+            String json = loadJSONFromAssets(context);
+            JSONObject jsonObject = new JSONObject(json);
+
+            Iterator<String> keys = jsonObject.keys();
+            while (keys.hasNext()) {
+                String category = keys.next();
+                JSONArray exercisesArray = jsonObject.getJSONArray(category);
+                for (int i = 0; i < exercisesArray.length(); i++) {
+                    JSONObject exerciseObject = exercisesArray.getJSONObject(i);
+                    Exercise exercise = new Exercise(
+                            exerciseObject.getInt("id"),
+                            exerciseObject.getString("name"),
+                            category,
+                            exerciseObject.getDouble("met"),
+                            exerciseObject.getString("equipment"),
+                            exerciseObject.getString("difficulty"),
+                            exerciseObject.getString("description")
+                    );
+                    exerciseList.add(exercise);
+                }
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        cachedExercises = exerciseList;
+        return cachedExercises;
+    }
+
     private static String loadJSONFromAssets(Context context) {
         try {
             InputStream is = context.getResources().openRawResource(R.raw.exercises);

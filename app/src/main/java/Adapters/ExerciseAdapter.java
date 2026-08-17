@@ -7,7 +7,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Filter;
 import android.widget.Filterable;
-import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -17,119 +16,192 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.richhealth.R;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 import Models.Exercise;
 
-public class ExerciseAdapter extends RecyclerView.Adapter<ExerciseAdapter.ExerciseViewHolder> implements Filterable {
+/**
+ * Grouped, multi-view-type adapter for the exercise catalogue.
+ *
+ * The catalogue is rendered as a single vertical list, split into category sections
+ * (Chest, Shoulders, Biceps, Triceps, Legs, Forearm Flexors & Grip) each introduced by
+ * a header row. Internally we flatten the (filtered) exercise list into a list of
+ * {@link Row}s — either a header row or an exercise row — and expose two RecyclerView
+ * view types. Search / category filtering re-flattens the visible rows, so headers keep
+ * making sense: filtering to one category shows just that section, and a text search shows
+ * matches under their own category headers.
+ *
+ * The same adapter (and {@code item_exercise} layout) is reused by the Add Workout /
+ * edit-workout exercise pickers so the picker matches the library UI.
+ */
+public class ExerciseAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> implements Filterable {
+
+    private static final int TYPE_HEADER = 0;
+    private static final int TYPE_EXERCISE = 1;
+
+    // Fixed display order for the category sections; matches res/raw/exercises.json.
+    private static final String[] CATEGORY_ORDER = {
+            "Chest", "Shoulders", "Biceps", "Triceps", "Legs", "Forearm Flexors & Grip"
+    };
 
     private List<Exercise> exerciseList;
-    private List<Exercise> filteredList;
-    private Context context;
-    private OnExerciseClickListener listener;
+    private List<Row> displayItems = new ArrayList<>();
+    private final Context context;
+    private final OnExerciseClickListener listener;
 
-    // Map for category colors
-    private final Map<String, Integer> categoryColors = new HashMap<String, Integer>() {{
-        put("Chest", Color.parseColor("#008b8b"));    // Orange
-        put("Back", Color.parseColor("#2196F3"));     // Blue
-        put("Legs", Color.parseColor("#4CAF50"));     // Green
-        put("Shoulders", Color.parseColor("#9C27B0")); // Purple
-        put("Arms", Color.parseColor("#F44336"));     // Red
-        put("Core", Color.parseColor("#FFEB3B"));     // Yellow
-    }};
+    /** A single visible row: either a category header or an exercise. */
+    private static class Row {
+        final int type;
+        final String category;    // set when type == TYPE_HEADER
+        final Exercise exercise;  // set when type == TYPE_EXERCISE
 
-    private final Map<String, Integer> categoryIcons = new HashMap<String, Integer>() {{
-        put("Chest", R.drawable.ic_chest);
-        put("Back", R.drawable.ic_back);
-        put("Legs", R.drawable.ic_legs);
-        put("Shoulders", R.drawable.ic_shoulders);
-        put("Arms", R.drawable.ic_arms);
-        put("Core", R.drawable.ic_core);
-    }};
+        private Row(int type, String category, Exercise exercise) {
+            this.type = type;
+            this.category = category;
+            this.exercise = exercise;
+        }
+
+        static Row header(String category) {
+            return new Row(TYPE_HEADER, category, null);
+        }
+
+        static Row exercise(Exercise exercise) {
+            return new Row(TYPE_EXERCISE, null, exercise);
+        }
+    }
 
     public ExerciseAdapter(List<Exercise> exerciseList, Context context, OnExerciseClickListener listener) {
         this.exerciseList = exerciseList;
-        this.filteredList = new ArrayList<>(exerciseList);
         this.context = context;
         this.listener = listener;
-        organizeExercises();
+        buildDisplayItems(exerciseList);
     }
 
-    @NonNull
-    @Override
-    public ExerciseViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(context).inflate(R.layout.item_exercise, parent, false);
-        return new ExerciseViewHolder(view, listener);
-    }
+    /** Flattens the given exercises into grouped header + exercise rows. */
+    private void buildDisplayItems(List<Exercise> exercises) {
+        displayItems = new ArrayList<>();
+        if (exercises == null || exercises.isEmpty()) {
+            return;
+        }
 
-    @Override
-    public void onBindViewHolder(@NonNull ExerciseViewHolder holder, int position) {
-        Exercise exercise = filteredList.get(position);
-        holder.exerciseName.setText(exercise.getName());
-        holder.exerciseDescription.setText(exercise.getDescription());
-        holder.exerciseCategory.setText(exercise.getCategory());
-        holder.exerciseCategory.setTextColor(Color.parseColor("#008b8b")); // Main orange
+        // Preserve the fixed category order, then append any unknown categories at the end.
+        LinkedHashMap<String, List<Exercise>> groups = new LinkedHashMap<>();
+        for (String category : CATEGORY_ORDER) {
+            groups.put(category, new ArrayList<>());
+        }
+        for (Exercise exercise : exercises) {
+            String category = exercise.getCategory();
+            List<Exercise> bucket = groups.get(category);
+            if (bucket == null) {
+                bucket = new ArrayList<>();
+                groups.put(category, bucket);
+            }
+            bucket.add(exercise);
+        }
 
-        // Set difficulty with orange shades
-        String difficulty = exercise.getDifficulty();
-        holder.exerciseDifficulty.setText(difficulty.substring(0, 1).toUpperCase() + difficulty.substring(1).toLowerCase());
-
-        // Different shades of orange for difficulty levels
-        switch(difficulty.toLowerCase()) {
-            case "beginner":
-                holder.exerciseDifficulty.setText("▮▯▯");
-                break;
-            case "intermediate":
-                holder.exerciseDifficulty.setText("▮▮▯");
-                break;
-            case "advanced":
-                holder.exerciseDifficulty.setText("▮▮▮");
-                break;
-            default:
-                holder.exerciseDifficulty.setTextColor(Color.parseColor("#9E9E9E")); // Default gray
+        for (Map.Entry<String, List<Exercise>> entry : groups.entrySet()) {
+            List<Exercise> bucket = entry.getValue();
+            if (bucket.isEmpty()) {
+                continue;
+            }
+            displayItems.add(Row.header(entry.getKey()));
+            for (Exercise exercise : bucket) {
+                displayItems.add(Row.exercise(exercise));
+            }
         }
     }
 
     @Override
+    public int getItemViewType(int position) {
+        return displayItems.get(position).type;
+    }
+
+    @NonNull
+    @Override
+    public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        LayoutInflater inflater = LayoutInflater.from(context);
+        if (viewType == TYPE_HEADER) {
+            View view = inflater.inflate(R.layout.item_exercise_header, parent, false);
+            return new HeaderViewHolder(view);
+        }
+        View view = inflater.inflate(R.layout.item_exercise, parent, false);
+        return new ExerciseViewHolder(view);
+    }
+
+    @Override
+    public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
+        Row row = displayItems.get(position);
+        if (row.type == TYPE_HEADER) {
+            ((HeaderViewHolder) holder).headerTitle.setText(row.category);
+            return;
+        }
+
+        final Exercise exercise = row.exercise;
+        ExerciseViewHolder h = (ExerciseViewHolder) holder;
+        h.exerciseName.setText(exercise.getName());
+        h.exerciseDescription.setText(exercise.getDescription());
+        h.exerciseCategory.setText(exercise.getCategory());
+        h.exerciseCategory.setTextColor(Color.parseColor("#008b8b"));
+
+        // Difficulty shown as a compact 3-bar indicator.
+        String difficulty = exercise.getDifficulty();
+        switch (difficulty.toLowerCase()) {
+            case "beginner":
+                h.exerciseDifficulty.setText("▮▯▯");
+                break;
+            case "intermediate":
+                h.exerciseDifficulty.setText("▮▮▯");
+                break;
+            case "advanced":
+                h.exerciseDifficulty.setText("▮▮▮");
+                break;
+            default:
+                h.exerciseDifficulty.setText(difficulty);
+                h.exerciseDifficulty.setTextColor(Color.parseColor("#9E9E9E"));
+        }
+
+        h.itemView.setOnClickListener(v -> {
+            if (listener != null) {
+                listener.onExerciseClick(exercise);
+            }
+        });
+    }
+
+    @Override
     public int getItemCount() {
-        return filteredList.size();
+        return displayItems.size();
     }
 
-    private void organizeExercises() {
-        // Sort exercises by category
-        Collections.sort(exerciseList, (e1, e2) -> e1.getCategory().compareTo(e2.getCategory()));
-        filteredList = new ArrayList<>(exerciseList);
+    static class HeaderViewHolder extends RecyclerView.ViewHolder {
+        TextView headerTitle;
+
+        HeaderViewHolder(@NonNull View itemView) {
+            super(itemView);
+            headerTitle = itemView.findViewById(R.id.exercise_header_title);
+        }
     }
 
-    public static class ExerciseViewHolder extends RecyclerView.ViewHolder {
+    static class ExerciseViewHolder extends RecyclerView.ViewHolder {
         TextView exerciseName, exerciseDescription, exerciseDifficulty, exerciseCategory;
-//        ImageView exerciseCategory;
 
-        public ExerciseViewHolder(@NonNull View itemView, OnExerciseClickListener listener) {
+        ExerciseViewHolder(@NonNull View itemView) {
             super(itemView);
             exerciseName = itemView.findViewById(R.id.exercise_name);
             exerciseDescription = itemView.findViewById(R.id.exercise_description);
             exerciseCategory = itemView.findViewById(R.id.exercise_category);
             exerciseDifficulty = itemView.findViewById(R.id.exercise_difficulty);
-
-            itemView.setOnClickListener(v -> {
-                if (listener != null) {
-                    listener.onExerciseClick(getAdapterPosition());
-                }
-            });
         }
     }
 
     public interface OnExerciseClickListener {
-        void onExerciseClick(int position);
+        void onExerciseClick(Exercise exercise);
     }
 
     public void updateList(List<Exercise> newExercises) {
         this.exerciseList = newExercises;
-        organizeExercises();
+        buildDisplayItems(newExercises);
         notifyDataSetChanged();
     }
 
@@ -164,8 +236,9 @@ public class ExerciseAdapter extends RecyclerView.Adapter<ExerciseAdapter.Exerci
             }
 
             @Override
+            @SuppressWarnings("unchecked")
             protected void publishResults(CharSequence constraint, FilterResults results) {
-                filteredList = (List<Exercise>) results.values;
+                buildDisplayItems((List<Exercise>) results.values);
                 notifyDataSetChanged();
             }
         };

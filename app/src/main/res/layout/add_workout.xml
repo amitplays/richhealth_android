@@ -105,6 +105,7 @@
                                 android:textSize="16sp"/>
 
                             <ImageView
+                                android:id="@+id/select_exercise_add_icon"
                                 android:layout_width="@dimen/icon_md"
                                 android:layout_height="@dimen/icon_md"
                                 android:src="@drawable/ic_baseline_add_24"

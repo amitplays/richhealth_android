@@ -24,7 +24,7 @@
             android:layout_weight="1"
             android:orientation="horizontal"
             android:gravity="center"
-            android:background="@drawable/pill_tab_selected"
+            android:background="@drawable/pill_tab_unselected"
             android:paddingVertical="9dp"
             android:clickable="true"
             android:focusable="true">
@@ -34,14 +34,14 @@
                 android:layout_height="16dp"
                 android:layout_marginEnd="6dp"
                 android:src="@drawable/ic_feed"
-                app:tint="@color/white"/>
+                app:tint="#AAAAAA"/>
             <TextView
                 android:id="@+id/tab_label_feed"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Feed"
                 android:textSize="13sp"
-                android:textColor="@color/white"/>
+                android:textColor="#AAAAAA"/>
         </LinearLayout>
 
         <LinearLayout
@@ -51,7 +51,7 @@
             android:layout_weight="1"
             android:orientation="horizontal"
             android:gravity="center"
-            android:background="@drawable/pill_tab_unselected"
+            android:background="@drawable/pill_tab_selected"
             android:paddingVertical="9dp"
             android:clickable="true"
             android:focusable="true">
@@ -61,14 +61,14 @@
                 android:layout_height="16dp"
                 android:layout_marginEnd="6dp"
                 android:src="@drawable/ic_apps"
-                app:tint="#AAAAAA"/>
+                app:tint="@color/white"/>
             <TextView
                 android:id="@+id/tab_label_tools"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Tools"
                 android:textSize="13sp"
-                android:textColor="#AAAAAA"/>
+                android:textColor="@color/white"/>
         </LinearLayout>
     </LinearLayout>
 

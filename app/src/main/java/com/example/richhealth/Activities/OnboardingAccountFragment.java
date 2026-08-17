@@ -126,6 +126,16 @@ public class OnboardingAccountFragment extends BaseOnboardingFragment {
         return valid;
     }
 
+    /** Returns the trimmed email currently entered in the field. */
+    public String getEnteredEmail() {
+        return inputEmail.getText() != null ? inputEmail.getText().toString().trim() : "";
+    }
+
+    /** Shows an error on the email field (e.g. duplicate-email check). */
+    public void setEmailError(String message) {
+        if (layoutEmail != null) layoutEmail.setError(message);
+    }
+
     @Override
     public void collectData(OnboardingData data) {
         data.name = inputName.getText() != null ? inputName.getText().toString().trim() : "";
