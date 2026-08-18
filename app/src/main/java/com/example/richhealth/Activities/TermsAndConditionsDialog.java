@@ -176,7 +176,8 @@ public class TermsAndConditionsDialog {
                 "<p>" +
                 "&#8226; Certain premium features require an active subscription (RichHealth Pro).<br><br>" +
                 "&#8226; Subscriptions renew automatically unless cancelled at least 24 hours before the renewal date.<br><br>" +
-                "&#8226; Refund requests are subject to our refund policy and applicable laws.<br><br>" +
+                "&#8226; Subscriptions are billed through the app store (Google Play or Apple); manage or cancel anytime in your store account. Cancellation stops future renewals but does not refund the current period.<br><br>" +
+                "&#8226; All purchases are final and non-refundable except where required by law. Refunds for store purchases are handled solely by Google Play or Apple under their terms; RichHealth cannot issue them.<br><br>" +
                 "&#8226; We reserve the right to adjust pricing with 30 days prior notice." +
                 "</p><br>" +
 
