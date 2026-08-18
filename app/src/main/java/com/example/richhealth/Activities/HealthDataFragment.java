@@ -358,20 +358,7 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         sentRequestsRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
         sentRequestsRecyclerView.setAdapter(relationshipAdapter);
 
-        // Setup add dependent button
-        MaterialButton addDependentButton = rootView.findViewById(R.id.add_dependent_button);
-        if (addDependentButton != null) {
-            addDependentButton.setOnClickListener(v -> {
-                Intent intent = new Intent(requireContext(), AddDependentActivity.class);
-                startActivity(intent);
-            });
-        }
-
-        // Setup connect family member button
-        MaterialButton addFamilyMemberButton = rootView.findViewById(R.id.add_family_member_button);
-        addFamilyMemberButton.setOnClickListener(v -> {
-            showAddFamilyMemberDialog();
-        });
+        // Add actions now live in the panel header "+" dropdown (see showFamilyAddMenu()).
     }
 
     private void initViews(View view) {
@@ -553,7 +540,6 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         symptomsPanel.getWindow().getAttributes().windowAnimations = R.style.DialogAnimationSlideRight;
 
         // Close button
-        symptomsPanel.findViewById(R.id.close_panel_button).setOnClickListener(v -> symptomsPanel.dismiss());
 
         // Setup RecyclerView
         RecyclerView symptomsRecycler = symptomsPanel.findViewById(R.id.symptoms_recycler);
@@ -587,7 +573,7 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         }
 
         // Setup Add Symptom Button
-        MaterialButton addSymptomButton = symptomsPanel.findViewById(R.id.add_symptom_button);
+        View addSymptomButton = symptomsPanel.findViewById(R.id.add_symptom_button);
         addSymptomButton.setOnClickListener(v -> {
             showAddSymptomDialog();
         });
@@ -613,7 +599,6 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         measurementsPanel.getWindow().getAttributes().windowAnimations = R.style.DialogAnimationSlideRight;
 
         // Close button
-        measurementsPanel.findViewById(R.id.close_panel_button).setOnClickListener(v -> measurementsPanel.dismiss());
 
         // Setup RecyclerView
         RecyclerView measurementsRecycler = measurementsPanel.findViewById(R.id.measurements_recycler);
@@ -648,7 +633,7 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         }
 
         // Setup Add Measurement Button
-        MaterialButton addMeasurementButton = measurementsPanel.findViewById(R.id.add_measurement_button);
+        View addMeasurementButton = measurementsPanel.findViewById(R.id.add_measurement_button);
         addMeasurementButton.setOnClickListener(v -> {
             showAddMeasurementDialog();
         });
@@ -723,7 +708,6 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         periodLogsPanel.getWindow().getAttributes().windowAnimations = R.style.DialogAnimationSlideRight;
 
         // Close button
-        periodLogsPanel.findViewById(R.id.close_panel_button).setOnClickListener(v -> periodLogsPanel.dismiss());
 
         // Setup RecyclerView
         RecyclerView periodLogsRecycler = periodLogsPanel.findViewById(R.id.period_logs_recycler);
@@ -757,7 +741,7 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         }
 
         // Setup Add Period Log Button
-        MaterialButton addPeriodLogButton = periodLogsPanel.findViewById(R.id.add_period_log_button);
+        View addPeriodLogButton = periodLogsPanel.findViewById(R.id.add_period_log_button);
         addPeriodLogButton.setOnClickListener(v -> {
             showAddPeriodLogDialog();
         });
@@ -784,7 +768,6 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         medicalReportsPanel.getWindow().getAttributes().windowAnimations = R.style.DialogAnimationSlideRight;
 
         // Close button
-        medicalReportsPanel.findViewById(R.id.close_panel_button).setOnClickListener(v -> medicalReportsPanel.dismiss());
 
         // Initialize views (header is now a search field — no title/subtitle)
         com.google.android.material.button.MaterialButton addReportButton = medicalReportsPanel.findViewById(R.id.add_medical_report_button);
@@ -853,10 +836,9 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         medicationsPanel.getWindow().getAttributes().windowAnimations = R.style.DialogAnimationSlideRight;
 
         // Close button
-        medicationsPanel.findViewById(R.id.close_panel_button).setOnClickListener(v -> medicationsPanel.dismiss());
 
         // Setup Add Medication button
-        MaterialButton addMedicationButton = medicationsPanel.findViewById(R.id.add_medication_button);
+        View addMedicationButton = medicationsPanel.findViewById(R.id.add_medication_button);
         addMedicationButton.setOnClickListener(v -> {
             showAddMedicationDialog();
         });
@@ -900,7 +882,6 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         familyMembersPanel.getWindow().getAttributes().windowAnimations = R.style.DialogAnimationSlideRight;
 
         // Close button
-        familyMembersPanel.findViewById(R.id.close_panel_button).setOnClickListener(v -> familyMembersPanel.dismiss());
 
         // Setup RecyclerView for family relationships
         sentRequestsRecyclerView = familyMembersPanel.findViewById(R.id.family_relationships_recycler);
@@ -908,18 +889,11 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         sentRequestsRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
         sentRequestsRecyclerView.setAdapter(relationshipAdapter);
 
-        // Setup Add Dependent button
-        MaterialButton addDependentButton = familyMembersPanel.findViewById(R.id.add_dependent_button);
-        addDependentButton.setOnClickListener(v -> {
-            Intent intent = new Intent(requireContext(), AddDependentActivity.class);
-            startActivity(intent);
-        });
-
-        // Setup Connect Family Member button
-        MaterialButton addFamilyMemberButton = familyMembersPanel.findViewById(R.id.add_family_member_button);
-        addFamilyMemberButton.setOnClickListener(v -> {
-            showAddFamilyMemberDialog();
-        });
+        // Header "+" → native dropdown (Add dependent / Connect family member).
+        View familyAddButton = familyMembersPanel.findViewById(R.id.family_add_menu_button);
+        if (familyAddButton != null) {
+            familyAddButton.setOnClickListener(this::showFamilyAddMenu);
+        }
 
 
         // Show empty state initially, will be updated when data loads
@@ -4434,6 +4408,51 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         datePickerDialog.show();
     }
 
+    /** Family panel "+" → native PopupMenu (Add dependent / Connect family member). */
+    private void showFamilyAddMenu(View anchor) {
+        androidx.appcompat.widget.PopupMenu popup =
+                new androidx.appcompat.widget.PopupMenu(requireContext(), anchor);
+        popup.getMenuInflater().inflate(R.menu.family_add_menu, popup.getMenu());
+        try {
+            java.lang.reflect.Method m = popup.getClass().getMethod("setForceShowIcon", boolean.class);
+            m.invoke(popup, true);
+        } catch (Throwable ignored) {}
+        popup.setOnMenuItemClickListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.menu_add_dependent) {
+                startActivity(new Intent(requireContext(), AddDependentActivity.class));
+                return true;
+            } else if (id == R.id.menu_connect_family) {
+                showAddFamilyMemberDialog();
+                return true;
+            }
+            return false;
+        });
+        popup.show();
+    }
+
+    /**
+     * The one relationship list used by both the add and the edit dialog, ordered
+     * oldest generation first. Kept identical to the iOS picker in
+     * FamilySheetView.swift, and every entry is covered by the backend's
+     * reciprocal map (userController.getReciprocalRelationship) so accepting an
+     * invite always produces a usable label on the other side.
+     *
+     * The value the user picks describes THEMSELVES — "I am their ..." — which is
+     * what the backend stores for the recipient.
+     */
+    private static final String[] RELATIONSHIP_OPTIONS = new String[] {
+            "Grandfather", "Grandmother",
+            "Father", "Mother",
+            "Paternal Uncle", "Paternal Aunt",
+            "Maternal Uncle", "Maternal Aunt",
+            "Spouse", "Brother", "Sister", "Cousin",
+            "Son", "Daughter",
+            "Nephew", "Niece",
+            "Grandson", "Granddaughter",
+            "Other"
+    };
+
     private void showAddFamilyMemberDialog() {
         Dialog dialog = new Dialog(requireContext(), R.style.DialogTheme);
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
@@ -4448,14 +4467,7 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         Button sendButton = dialog.findViewById(R.id.send_button);
 
         // Setup relationship dropdown
-        String[] relationships = new String[] {
-                "Father", "Mother", "Brother", "Sister",
-                "Grandfather", "Grandmother",
-                "Paternal Uncle", "Paternal Aunt",
-                "Maternal Uncle", "Maternal Aunt",
-                "Son", "Daughter", "Grandson", "Granddaughter",
-                "Nephew", "Niece"
-        };
+        String[] relationships = RELATIONSHIP_OPTIONS;
 
         ArrayAdapter<String> adapter = new ArrayAdapter<>(
                 requireContext(),
@@ -4713,14 +4725,7 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         emailInput.setEnabled(false);
         emailInput.setAlpha(0.6f);
 
-        String[] relationships = new String[] {
-                "Father", "Mother", "Brother", "Sister",
-                "Grandfather", "Grandmother",
-                "Paternal Uncle", "Paternal Aunt",
-                "Maternal Uncle", "Maternal Aunt",
-                "Son", "Daughter", "Grandson", "Granddaughter",
-                "Nephew", "Niece", "Cousin", "Spouse"
-        };
+        String[] relationships = RELATIONSHIP_OPTIONS;
 
         ArrayAdapter<String> adapter = new ArrayAdapter<>(
                 requireContext(),
