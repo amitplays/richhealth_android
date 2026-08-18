@@ -286,13 +286,15 @@
                             android:textStyle="bold" />
                     </LinearLayout>
 
-                    <!-- header: logo + lead + overall chip + council badge -->
+                    <!-- header row 1: logo + label (single line) + overall chip. The council
+                         count moves to the "Read the Council" row, and the date to its own row
+                         below, so the label/date never wrap into a cramped column. -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:layout_marginBottom="12dp">
+                        android:layout_marginBottom="4dp">
 
                         <ImageView
                             android:layout_width="26dp"
@@ -301,31 +303,19 @@
                             android:layout_marginEnd="10dp"
                             android:contentDescription="@null" />
 
-                        <LinearLayout
+                        <TextView
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:orientation="vertical">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="RICHIE'S READ ON YOU"
-                                android:textColor="#008b8b"
-                                android:textSize="11sp"
-                                android:textStyle="bold"
-                                android:textAllCaps="true"
-                                android:letterSpacing="0.08" />
-
-                            <TextView
-                                android:id="@+id/richie_updated"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text=""
-                                android:textColor="#9E9E9E"
-                                android:textSize="12sp"
-                                android:layout_marginTop="1dp" />
-                        </LinearLayout>
+                            android:text="RICHIE'S READ ON YOU"
+                            android:textColor="#008b8b"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:textAllCaps="true"
+                            android:letterSpacing="0.08"
+                            android:singleLine="true"
+                            android:ellipsize="end"
+                            android:layout_marginEnd="8dp" />
 
                         <TextView
                             android:id="@+id/richie_overall_chip"
@@ -339,24 +329,19 @@
                             android:paddingHorizontal="9dp"
                             android:paddingVertical="4dp"
                             android:visibility="gone" />
-
-                        <TextView
-                            android:id="@+id/richie_council_badge"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text=""
-                            android:textColor="#008b8b"
-                            android:textSize="10sp"
-                            android:textStyle="bold"
-                            android:textAllCaps="true"
-                            android:letterSpacing="0.06"
-                            android:background="@drawable/rounded_category_bg"
-                            android:backgroundTint="#0A2828"
-                            android:paddingHorizontal="9dp"
-                            android:paddingVertical="5dp"
-                            android:layout_marginStart="6dp"
-                            android:visibility="gone" />
                     </LinearLayout>
+
+                    <!-- header row 2: date on its own full-width row, single line -->
+                    <TextView
+                        android:id="@+id/richie_updated"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text=""
+                        android:textColor="#9E9E9E"
+                        android:textSize="12sp"
+                        android:singleLine="true"
+                        android:ellipsize="end"
+                        android:layout_marginBottom="12dp" />
 
                     <!-- headline: prominent single line above the analysis -->
                     <TextView
@@ -399,6 +384,7 @@
                             android:paddingVertical="4dp">
 
                             <TextView
+                                android:id="@+id/richie_council_label"
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"

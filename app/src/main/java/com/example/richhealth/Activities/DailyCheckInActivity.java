@@ -107,7 +107,7 @@ public class DailyCheckInActivity extends AppCompatActivity {
     private LinearLayout richieReady;
     private LinearLayout richieFailed;
     private TextView richieUpdated;
-    private TextView richieCouncilBadge;
+    private TextView richieCouncilLabel;
     private TextView richieAnalysisText;
     private LinearLayout richieCouncilSection;
     private LinearLayout richieCouncilHeader;
@@ -226,7 +226,7 @@ public class DailyCheckInActivity extends AppCompatActivity {
         richieReady           = findViewById(R.id.richie_ready);
         richieFailed          = findViewById(R.id.richie_failed);
         richieUpdated         = findViewById(R.id.richie_updated);
-        richieCouncilBadge    = findViewById(R.id.richie_council_badge);
+        richieCouncilLabel    = findViewById(R.id.richie_council_label);
         richieAnalysisText    = findViewById(R.id.richie_analysis_text);
         richieCouncilSection  = findViewById(R.id.richie_council_section);
         richieCouncilHeader   = findViewById(R.id.richie_council_header);
@@ -1053,13 +1053,12 @@ public class DailyCheckInActivity extends AppCompatActivity {
         boolean isCouncil = json.optBoolean("isCouncil", false);
         JSONArray council = json.optJSONArray("council");
 
-        // Council badge: "◆ N perspectives" when a council was used.
-        if (richieCouncilBadge != null) {
+        // Fold the council count into the "Read the Council" row instead of a second header chip.
+        if (richieCouncilLabel != null) {
             if (isCouncil && council != null && council.length() > 0) {
-                richieCouncilBadge.setText("◆ " + council.length() + " perspectives");
-                richieCouncilBadge.setVisibility(View.VISIBLE);
+                richieCouncilLabel.setText("Read the Council · " + council.length() + " perspectives");
             } else {
-                richieCouncilBadge.setVisibility(View.GONE);
+                richieCouncilLabel.setText("Read the Council");
             }
         }
 
