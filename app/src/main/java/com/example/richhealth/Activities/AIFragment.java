@@ -147,6 +147,7 @@ public class AIFragment extends Fragment implements BackPressHandler {
     private View emptyStateView;
     private MaterialButton newChatButton;
     private MaterialButton deleteAllChatsButton;
+    private ImageButton closePanelButton;
     private EditText chatSearchInput;
     private View historyLoading;
     // Full, unfiltered session list — the search box filters a copy of this.
@@ -442,15 +443,23 @@ public class AIFragment extends Fragment implements BackPressHandler {
         modelDropdownButton.setOnClickListener(v -> showModelSelectionDropdown());
     }
 
-    /** Logo drawable for a model id. */
+    /** True for models shown as a full-color brand logo (real avatar, not a tinted glyph). */
+    private boolean isBrandLogo(String id) {
+        switch (id) {
+            case "gpt5.3": case "claude4.5": case "gemini": case "deepseek": return true;
+            default: return false;
+        }
+    }
+
+    /** Logo drawable for a model id. Brand models use real circular brand avatars. */
     private int modelIconRes(String id) {
         switch (id) {
-            case "gemini":    return R.drawable.ic_model_gemini;
+            case "gemini":    return R.drawable.ic_brand_gemini;
+            case "deepseek":  return R.drawable.ic_brand_deepseek;
+            case "gpt5.3":    return R.drawable.ic_brand_openai;
+            case "claude4.5": return R.drawable.ic_brand_claude;
             case "mistral":   return R.drawable.ic_model_mistral;
-            case "deepseek":  return R.drawable.ic_model_deepseek;
             case "llama":     return R.drawable.ic_model_llama;
-            case "gpt5.3":    return R.drawable.ic_model_gpt;
-            case "claude4.5": return R.drawable.ic_model_claude;
             case "max":       return R.drawable.ic_model_max;
             default:          return R.drawable.ic_model_auto;
         }
@@ -486,20 +495,25 @@ public class AIFragment extends Fragment implements BackPressHandler {
     /** Round brand-tinted chip holding a model's logo, for the picker rows. */
     private View buildModelIconChip(String id, float dp) {
         int color = modelIconColor(id);
+        boolean brand = isBrandLogo(id);
         FrameLayout chip = new FrameLayout(requireContext());
         LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams((int) (34 * dp), (int) (34 * dp));
         cp.setMarginEnd((int) (14 * dp));
         chip.setLayoutParams(cp);
-        GradientDrawable bg = new GradientDrawable();
-        bg.setShape(GradientDrawable.OVAL);
-        bg.setColor(Color.argb(30, Color.red(color), Color.green(color), Color.blue(color)));
-        chip.setBackground(bg);
+        // Generic glyphs sit on a brand-tinted oval; real brand avatars are self-contained circles.
+        if (!brand) {
+            GradientDrawable bg = new GradientDrawable();
+            bg.setShape(GradientDrawable.OVAL);
+            bg.setColor(Color.argb(30, Color.red(color), Color.green(color), Color.blue(color)));
+            chip.setBackground(bg);
+        }
         ImageView iv = new ImageView(requireContext());
-        FrameLayout.LayoutParams ip = new FrameLayout.LayoutParams((int) (19 * dp), (int) (19 * dp));
+        int isz = brand ? (int) (34 * dp) : (int) (19 * dp); // brand avatar fills the chip
+        FrameLayout.LayoutParams ip = new FrameLayout.LayoutParams(isz, isz);
         ip.gravity = Gravity.CENTER;
         iv.setLayoutParams(ip);
         iv.setImageResource(modelIconRes(id));
-        iv.setColorFilter(color);
+        if (!brand) iv.setColorFilter(color); // brand logos keep their real colors
         chip.addView(iv);
         return chip;
     }
@@ -535,7 +549,10 @@ public class AIFragment extends Fragment implements BackPressHandler {
 
         ImageView icon = new ImageView(requireContext());
         icon.setImageResource(iconRes);
-        icon.setColorFilter(iconColor);
+        // Real brand avatars keep their colors; only tint the generic glyphs.
+        boolean brandIcon = iconRes == R.drawable.ic_brand_openai || iconRes == R.drawable.ic_brand_claude
+                || iconRes == R.drawable.ic_brand_gemini || iconRes == R.drawable.ic_brand_deepseek;
+        if (!brandIcon) icon.setColorFilter(iconColor);
         LinearLayout.LayoutParams ip = new LinearLayout.LayoutParams((int)(20 * dp), (int)(20 * dp));
         ip.setMarginEnd((int)(14 * dp));
         icon.setLayoutParams(ip);
@@ -1003,7 +1020,9 @@ public class AIFragment extends Fragment implements BackPressHandler {
         if (modelPillIcon != null) {
             String iconId = max ? MAX_MODEL_ID : currentModel;
             modelPillIcon.setImageResource(modelIconRes(iconId));
-            modelPillIcon.setColorFilter(modelIconColor(iconId));
+            // Brand avatars keep their real colors; generic glyphs stay brand-tinted.
+            if (isBrandLogo(iconId)) modelPillIcon.clearColorFilter();
+            else modelPillIcon.setColorFilter(modelIconColor(iconId));
         }
         if (maxModePill != null) {
             maxModePill.setBackgroundResource(
@@ -1468,6 +1487,7 @@ public class AIFragment extends Fragment implements BackPressHandler {
         emptyStateView = chatHistoryPanel.findViewById(R.id.empty_state);
         newChatButton = chatHistoryPanel.findViewById(R.id.new_chat_button);
         deleteAllChatsButton = chatHistoryPanel.findViewById(R.id.delete_all_chats_button);
+        closePanelButton = chatHistoryPanel.findViewById(R.id.close_panel_button);
         historyLoading = chatHistoryPanel.findViewById(R.id.history_loading);
 
         // Search box — filters the loaded sessions live (focus visuals handled by
@@ -1496,6 +1516,10 @@ public class AIFragment extends Fragment implements BackPressHandler {
 
         deleteAllChatsButton.setOnClickListener(v -> {
             showDeleteAllChatsConfirmDialog();
+        });
+
+        closePanelButton.setOnClickListener(v -> {
+            chatHistoryPanel.dismiss();
         });
 
         // Setup chat history button (3-dots in pill) in the main view
@@ -2824,6 +2848,9 @@ public class AIFragment extends Fragment implements BackPressHandler {
 
         savedChatsPanel.getWindow().setAttributes(params);
         savedChatsPanel.getWindow().getAttributes().windowAnimations = R.style.DialogAnimationSlideRight;
+
+        // Close button
+        savedChatsPanel.findViewById(R.id.close_panel_button).setOnClickListener(v -> savedChatsPanel.dismiss());
 
         RecyclerView savedChatsRecycler = savedChatsPanel.findViewById(R.id.saved_chats_recycler);
         savedChatAdapter = new SavedChatAdapter(requireContext());
