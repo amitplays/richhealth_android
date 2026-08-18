@@ -186,6 +186,9 @@ public class MainActivity extends AppCompatActivity implements PaymentResultWith
                 && !biometricVerified && !waitingForBiometric) {
             showBiometricLock();
         }
+        // Refresh Pro status on foreground so a family-Pro coverage change made while the app was
+        // backgrounded fires its local notification on return (ProStatusManager detects the flip).
+        Utils.ProStatusManager.syncProStatusOnLogin(this);
     }
 
     /**
