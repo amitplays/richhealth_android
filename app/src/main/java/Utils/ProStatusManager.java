@@ -117,6 +117,13 @@ public class ProStatusManager {
 
     public void setFamilyPlanInfo(boolean isFamilyPlanOwner, boolean isGrantedPro,
                                    String proGrantedBy, int familyMemberCount, int maxFamilyMembers) {
+        // Detect a family-Pro coverage change on THIS member's device. We have no push service,
+        // so the member's own app notices the transition on its next pro-access sync and fires a
+        // local notification -- consistent with the app's other local-only notifications.
+        // Only fires on an actual flip; the first sync (no baseline stored) records silently.
+        boolean hadBaseline = prefs.contains(KEY_IS_GRANTED_PRO);
+        boolean wasGrantedPro = prefs.getBoolean(KEY_IS_GRANTED_PRO, false);
+
         SharedPreferences.Editor editor = prefs.edit();
         editor.putBoolean(KEY_IS_FAMILY_PLAN_OWNER, isFamilyPlanOwner);
         editor.putBoolean(KEY_IS_GRANTED_PRO, isGrantedPro);
@@ -124,6 +131,22 @@ public class ProStatusManager {
         editor.putInt(KEY_FAMILY_MEMBER_COUNT, familyMemberCount);
         editor.putInt(KEY_MAX_FAMILY_MEMBERS, maxFamilyMembers);
         editor.apply();
+
+        if (hadBaseline && wasGrantedPro != isGrantedPro) {
+            try {
+                if (isGrantedPro) {
+                    CheckInNotificationHelper.fireNow(context,
+                            "You're on RichHealth Pro",
+                            "A family member added you to their RichHealth Pro plan. Enjoy full access.");
+                } else {
+                    CheckInNotificationHelper.fireNow(context,
+                            "Pro access ended",
+                            "Your family RichHealth Pro access has ended.");
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to fire family coverage notification", e);
+            }
+        }
     }
 
     public boolean isFamilyPlanOwner() {
