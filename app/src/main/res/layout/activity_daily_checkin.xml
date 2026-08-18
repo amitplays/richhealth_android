@@ -286,15 +286,15 @@
                             android:textStyle="bold" />
                     </LinearLayout>
 
-                    <!-- header row 1: logo + label (single line) + overall chip. The council
-                         count moves to the "Read the Council" row, and the date to its own row
-                         below, so the label/date never wrap into a cramped column. -->
+                    <!-- header row: logo + (category + headline TITLE) column + ONE chip.
+                         Category label and the headline stack in a weight=1 column on the
+                         left; the status chip is pinned top-right (aligned top). -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:layout_marginBottom="4dp">
+                        android:gravity="top"
+                        android:layout_marginBottom="12dp">
 
                         <ImageView
                             android:layout_width="26dp"
@@ -303,24 +303,42 @@
                             android:layout_marginEnd="10dp"
                             android:contentDescription="@null" />
 
-                        <TextView
+                        <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="RICHIE'S READ ON YOU"
-                            android:textColor="#008b8b"
-                            android:textSize="11sp"
-                            android:textStyle="bold"
-                            android:textAllCaps="true"
-                            android:letterSpacing="0.08"
-                            android:singleLine="true"
-                            android:ellipsize="end"
-                            android:layout_marginEnd="8dp" />
+                            android:orientation="vertical"
+                            android:layout_marginEnd="8dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="RICHIE'S READ ON YOU"
+                                android:textColor="#008b8b"
+                                android:textSize="11sp"
+                                android:textStyle="bold"
+                                android:textAllCaps="true"
+                                android:letterSpacing="0.08" />
+
+                            <!-- headline is the TITLE directly under the category label -->
+                            <TextView
+                                android:id="@+id/richie_headline"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text=""
+                                android:textColor="#FFFFFF"
+                                android:textSize="17sp"
+                                android:textStyle="bold"
+                                android:lineSpacingExtra="2dp"
+                                android:layout_marginTop="3dp"
+                                android:visibility="gone" />
+                        </LinearLayout>
 
                         <TextView
                             android:id="@+id/richie_overall_chip"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:layout_gravity="top"
                             android:text=""
                             android:textSize="10sp"
                             android:textStyle="bold"
@@ -331,30 +349,6 @@
                             android:visibility="gone" />
                     </LinearLayout>
 
-                    <!-- header row 2: date on its own full-width row, single line -->
-                    <TextView
-                        android:id="@+id/richie_updated"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text=""
-                        android:textColor="#9E9E9E"
-                        android:textSize="12sp"
-                        android:singleLine="true"
-                        android:ellipsize="end"
-                        android:layout_marginBottom="12dp" />
-
-                    <!-- headline: prominent single line above the analysis -->
-                    <TextView
-                        android:id="@+id/richie_headline"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text=""
-                        android:textColor="#FFFFFF"
-                        android:textSize="17sp"
-                        android:textStyle="bold"
-                        android:lineSpacingExtra="3dp"
-                        android:layout_marginBottom="8dp"
-                        android:visibility="gone" />
 
                     <TextView
                         android:id="@+id/richie_analysis_text"
@@ -365,103 +359,79 @@
                         android:textSize="16sp"
                         android:lineSpacingExtra="4dp" />
 
-                    <!-- The Council (collapsible) -->
+                    <!-- Read the Council · N perspectives → opens a bottom sheet -->
                     <LinearLayout
-                        android:id="@+id/richie_council_section"
+                        android:id="@+id/richie_council_row"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:background="?attr/selectableItemBackground"
+                        android:paddingVertical="8dp"
                         android:layout_marginTop="14dp"
                         android:visibility="gone">
-
-                        <LinearLayout
-                            android:id="@+id/richie_council_header"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical"
-                            android:background="?attr/selectableItemBackground"
-                            android:paddingVertical="4dp">
-
-                            <TextView
-                                android:id="@+id/richie_council_label"
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:text="Read the Council"
-                                android:textColor="#008b8b"
-                                android:textSize="13sp"
-                                android:textStyle="bold" />
-
-                            <TextView
-                                android:id="@+id/richie_council_chevron"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="›"
-                                android:textColor="#008b8b"
-                                android:textSize="18sp"
-                                android:rotation="90"
-                                android:contentDescription="@null" />
-                        </LinearLayout>
-
-                        <LinearLayout
-                            android:id="@+id/richie_council_container"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:layout_marginTop="8dp"
-                            android:visibility="gone" />
-                    </LinearLayout>
-
-                    <!-- Richie's reasoning (free tier, collapsible) -->
-                    <LinearLayout
-                        android:id="@+id/richie_reasoning_section"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:layout_marginTop="14dp"
-                        android:visibility="gone">
-
-                        <LinearLayout
-                            android:id="@+id/richie_reasoning_header"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical"
-                            android:background="?attr/selectableItemBackground"
-                            android:paddingVertical="4dp">
-
-                            <TextView
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:text="Richie's reasoning"
-                                android:textColor="#008b8b"
-                                android:textSize="13sp"
-                                android:textStyle="bold" />
-
-                            <TextView
-                                android:id="@+id/richie_reasoning_chevron"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="›"
-                                android:textColor="#008b8b"
-                                android:textSize="18sp"
-                                android:rotation="90"
-                                android:contentDescription="@null" />
-                        </LinearLayout>
 
                         <TextView
-                            android:id="@+id/richie_reasoning_text"
-                            android:layout_width="match_parent"
+                            android:id="@+id/richie_council_label"
+                            android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:text=""
-                            android:textColor="#BBBBBB"
+                            android:layout_weight="1"
+                            android:text="Read the Council"
+                            android:textColor="#008b8b"
                             android:textSize="13sp"
-                            android:lineSpacingExtra="2dp"
-                            android:layout_marginTop="8dp"
-                            android:visibility="gone" />
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="›"
+                            android:textColor="#008b8b"
+                            android:textSize="18sp"
+                            android:contentDescription="@null" />
                     </LinearLayout>
+
+                    <!-- Richie's reasoning (free tier) → opens a bottom sheet -->
+                    <LinearLayout
+                        android:id="@+id/richie_reasoning_row"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:background="?attr/selectableItemBackground"
+                        android:paddingVertical="8dp"
+                        android:layout_marginTop="14dp"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:id="@+id/richie_reasoning_label"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Richie's reasoning"
+                            android:textColor="#008b8b"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="›"
+                            android:textColor="#008b8b"
+                            android:textSize="18sp"
+                            android:contentDescription="@null" />
+                    </LinearLayout>
+
+                    <!-- date: the LAST line of the ready content -->
+                    <TextView
+                        android:id="@+id/richie_updated"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text=""
+                        android:textColor="#9E9E9E"
+                        android:textSize="12sp"
+                        android:singleLine="true"
+                        android:ellipsize="end"
+                        android:layout_marginTop="14dp" />
                 </LinearLayout>
 
                 <!-- failed state -->

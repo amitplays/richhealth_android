@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Bottom sheet for "The Council" (member perspectives) and, reused, "Richie's
+     reasoning" (single body). Member rows are added in Java into council_sheet_container;
+     for reasoning the subtitle + container are hidden and council_sheet_body is shown. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_sheet_surface"
+    android:paddingStart="22dp"
+    android:paddingEnd="22dp"
+    android:paddingTop="10dp"
+    android:paddingBottom="22dp">
+
+    <!-- Grabber -->
+    <View
+        android:layout_width="36dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="18dp"
+        android:background="@drawable/bg_dialog_input"
+        android:alpha="0.5"/>
+
+    <TextView
+        android:id="@+id/council_sheet_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="The Council"
+        android:textColor="@color/rh_text_primary"
+        android:textSize="20sp"
+        android:fontFamily="sans-serif-medium"/>
+
+    <TextView
+        android:id="@+id/council_sheet_subtitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="Each perspective reviewed your check-in through a different lens."
+        android:textColor="@color/rh_text_tertiary"
+        android:textSize="13sp"
+        android:lineSpacingExtra="2dp"/>
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="18dp"
+        android:overScrollMode="never"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- Reasoning body (single block); hidden for the council variant. -->
+            <TextView
+                android:id="@+id/council_sheet_body"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text=""
+                android:textColor="#BBBBBB"
+                android:textSize="14sp"
+                android:lineSpacingExtra="3dp"
+                android:visibility="gone"/>
+
+            <!-- Council member rows added in Java. -->
+            <LinearLayout
+                android:id="@+id/council_sheet_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"/>
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+</LinearLayout>

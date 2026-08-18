@@ -32,6 +32,7 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 import com.example.richhealth.R;
+import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButton;
 
 import org.json.JSONArray;
@@ -109,15 +110,14 @@ public class DailyCheckInActivity extends AppCompatActivity {
     private TextView richieUpdated;
     private TextView richieCouncilLabel;
     private TextView richieAnalysisText;
-    private LinearLayout richieCouncilSection;
-    private LinearLayout richieCouncilHeader;
-    private LinearLayout richieCouncilContainer;
-    private TextView richieCouncilChevron;
-    private LinearLayout richieReasoningSection;
-    private LinearLayout richieReasoningHeader;
-    private TextView richieReasoningText;
-    private TextView richieReasoningChevron;
+    // Council / reasoning are now single tappable rows that open a bottom sheet.
+    private LinearLayout richieCouncilRow;
+    private LinearLayout richieReasoningRow;
     private MaterialButton richieRetryBtn;
+
+    // Data backing the council / reasoning bottom sheets (set on the last ready analysis).
+    private JSONArray richieCouncilData;
+    private String richieReasoningTextValue;
 
     // (2) What Richie's watching — watchlist container.
     private LinearLayout watchlistSection;
@@ -228,26 +228,13 @@ public class DailyCheckInActivity extends AppCompatActivity {
         richieUpdated         = findViewById(R.id.richie_updated);
         richieCouncilLabel    = findViewById(R.id.richie_council_label);
         richieAnalysisText    = findViewById(R.id.richie_analysis_text);
-        richieCouncilSection  = findViewById(R.id.richie_council_section);
-        richieCouncilHeader   = findViewById(R.id.richie_council_header);
-        richieCouncilContainer= findViewById(R.id.richie_council_container);
-        richieCouncilChevron  = findViewById(R.id.richie_council_chevron);
-        richieReasoningSection= findViewById(R.id.richie_reasoning_section);
-        richieReasoningHeader = findViewById(R.id.richie_reasoning_header);
-        richieReasoningText   = findViewById(R.id.richie_reasoning_text);
-        richieReasoningChevron= findViewById(R.id.richie_reasoning_chevron);
+        richieCouncilRow      = findViewById(R.id.richie_council_row);
+        richieReasoningRow    = findViewById(R.id.richie_reasoning_row);
         richieRetryBtn        = findViewById(R.id.richie_retry_btn);
 
-        richieCouncilHeader.setOnClickListener(v -> {
-            boolean show = richieCouncilContainer.getVisibility() != View.VISIBLE;
-            richieCouncilContainer.setVisibility(show ? View.VISIBLE : View.GONE);
-            richieCouncilChevron.setRotation(show ? 270f : 90f);
-        });
-        richieReasoningHeader.setOnClickListener(v -> {
-            boolean show = richieReasoningText.getVisibility() != View.VISIBLE;
-            richieReasoningText.setVisibility(show ? View.VISIBLE : View.GONE);
-            richieReasoningChevron.setRotation(show ? 270f : 90f);
-        });
+        // The council / reasoning rows open a bottom sheet instead of expanding inline.
+        richieCouncilRow.setOnClickListener(v -> showCouncilSheet());
+        richieReasoningRow.setOnClickListener(v -> showReasoningSheet());
         richieRetryBtn.setOnClickListener(v -> {
             if (analysisSessionId != null) startAnalysisFor(analysisSessionId);
         });
@@ -1053,29 +1040,27 @@ public class DailyCheckInActivity extends AppCompatActivity {
         boolean isCouncil = json.optBoolean("isCouncil", false);
         JSONArray council = json.optJSONArray("council");
 
-        // Fold the council count into the "Read the Council" row instead of a second header chip.
-        if (richieCouncilLabel != null) {
-            if (isCouncil && council != null && council.length() > 0) {
-                richieCouncilLabel.setText("Read the Council · " + council.length() + " perspectives");
-            } else {
-                richieCouncilLabel.setText("Read the Council");
-            }
-        }
-
+        // Council → a single "Read the Council · N perspectives" row that opens a sheet.
+        // Free tier (no council but has thinking) → a "Richie's reasoning" row instead.
         if (isCouncil && council != null && council.length() > 0) {
-            richieReasoningSection.setVisibility(View.GONE);
-            richieCouncilSection.setVisibility(View.VISIBLE);
-            buildCouncil(council);
+            richieCouncilData = council;
+            richieReasoningTextValue = null;
+            if (richieCouncilLabel != null) {
+                richieCouncilLabel.setText("Read the Council · " + council.length() + " perspectives");
+            }
+            if (richieCouncilRow != null) richieCouncilRow.setVisibility(View.VISIBLE);
+            if (richieReasoningRow != null) richieReasoningRow.setVisibility(View.GONE);
         } else {
-            richieCouncilSection.setVisibility(View.GONE);
+            richieCouncilData = null;
+            if (richieCouncilRow != null) richieCouncilRow.setVisibility(View.GONE);
             String thinking = json.optString("thinking", "");
+            if ("null".equals(thinking)) thinking = "";
             if (thinking != null && !thinking.trim().isEmpty()) {
-                richieReasoningSection.setVisibility(View.VISIBLE);
-                richieReasoningText.setText(thinking);
-                richieReasoningText.setVisibility(View.GONE); // collapsed by default
-                richieReasoningChevron.setRotation(90f);
+                richieReasoningTextValue = thinking.trim();
+                if (richieReasoningRow != null) richieReasoningRow.setVisibility(View.VISIBLE);
             } else {
-                richieReasoningSection.setVisibility(View.GONE);
+                richieReasoningTextValue = null;
+                if (richieReasoningRow != null) richieReasoningRow.setVisibility(View.GONE);
             }
         }
 
@@ -1401,12 +1386,66 @@ public class DailyCheckInActivity extends AppCompatActivity {
         sharpenSection.setVisibility(rows > 0 ? View.VISIBLE : View.GONE);
     }
 
-    private void buildCouncil(JSONArray council) {
-        if (richieCouncilContainer == null) return;
-        richieCouncilContainer.removeAllViews();
-        // Reset to collapsed state each time it's rebuilt.
-        richieCouncilContainer.setVisibility(View.GONE);
-        if (richieCouncilChevron != null) richieCouncilChevron.setRotation(90f);
+    /**
+     * Opens the "Read the Council" bottom sheet and fills it with the stored member
+     * perspectives. No-op when there's no council data.
+     */
+    private void showCouncilSheet() {
+        if (richieCouncilData == null || richieCouncilData.length() == 0) return;
+
+        BottomSheetDialog dialog = new BottomSheetDialog(this, R.style.RH_Theme_BottomSheetDialog);
+        View sheet = getLayoutInflater().inflate(R.layout.sheet_council, null);
+        dialog.setContentView(sheet);
+
+        // Keep only our rounded-top surface visible (no elevated layer behind it).
+        View bg = dialog.findViewById(com.google.android.material.R.id.design_bottom_sheet);
+        if (bg != null) bg.setBackgroundColor(Color.TRANSPARENT);
+
+        TextView title      = sheet.findViewById(R.id.council_sheet_title);
+        TextView subtitle   = sheet.findViewById(R.id.council_sheet_subtitle);
+        TextView body       = sheet.findViewById(R.id.council_sheet_body);
+        LinearLayout list   = sheet.findViewById(R.id.council_sheet_container);
+
+        if (title != null)    title.setText("The Council");
+        if (subtitle != null) subtitle.setVisibility(View.VISIBLE);
+        if (body != null)     body.setVisibility(View.GONE);
+        buildCouncil(richieCouncilData, list);
+
+        dialog.show();
+    }
+
+    /** Opens the "Richie's reasoning" bottom sheet with the stored reasoning text. */
+    private void showReasoningSheet() {
+        if (richieReasoningTextValue == null || richieReasoningTextValue.trim().isEmpty()) return;
+
+        BottomSheetDialog dialog = new BottomSheetDialog(this, R.style.RH_Theme_BottomSheetDialog);
+        View sheet = getLayoutInflater().inflate(R.layout.sheet_council, null);
+        dialog.setContentView(sheet);
+
+        View bg = dialog.findViewById(com.google.android.material.R.id.design_bottom_sheet);
+        if (bg != null) bg.setBackgroundColor(Color.TRANSPARENT);
+
+        TextView title      = sheet.findViewById(R.id.council_sheet_title);
+        TextView subtitle   = sheet.findViewById(R.id.council_sheet_subtitle);
+        TextView body       = sheet.findViewById(R.id.council_sheet_body);
+        LinearLayout list   = sheet.findViewById(R.id.council_sheet_container);
+
+        if (title != null)    title.setText("Richie's reasoning");
+        if (subtitle != null) subtitle.setVisibility(View.GONE);
+        if (list != null)     list.setVisibility(View.GONE);
+        if (body != null) {
+            body.setText(richieReasoningTextValue);
+            body.setVisibility(View.VISIBLE);
+        }
+
+        dialog.show();
+    }
+
+    /** Builds council member rows (teal uppercase label + #BBBBBB body) into {@code container}. */
+    private void buildCouncil(JSONArray council, LinearLayout container) {
+        if (container == null || council == null) return;
+        container.removeAllViews();
+        container.setVisibility(View.VISIBLE);
 
         for (int i = 0; i < council.length(); i++) {
             JSONObject m = council.optJSONObject(i);
@@ -1420,7 +1459,7 @@ public class DailyCheckInActivity extends AppCompatActivity {
             LinearLayout.LayoutParams bp = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT);
-            bp.bottomMargin = dpToPx(12);
+            bp.bottomMargin = dpToPx(14);
             block.setLayoutParams(bp);
 
             TextView lbl = new TextView(this);
@@ -1438,7 +1477,7 @@ public class DailyCheckInActivity extends AppCompatActivity {
             txt.setPadding(0, dpToPx(2), 0, 0);
             block.addView(txt);
 
-            richieCouncilContainer.addView(block);
+            container.addView(block);
         }
     }
 
