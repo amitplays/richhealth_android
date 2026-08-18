@@ -166,6 +166,10 @@ public class MainActivity extends AppCompatActivity implements PaymentResultWith
         if ("profile".equals(navigateTo)) {
             intent.removeExtra("navigate_to");
             bottomNav.setSelectedItemId(R.id.navigation_profile);
+        } else if ("medications".equals(navigateTo)) {
+            // Switch to Health Hub; HealthDataFragment reads this same extra on resume, opens the
+            // Medications panel, and clears it. (Extra left in place so the fragment can consume it.)
+            bottomNav.setSelectedItemId(R.id.navigation_tools);
         }
     }
     @Override

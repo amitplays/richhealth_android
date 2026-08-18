@@ -121,7 +121,9 @@ public class MedicationReminderReceiver extends BroadcastReceiver {
         int flags = PendingIntent.FLAG_UPDATE_CURRENT;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) flags |= PendingIntent.FLAG_IMMUTABLE;
         Intent openIntent = new Intent(context, MainActivity.class);
-        openIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        openIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP
+                | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        openIntent.putExtra("navigate_to", "medications"); // deep-link tap → Health Hub → Medications
         PendingIntent contentPi = PendingIntent.getActivity(
                 context, MedicationReminderHelper.stableId(serverId, day, timeIndex), openIntent, flags);
 

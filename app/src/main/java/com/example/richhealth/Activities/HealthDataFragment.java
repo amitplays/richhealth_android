@@ -5510,6 +5510,13 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         super.onResume();
         // Refresh data if needed
         refreshPlanPill();
+        // Deep-link: a tapped medication reminder set navigate_to=medications on the Activity
+        // intent. Open the Medications panel once, then clear the extra so it doesn't reopen.
+        if (getActivity() != null && getActivity().getIntent() != null
+                && "medications".equals(getActivity().getIntent().getStringExtra("navigate_to"))) {
+            getActivity().getIntent().removeExtra("navigate_to");
+            try { showMedicationsPanel(); } catch (Exception ignored) {}
+        }
     }
 
     private class RelationshipAdapter extends RecyclerView.Adapter<HealthDataFragment.RelationshipAdapter.RelationshipViewHolder> {
