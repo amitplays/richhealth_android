@@ -4271,6 +4271,16 @@ public class AIFragment extends Fragment implements BackPressHandler {
         animateHeader();
         loadUserProfile();
 
+        // Refresh Pro from the server so a family/shared-Pro grant made while she is
+        // already logged in reaches the image button (which reads the cached
+        // ProStatusManager). Re-evaluate the greyed/enabled state when the sync returns.
+        ProStatusManager.checkProAccessOnStartup(requireContext(), new ProStatusManager.ProStatusCallback() {
+            @Override public void onStatusSynced(boolean isPro) {
+                if (isAdded()) updateImageButtonState();
+            }
+            @Override public void onSyncError(String error) { }
+        });
+
         // Resume pill glide + logo spin if welcome screen is visible
         if (welcomeContainer != null && welcomeContainer.getVisibility() == View.VISIBLE) {
             startPillAutoScroll();
