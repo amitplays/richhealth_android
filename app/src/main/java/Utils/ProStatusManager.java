@@ -329,7 +329,9 @@ public class ProStatusManager {
                     try {
                         JSONObject jsonResponse = new JSONObject(response);
                         boolean isPro = jsonResponse.optBoolean("isPro", false);
-                        long expiryDate = jsonResponse.optLong("expiryDate", 0);
+                        // Backend (/api/user/pro-access) returns "expiresAt"; keep the old
+                        // "expiryDate" key as a fallback so no build mismatch drops the expiry.
+                        long expiryDate = jsonResponse.optLong("expiresAt", jsonResponse.optLong("expiryDate", 0));
                         String tier = jsonResponse.optString("tier", "");
 
                         ProStatusManager proStatusManager = getInstance(context);
