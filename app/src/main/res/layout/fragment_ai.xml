@@ -335,6 +335,51 @@
                     android:inputType="textMultiLine|textCapSentences"
                     android:scrollbars="vertical"/>
 
+                <!-- Pending attached-image chip (shown after a successful upload, before send). -->
+                <LinearLayout
+                    android:id="@+id/image_attach_chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:background="@drawable/model_pill_bg"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="6dp"
+                    android:paddingTop="5dp"
+                    android:paddingBottom="5dp"
+                    android:layout_marginTop="4dp"
+                    android:visibility="gone">
+
+                    <ImageView
+                        android:layout_width="13dp"
+                        android:layout_height="13dp"
+                        android:layout_marginEnd="5dp"
+                        android:src="@android:drawable/ic_menu_gallery"
+                        app:tint="#008b8b"
+                        android:contentDescription="Attached image" />
+
+                    <TextView
+                        android:id="@+id/image_attach_label"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Image attached"
+                        android:textColor="#008b8b"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:singleLine="true" />
+
+                    <ImageButton
+                        android:id="@+id/image_attach_remove"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_marginStart="6dp"
+                        android:src="@android:drawable/ic_menu_close_clear_cancel"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:padding="2dp"
+                        app:tint="#808080"
+                        android:contentDescription="Remove attached image" />
+                </LinearLayout>
+
                 <!-- Bottom action row: model pill · usage ring · spacer · Aa · send -->
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -458,6 +503,19 @@
                         android:layout_width="0dp"
                         android:layout_height="1dp"
                         android:layout_weight="1"/>
+
+                    <!-- Attach image (greyed unless Pro + a vision-capable model is selected) -->
+                    <ImageButton
+                        android:id="@+id/image_attach_button"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:src="@android:drawable/ic_menu_gallery"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:padding="6dp"
+                        android:scaleType="fitCenter"
+                        app:tint="#808080"
+                        android:layout_marginEnd="2dp"
+                        android:contentDescription="Attach image"/>
 
                     <!-- Text-size cycler (Aa) -->
                     <ImageButton

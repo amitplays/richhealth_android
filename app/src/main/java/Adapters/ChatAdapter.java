@@ -282,15 +282,25 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     class UserMessageViewHolder extends RecyclerView.ViewHolder {
         private TextView messageTextView;
         private TextView timeTextView;
+        private View imagePlaceholder;
 
         public UserMessageViewHolder(@NonNull View itemView) {
             super(itemView);
             messageTextView = itemView.findViewById(R.id.message_text);
             timeTextView = itemView.findViewById(R.id.time_text);
+            imagePlaceholder = itemView.findViewById(R.id.user_image_placeholder);
         }
 
         public void bind(ChatMessage message) {
-            messageTextView.setText(message.getMessage());
+            // Attached-image placeholder (id is mapped end-to-end; visual is a placeholder for now).
+            if (imagePlaceholder != null) {
+                imagePlaceholder.setVisibility(message.hasImage() ? View.VISIBLE : View.GONE);
+            }
+            String txt = message.getMessage();
+            boolean hasText = txt != null && !txt.trim().isEmpty();
+            // Hide the empty text bubble when the message is image-only.
+            ((View) messageTextView.getParent()).setVisibility(hasText ? View.VISIBLE : View.GONE);
+            messageTextView.setText(txt);
             messageTextView.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, messageTextSizeSp);
             SimpleDateFormat sdf = new SimpleDateFormat("h:mm a", Locale.getDefault());
             timeTextView.setText(sdf.format(new Date(message.getTimestamp())));
@@ -313,6 +323,10 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         private View thinkingHeader;
         private TextView thinkingText;
         private ImageView thinkingChevron;
+        private View traceHeader;
+        private android.widget.LinearLayout traceContainer;
+        private ImageView traceChevron;
+        private TextView traceLabel;
 
         public AIMessageViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -327,6 +341,10 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             thinkingHeader = itemView.findViewById(R.id.thinking_header);
             thinkingText = itemView.findViewById(R.id.thinking_text);
             thinkingChevron = itemView.findViewById(R.id.thinking_chevron);
+            traceHeader = itemView.findViewById(R.id.trace_header);
+            traceContainer = itemView.findViewById(R.id.trace_container);
+            traceChevron = itemView.findViewById(R.id.trace_chevron);
+            traceLabel = itemView.findViewById(R.id.trace_label);
         }
 
         public void bind(ChatMessage message, int position) {
@@ -369,6 +387,53 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 } else {
                     thinkingHeader.setVisibility(View.GONE);
                     thinkingText.setVisibility(View.GONE);
+                }
+            }
+
+            // ─── Agentic trace ("what Richie checked") collapsible ───────
+            // Tool steps + tappable citations. Mirrors iOS; collapsed by default.
+            if (traceHeader != null && traceContainer != null) {
+                if (message.hasAgentTrace() && !message.isThinking()) {
+                    if (traceLabel != null) traceLabel.setText(message.getAgentTraceLabel());
+                    traceHeader.setVisibility(View.VISIBLE);
+                    traceContainer.setVisibility(View.GONE);
+                    if (traceChevron != null) traceChevron.setRotation(0f);
+                    // Rebuild the expanded content each bind (recycle-safe).
+                    traceContainer.removeAllViews();
+                    for (String line : message.getAgentToolLines()) {
+                        TextView tv = new TextView(context);
+                        tv.setText("• " + line);
+                        tv.setTextColor(0xFF8AA6A6);
+                        tv.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 11f);
+                        traceContainer.addView(tv);
+                    }
+                    for (String[] src : message.getAgentSources()) {
+                        final String url = src[1];
+                        TextView tv = new TextView(context);
+                        tv.setText(src[0]);
+                        tv.setTextColor(0xFF008B8B); // brand teal — link
+                        tv.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 11f);
+                        tv.setPadding(0, 6, 0, 0);
+                        tv.setClickable(true);
+                        tv.setOnClickListener(v -> {
+                            try {
+                                context.startActivity(new android.content.Intent(
+                                        android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)));
+                            } catch (Exception ignored) { }
+                        });
+                        traceContainer.addView(tv);
+                    }
+                    traceHeader.setOnClickListener(v -> {
+                        final boolean show = traceContainer.getVisibility() != View.VISIBLE;
+                        if (traceChevron != null) {
+                            traceChevron.animate().rotation(show ? 180f : 0f).setDuration(180).start();
+                        }
+                        toggleKeepingScroll(AIMessageViewHolder.this,
+                                () -> traceContainer.setVisibility(show ? View.VISIBLE : View.GONE));
+                    });
+                } else {
+                    traceHeader.setVisibility(View.GONE);
+                    traceContainer.setVisibility(View.GONE);
                 }
             }
 

@@ -56,11 +56,64 @@ public class ChatMessage {
     public void setReasoning(String r) { this.reasoning = r; }
     public boolean hasReasoning() { return reasoning != null && !reasoning.trim().isEmpty(); }
 
+    /** Agentic tool trace + citations for an AI reply (mirrors iOS steps/sources).
+     *  Populated from the message's agentSteps + sources arrays; empty for normal
+     *  replies. Shown as a collapsible "what Richie checked" row + tappable sources. */
+    private final java.util.List<String> agentToolLines = new java.util.ArrayList<>();
+    private final java.util.List<String[]> agentSources = new java.util.ArrayList<>(); // [displayTitle, url]
+
+    public void setAgentTrace(org.json.JSONArray steps, org.json.JSONArray sources) {
+        agentToolLines.clear();
+        agentSources.clear();
+        if (steps != null) {
+            for (int i = 0; i < steps.length(); i++) {
+                org.json.JSONObject s = steps.optJSONObject(i);
+                if (s == null || !"tool_start".equals(s.optString("type"))) continue;
+                String tool = s.optString("tool", "");
+                String q = s.optString("query", "").trim();
+                String line;
+                switch (tool) {
+                    case "search_publications":  line = "Searched research" + (q.isEmpty() ? "" : ": " + q); break;
+                    case "web_search":           line = "Searched the web" + (q.isEmpty() ? "" : ": " + q); break;
+                    case "fetch_health_records": line = "Checked your " + (q.isEmpty() ? "records" : q) + " log"; break;
+                    default:                     line = "Used " + (tool.isEmpty() ? "a tool" : tool);
+                }
+                agentToolLines.add(line);
+            }
+        }
+        if (sources != null) {
+            for (int i = 0; i < sources.length(); i++) {
+                org.json.JSONObject src = sources.optJSONObject(i);
+                if (src == null) continue;
+                String url = src.optString("url", "").trim();
+                if (url.isEmpty()) continue;
+                String title = src.optString("title", "").trim();
+                if (title.isEmpty()) title = url;
+                int year = src.optInt("year", 0);
+                agentSources.add(new String[]{ year > 0 ? title + " (" + year + ")" : title, url });
+            }
+        }
+    }
+    public boolean hasAgentTrace() { return !agentToolLines.isEmpty() || !agentSources.isEmpty(); }
+    public java.util.List<String> getAgentToolLines() { return agentToolLines; }
+    public java.util.List<String[]> getAgentSources() { return agentSources; }
+    public String getAgentTraceLabel() {
+        int n = agentSources.size();
+        return n == 0 ? "What Richie checked" : "Checked " + n + " source" + (n == 1 ? "" : "s");
+    }
+
     /** True when Richie saved a new memory from this turn — drives the small
      *  memory icon in the action row (tap shows a short "saved in this chat" note). */
     private boolean memoryAdded;
     public boolean isMemoryAdded() { return memoryAdded; }
     public void setMemoryAdded(boolean v) { this.memoryAdded = v; }
+
+    /** Image attached to a USER message (FileStore id from the backend). null for text-only.
+     *  Rendered as a placeholder for now; the id is mapped end-to-end. */
+    private String imageFileId;
+    public String getImageFileId() { return imageFileId; }
+    public void setImageFileId(String id) { this.imageFileId = id; }
+    public boolean hasImage() { return imageFileId != null && !imageFileId.trim().isEmpty(); }
 
     public boolean isForkContext() { return isForkContext; }
     public void setForkContext(boolean v) { isForkContext = v; }

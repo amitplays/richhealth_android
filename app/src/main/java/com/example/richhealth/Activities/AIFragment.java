@@ -83,6 +83,9 @@ import Utils.ErrorHandler;
 import Utils.ProStatusManager;
 import Utils.SimpleProgress;
 import Utils.Utilities;
+import android.net.Uri;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 
 public class AIFragment extends Fragment implements BackPressHandler {
 
@@ -241,6 +244,21 @@ public class AIFragment extends Fragment implements BackPressHandler {
     // [PLAN-PILL-REVIEW] removed (hardcoded/dead plan pill; will review later)
     private Utils.UsageRing usageRing;
     private android.widget.ImageButton textSizeButton;
+
+    // ---- Chat image attachment (Pro + vision-capable model only) ----
+    private android.widget.ImageButton imageAttachButton;
+    private android.view.View imageAttachChip;
+    private android.widget.TextView imageAttachLabel;
+    private String pendingImageFileId = null;
+    private final okhttp3.OkHttpClient imageHttpClient = new okhttp3.OkHttpClient();
+    // Vision-capable model ids — mirrors iOS RichieViewModel.visionModels.
+    private static final java.util.Set<String> VISION_MODELS =
+            new java.util.HashSet<>(java.util.Arrays.asList("gemini", "gpt5.3", "claude4.5"));
+    // Registered at construction (required before STARTED); GetContent returns an image Uri.
+    private final ActivityResultLauncher<String> imagePickerLauncher =
+            registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
+                if (uri != null) uploadChatImage(uri);
+            });
     private boolean isNewChatMode = true;
     private int messageLimit = 5;
     private int messagesUsed = 0;
@@ -356,6 +374,26 @@ public class AIFragment extends Fragment implements BackPressHandler {
             applyTextSizeIconScale(getSavedChatTextSizeSp(), false);
             textSizeButton.setOnClickListener(this::cycleChatTextSize);
         }
+
+        // Attach-image button — always clickable; greyed unless (Pro AND vision-capable
+        // model). Tapping while greyed shows the tooltip instead of opening the picker.
+        imageAttachButton = view.findViewById(R.id.image_attach_button);
+        imageAttachChip = view.findViewById(R.id.image_attach_chip);
+        imageAttachLabel = view.findViewById(R.id.image_attach_label);
+        if (imageAttachButton != null) {
+            imageAttachButton.setOnClickListener(v -> {
+                if (canAttachImage()) {
+                    imagePickerLauncher.launch("image/*");
+                } else {
+                    Utilities.toast(requireContext(), "choose the model which can upload image");
+                }
+            });
+        }
+        android.widget.ImageButton imageAttachRemove = view.findViewById(R.id.image_attach_remove);
+        if (imageAttachRemove != null) {
+            imageAttachRemove.setOnClickListener(v -> clearPendingImage());
+        }
+        updateImageButtonState();
 
         // Dependent selector
         inputProfileChip = view.findViewById(R.id.input_profile_chip);
@@ -1036,6 +1074,105 @@ public class AIFragment extends Fragment implements BackPressHandler {
         // Input card border is owned by updateInputBorder() so family selection
         // (white) and Max mode (bright teal) never fight over it.
         updateInputBorder();
+        updateImageButtonState();
+    }
+
+    /** True only when the user is Pro AND the selected model can accept images. */
+    private boolean canAttachImage() {
+        boolean isPro = proStatusManager != null && proStatusManager.isProUser();
+        return isPro && VISION_MODELS.contains(currentModel);
+    }
+
+    /** Greys the attach button when images can't be sent (button stays clickable so
+     *  the tap can surface the tooltip). */
+    private void updateImageButtonState() {
+        if (imageAttachButton == null) return;
+        boolean enabled = canAttachImage();
+        imageAttachButton.setAlpha(enabled ? 1f : 0.4f);
+        imageAttachButton.setColorFilter(Color.parseColor(enabled ? "#008b8b" : "#808080"));
+    }
+
+    private void setPendingImage(String fileId) {
+        pendingImageFileId = fileId;
+        if (imageAttachChip != null) imageAttachChip.setVisibility(android.view.View.VISIBLE);
+        if (imageAttachLabel != null) imageAttachLabel.setText("Image attached");
+    }
+
+    private void clearPendingImage() {
+        pendingImageFileId = null;
+        if (imageAttachChip != null) imageAttachChip.setVisibility(android.view.View.GONE);
+    }
+
+    /** Reads the picked image and POSTs it as multipart (field "image") to
+     *  /api/chat/image, mirroring MedicalReportApiService's OkHttp upload. On success
+     *  the returned fileId is held as the pending attachment for the next send. */
+    private void uploadChatImage(Uri uri) {
+        Context ctx = (appContext != null) ? appContext : getContext();
+        if (ctx == null) return;
+        final byte[] bytes;
+        final String mime;
+        try {
+            java.io.InputStream in = requireContext().getContentResolver().openInputStream(uri);
+            if (in == null) { Utilities.toast(ctx, "Couldn't read image"); return; }
+            java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
+            byte[] buf = new byte[8192];
+            int n;
+            while ((n = in.read(buf)) != -1) bos.write(buf, 0, n);
+            in.close();
+            bytes = bos.toByteArray();
+            String t = requireContext().getContentResolver().getType(uri);
+            mime = (t != null && t.startsWith("image/")) ? t : "image/jpeg";
+        } catch (Exception e) {
+            Log.e(TAG, "read image failed", e);
+            Utilities.toast(ctx, "Couldn't read image");
+            return;
+        }
+        if (bytes.length == 0) { Utilities.toast(ctx, "Couldn't read image"); return; }
+        if (bytes.length > 16 * 1024 * 1024) { Utilities.toast(ctx, "Image too large (max 16MB)"); return; }
+
+        String fileName = mime.contains("png") ? "image.png" : "image.jpg";
+        okhttp3.RequestBody fileBody = okhttp3.RequestBody.create(okhttp3.MediaType.parse(mime), bytes);
+        okhttp3.RequestBody body = new okhttp3.MultipartBody.Builder()
+                .setType(okhttp3.MultipartBody.FORM)
+                .addFormDataPart("image", fileName, fileBody)
+                .build();
+        String token = TokenManager.getInstance(ctx).getToken();
+        okhttp3.Request req = new okhttp3.Request.Builder()
+                .url(ApiConfig.getBaseUrl() + "/api/chat/image")
+                .header("Authorization", "Bearer " + token)
+                .post(body)
+                .build();
+        if (imageAttachButton != null) imageAttachButton.setEnabled(false);
+        imageHttpClient.newCall(req).enqueue(new okhttp3.Callback() {
+            @Override public void onFailure(okhttp3.Call call, java.io.IOException e) {
+                if (!isAdded()) return;
+                requireActivity().runOnUiThread(() -> {
+                    if (imageAttachButton != null) imageAttachButton.setEnabled(true);
+                    Utilities.toast(ctx, "Image upload failed");
+                });
+            }
+            @Override public void onResponse(okhttp3.Call call, okhttp3.Response response) throws java.io.IOException {
+                String respBody = response.body() != null ? response.body().string() : "";
+                final boolean ok = response.isSuccessful();
+                String fid = null;
+                if (ok) {
+                    try {
+                        JSONObject o = new JSONObject(respBody);
+                        fid = o.optString("fileId", null);
+                    } catch (Exception ignored) {}
+                }
+                final String fileId = fid;
+                if (!isAdded()) return;
+                requireActivity().runOnUiThread(() -> {
+                    if (imageAttachButton != null) imageAttachButton.setEnabled(true);
+                    if (ok && fileId != null && !fileId.isEmpty()) {
+                        setPendingImage(fileId);
+                    } else {
+                        Utilities.toast(ctx, "Image upload failed");
+                    }
+                });
+            }
+        });
     }
 
     private int getMessageLimit() {
@@ -2740,6 +2877,8 @@ public class AIFragment extends Fragment implements BackPressHandler {
             if (!savedReasoning.trim().isEmpty()) {
                 message.setReasoning(savedReasoning);
             }
+            message.setAgentTrace(messageObj.optJSONArray("agentSteps"), messageObj.optJSONArray("sources"));
+            message.setImageFileId(messageObj.isNull("imageFileId") ? null : messageObj.optString("imageFileId", null));
 
             chatAdapter.addMessage(message);
         }
@@ -3353,6 +3492,7 @@ public class AIFragment extends Fragment implements BackPressHandler {
         cancelReplyRecoveryPoll();
 
         ChatMessage userMessage = new ChatMessage(messageText, false);
+        userMessage.setImageFileId(pendingImageFileId);
         if (sessionId != null) {
             userMessage.setSessionId(sessionId);
         }
@@ -3398,6 +3538,10 @@ public class AIFragment extends Fragment implements BackPressHandler {
         try {
             requestBody.put("message", messageText);
             requestBody.put("withAIResponse", true);
+            if (pendingImageFileId != null && !pendingImageFileId.isEmpty()) {
+                requestBody.put("imageFileId", pendingImageFileId);
+            }
+            clearPendingImage();
             // Note: modelType is per-session (set when session was created), not per-message.
             // Backend reads model from session.modelType, not from message body.
             // userContext is NOT sent — backend reads full health profile from MongoDB directly.
@@ -3431,7 +3575,7 @@ public class AIFragment extends Fragment implements BackPressHandler {
                                 JSONObject aiMessageObj = responseObj.getJSONObject("aiMessage");
                                 String aiResponseText = aiMessageObj.getString("message");
 
-                                appendAiResponse(aiResponseText, aiMessageObj.getString("_id"), null, null, false);
+                                appendAiResponse(aiResponseText, aiMessageObj.getString("_id"), null, null, false, aiMessageObj.optJSONArray("agentSteps"), aiMessageObj.optJSONArray("sources"));
                             }
 
                             showLimitReachedDialog();
@@ -3461,7 +3605,7 @@ public class AIFragment extends Fragment implements BackPressHandler {
                             }
                             org.json.JSONArray memArr = responseObj.optJSONArray("memoriesAdded");
                             boolean memorySaved = memArr != null && memArr.length() > 0;
-                            appendAiResponse(aiResponseText, aiMessageObj.getString("_id"), responseObj.optJSONArray("dataCards"), responseObj.optString("thinking", ""), memorySaved);
+                            appendAiResponse(aiResponseText, aiMessageObj.getString("_id"), responseObj.optJSONArray("dataCards"), responseObj.optString("thinking", ""), memorySaved, aiMessageObj.optJSONArray("agentSteps"), aiMessageObj.optJSONArray("sources"));
                         }
 
                         // Sync plan label with backend's authoritative tier
@@ -3734,7 +3878,7 @@ public class AIFragment extends Fragment implements BackPressHandler {
 
     /** Adds an AI reply bubble, then any prefilled "log this" cards parsed from
      *  its healthlog block, as separate card bubbles beneath it. */
-    private void appendAiResponse(String aiResponseText, String messageId, org.json.JSONArray dataCards, String reasoning, boolean memorySaved) {
+    private void appendAiResponse(String aiResponseText, String messageId, org.json.JSONArray dataCards, String reasoning, boolean memorySaved, org.json.JSONArray agentSteps, org.json.JSONArray agentSources) {
         // The reply lands in place; we never auto-scroll on it. Only the user's own
         // scrolling moves the chat, so the view never jumps when a reply arrives.
         ChatMessage aiMessage = new ChatMessage(aiResponseText, true);
@@ -3755,6 +3899,7 @@ public class AIFragment extends Fragment implements BackPressHandler {
         if (hasPriorAiReply && reasoning != null && !reasoning.trim().isEmpty()) {
             aiMessage.setReasoning(reasoning);
         }
+        aiMessage.setAgentTrace(agentSteps, agentSources);
         chatAdapter.addMessage(aiMessage);
 
         // Prefilled quick-log cards from the backend extraction pass, rendered as

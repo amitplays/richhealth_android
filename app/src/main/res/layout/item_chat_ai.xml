@@ -86,6 +86,50 @@
                     android:layout_marginBottom="6dp"
                     android:visibility="gone"/>
 
+                <!-- Collapsible agentic trace ("what Richie checked") — tool steps +
+                     citations. Same style/slot as the thinking row. Gone by default. -->
+                <LinearLayout
+                    android:id="@+id/trace_header"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp"
+                    android:paddingStart="2dp"
+                    android:paddingEnd="4dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:background="?attr/selectableItemBackground"
+                    android:visibility="gone">
+
+                    <ImageView
+                        android:id="@+id/trace_chevron"
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:layout_marginEnd="6dp"
+                        android:src="@drawable/ic_chevron_down"
+                        app:tint="#4A6A6A"/>
+
+                    <TextView
+                        android:id="@+id/trace_label"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="What Richie checked"
+                        android:textColor="#7FA8A8"
+                        android:textSize="11sp"/>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/trace_container"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:maxWidth="290dp"
+                    android:layout_marginTop="2dp"
+                    android:layout_marginBottom="6dp"
+                    android:visibility="gone"/>
+
                 <!-- Message body -->
                 <TextView
                     android:id="@+id/message_text"
