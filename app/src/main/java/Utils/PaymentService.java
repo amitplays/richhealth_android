@@ -207,6 +207,57 @@ public class PaymentService {
     }
 
     /**
+     * Verify a Google Play subscription purchase. Sends {productId, purchaseToken} to the backend,
+     * which validates against the Play Developer API and acknowledges the purchase server-side.
+     */
+    public void verifyGoogle(String productId, String purchaseToken, PaymentCallback callback) {
+        String url = BASE_URL + "/google/verify";
+        try {
+            JSONObject requestBody = new JSONObject();
+            requestBody.put("productId", productId);
+            requestBody.put("purchaseToken", purchaseToken);
+            JsonObjectRequest request = new JsonObjectRequest(Request.Method.POST, url, requestBody,
+                    new Response.Listener<JSONObject>() {
+                        @Override public void onResponse(JSONObject response) {
+                            ApiConfig.logRestCall(url, true, "Google purchase verified");
+                            try {
+                                if (response.getBoolean("success")) {
+                                    ProStatusResult result = new ProStatusResult();
+                                    result.setPro(true);
+                                    result.setExpiryDate(response.optLong("expiryDate", 0));
+                                    result.setPlan(response.optString("plan", ""));
+                                    result.setMaxFamilyMembers(response.optInt("maxFamilyMembers", 5));
+                                    callback.onSuccess(result);
+                                } else {
+                                    callback.onError(response.optString("message", "Verification failed"));
+                                }
+                            } catch (JSONException e) {
+                                Log.e(TAG, "Error parsing Google verification response", e);
+                                callback.onError("Failed to parse server response");
+                            }
+                        }
+                    },
+                    new Response.ErrorListener() {
+                        @Override public void onErrorResponse(VolleyError error) {
+                            ApiConfig.logRestCall(url, false, error.toString());
+                            callback.onError(parseErrorResponse(error));
+                        }
+                    }) {
+                @Override public Map<String, String> getHeaders() throws AuthFailureError {
+                    Map<String, String> headers = new HashMap<>();
+                    String token = tokenManager.getToken();
+                    if (token != null) headers.put("Authorization", "Bearer " + token);
+                    return headers;
+                }
+            };
+            requestQueue.add(request);
+        } catch (JSONException e) {
+            Log.e(TAG, "Error creating Google verification request", e);
+            callback.onError("Failed to create verification request");
+        }
+    }
+
+    /**
      * Get Pro status from the server
      * @param callback Callback to handle the response
      */

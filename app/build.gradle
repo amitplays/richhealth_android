@@ -31,6 +31,7 @@ android {
 
 dependencies {
     implementation 'com.razorpay:checkout:1.6.33'
+    implementation 'com.android.billingclient:billing:6.2.1'
     implementation 'androidx.appcompat:appcompat:1.5.1'
     implementation 'androidx.core:core:1.8.0'
     implementation 'androidx.activity:activity:1.5.1'

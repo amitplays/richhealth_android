@@ -115,6 +115,61 @@ public class PaymentManager {
     }
 
     public void startPaymentFlow(Activity activity, PlanOption plan, String couponCode, PaymentCallback callback) {
+        // Purchases go through Google Play Billing (Play policy requires it for in-app digital goods).
+        // The RazorPay flow is kept in startRazorpayFlow(...) for non-Play distribution / fallback.
+        startGooglePlayFlow(activity, plan, callback);
+    }
+
+    /** Play product IDs must match Play Console + backend GOOGLE_PRODUCT_PLAN. */
+    private static String googleProductId(int planId) {
+        switch (planId) {
+            case 1:  return "richhealth.plus";
+            case 3:  return "richhealth.ultra";
+            default: return "richhealth.pro";
+        }
+    }
+
+    /** Google Play Billing purchase → backend verify (which acknowledges) → sync Pro. */
+    public void startGooglePlayFlow(Activity activity, PlanOption plan, PaymentCallback callback) {
+        this.callback = callback;
+        this.currentActivity = activity;
+        this.selectedPlanType = plan.getPlanId();
+        final String productId = googleProductId(plan.getPlanId());
+        progressDialog = SimpleProgress.show(activity, "Opening Google Play…");
+        if (callback != null) callback.onPaymentInitiated();
+
+        new GooglePlayBillingManager(activity).purchaseSubscription(productId,
+                new GooglePlayBillingManager.PurchaseCallback() {
+            @Override public void onPurchased(String purchaseToken, String pid) {
+                if (progressDialog != null) progressDialog.hide();
+                final SimpleProgress verifying = SimpleProgress.show(activity, "Verifying…");
+                paymentService.verifyGoogle(pid, purchaseToken, new PaymentService.PaymentCallback() {
+                    @Override public void onSuccess(ProStatusResult result) {
+                        verifying.hide();
+                        proStatusManager.setProStatusComplete(true, result.getExpiryDate(), result.getPlan(), null);
+                        proStatusManager.setFamilyPlanInfo("family".equals(result.getPlan()), false, null,
+                                result.getFamilyProMemberCount(), result.getMaxFamilyMembers());
+                        if (callback != null) callback.onPaymentSuccess(result.getPlan());
+                    }
+                    @Override public void onError(String errorMessage) {
+                        verifying.hide();
+                        if (callback != null) callback.onPaymentFailed(errorMessage);
+                    }
+                });
+            }
+            @Override public void onError(String message) {
+                if (progressDialog != null) progressDialog.hide();
+                if (callback != null) callback.onPaymentFailed(message);
+            }
+            @Override public void onCancelled() {
+                if (progressDialog != null) progressDialog.hide();
+                if (callback != null) callback.onPaymentCancelled();
+            }
+        });
+    }
+
+    /** Legacy RazorPay purchase flow — retained (not deleted); no longer the default path. */
+    private void startRazorpayFlow(Activity activity, PlanOption plan, String couponCode, PaymentCallback callback) {
         Log.d(TAG, "=== PAYMENT FLOW STARTED (PlanOption) ===");
         Log.d(TAG, "Plan: " + plan.getName() + " planId=" + plan.getPlanId() + " amount=" + plan.getPrice()
                 + " coupon=" + (couponCode == null ? "" : couponCode));
