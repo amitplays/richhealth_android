@@ -13,4 +13,7 @@
         android:id="@+id/menu_logout"
         android:icon="@drawable/ic_logout"
         android:title="Log out" />
+    <item
+        android:id="@+id/menu_delete_account"
+        android:title="Delete account" />
 </menu>

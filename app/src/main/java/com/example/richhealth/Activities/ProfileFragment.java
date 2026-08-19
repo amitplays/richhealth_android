@@ -383,6 +383,56 @@ public class ProfileFragment extends Fragment {
         });
     }
 
+    /** Permanent in-app account deletion (Play requirement) — DELETE /api/user, then sign out. */
+    private void confirmDeleteAccount() {
+        DialogUtils.showConfirmDialog(requireContext(),
+                "Delete account?",
+                "This permanently deletes your account and all your health data. This can't be undone.",
+                "Delete", "Cancel", true,
+                () -> {
+                    Context context = getContext();
+                    if (context == null) return;
+                    TokenManager tokenManager = TokenManager.getInstance(context);
+                    final String token = tokenManager.getToken();
+                    if (token == null) { Utilities.toast(context, "Please log in again."); return; }
+                    String url = ApiConfig.BASE_URL + "/api/user";
+                    StringRequest request = new StringRequest(Request.Method.DELETE, url,
+                            response -> {
+                                if (!isAdded()) return;
+                                Utilities.toast(requireContext(), "Account deleted");
+                                performLocalLogout();
+                            },
+                            error -> {
+                                if (!isAdded()) return;
+                                Utilities.toast(requireContext(), "Couldn't delete account. Please try again.");
+                            }) {
+                        @Override public java.util.Map<String, String> getHeaders() throws AuthFailureError {
+                            java.util.Map<String, String> h = new java.util.HashMap<>();
+                            h.put("Authorization", "Bearer " + token);
+                            return h;
+                        }
+                    };
+                    Volley.newRequestQueue(context).add(request);
+                });
+    }
+
+    /** Clear session and return to login. Shared by logout and account deletion. */
+    private void performLocalLogout() {
+        if (userProfile != null) {
+            userProfile.setLoggedIn(false);
+            userProfile.setAuthToken(null);
+            dbHelper.updateUserProfile(userProfile);
+        }
+        Context context = getContext();
+        if (context != null) {
+            TokenManager.getInstance(context).logout();
+            Intent intent = new Intent(context, LoginActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+            requireActivity().finish();
+        }
+    }
+
     private void confirmLogout() {
         // App-styled confirmation (consistent with the rest of the app) instead of a native AlertDialog.
         DialogUtils.showConfirmDialog(requireContext(),
@@ -2554,6 +2604,9 @@ public class ProfileFragment extends Fragment {
                 return true;
             } else if (id == R.id.menu_logout) {
                 confirmLogout();
+                return true;
+            } else if (id == R.id.menu_delete_account) {
+                confirmDeleteAccount();
                 return true;
             }
             return false;
