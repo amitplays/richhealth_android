@@ -3843,17 +3843,22 @@ public class AIFragment extends Fragment implements BackPressHandler {
                             return;
 
                         case SERVER_ERROR:
-                        case NETWORK_ERROR: {
-                            // Timeout / dropped connection / gateway 5xx: on a long agentic/search
-                            // turn the backend may have finished and SAVED the reply even though our
-                            // request died. Mirror iOS — poll for that saved reply before surfacing
-                            // an error; only show the error if recovery actually fails.
-                            String fallbackMsg = (parsed.type == ErrorHandler.ErrorType.SERVER_ERROR)
-                                    ? "Server is temporarily unavailable. Please try again."
-                                    : "No internet connection. Please check your network.";
-                            recoverReplyAfterTimeout(sessionId, fallbackMsg);
+                            // Gateway 5xx on a long agentic/search turn: the backend may have finished
+                            // and SAVED the reply. Poll for it before surfacing an error (mirror iOS).
+                            recoverReplyAfterTimeout(sessionId, "Server is temporarily unavailable. Please try again.");
                             return;
-                        }
+
+                        case NETWORK_ERROR:
+                            // Distinguish a real TIMEOUT (request timed out but the backend may have
+                            // saved the reply → recover) from genuine OFFLINE (NoConnectionError →
+                            // nothing was saved → show the error NOW, don't stall the user ~48s on a
+                            // recovery poll that can never win). Volley subclasses tell them apart.
+                            if (error instanceof com.android.volley.TimeoutError) {
+                                recoverReplyAfterTimeout(sessionId, "No internet connection. Please check your network.");
+                            } else {
+                                showErrorMessage("No internet connection. Please check your network.");
+                            }
+                            return;
 
                         default:
                             Log.e(TAG, "Error sending message: " + error.toString());
