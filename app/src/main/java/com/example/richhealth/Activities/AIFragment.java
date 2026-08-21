@@ -186,6 +186,8 @@ public class AIFragment extends Fragment implements BackPressHandler {
     private ChatMessage thinkingMsg = null;
     private ObjectAnimator iconAnimator;
     private Handler thinkingCycleHandler = null;
+    private Handler liveProgressHandler = null;   // live-status poll while thinking
+    private volatile boolean liveLabelActive = false;   // a live tool label is showing
     // dot animation state — drives both the . .. ... .... ..... cycle AND message advancement
     private int thinkingDotStep = 0;
     private int thinkingMsgIdx  = 0;
@@ -2542,6 +2544,13 @@ public class AIFragment extends Fragment implements BackPressHandler {
                 if (!isAdded() || thinkingPosition < 0 || thinkingMsg == null
                         || thinkingBaseMessages == null) return;
 
+                // Live status owns the bubble text while a tool is running — don't overwrite
+                // it with the generic "Thinking…" cycle; just keep the loop alive.
+                if (liveLabelActive) {
+                    if (thinkingCycleHandler != null) thinkingCycleHandler.postDelayed(this, DOT_INTERVAL_MS);
+                    return;
+                }
+
                 // Dots cycle every step; the message escalates to the next (more
                 // patient) line every ~10s, then holds on the last one.
                 thinkingDotStep = (thinkingDotStep + 1) % DOT_STATES.length;
@@ -2571,6 +2580,8 @@ public class AIFragment extends Fragment implements BackPressHandler {
             }
         };
         thinkingCycleHandler.postDelayed(ticker, DOT_INTERVAL_MS);
+
+        startLiveProgressPoll(sessionId);   // show real tools as they run
     }
 
     /**
@@ -2607,8 +2618,83 @@ public class AIFragment extends Fragment implements BackPressHandler {
         return false;
     }
 
+    // ── Live status: poll GET /live while the thinking bubble is up and show each tool
+    // as it runs (reuses the thinking bubble; the generic cycle pauses via liveLabelActive).
+    private void startLiveProgressPoll(final String pollSessionId) {
+        stopLiveProgressPoll();
+        liveLabelActive = false;
+        liveProgressHandler = new Handler();
+        scheduleLiveProgressPoll(pollSessionId);
+    }
+    private void scheduleLiveProgressPoll(final String pollSessionId) {
+        if (liveProgressHandler == null) return;
+        liveProgressHandler.postDelayed(() -> {
+            if (!isAdded() || thinkingPosition < 0 || liveProgressHandler == null) return;
+            Context ctx = (appContext != null) ? appContext : getContext();
+            if (ctx == null) return;
+            final String url = ApiConfig.BASE_URL + "/api/chat/sessions/" + pollSessionId + "/live";
+            final TokenManager tm = TokenManager.getInstance(ctx);
+            StringRequest req = new StringRequest(Request.Method.GET, url,
+                resp -> {
+                    if (!isAdded() || thinkingPosition < 0) return;
+                    try {
+                        JSONObject o = new JSONObject(resp);
+                        String label = null;
+                        JSONArray steps = o.optJSONArray("steps");
+                        if (o.optBoolean("generating", false) && steps != null) {
+                            for (int i = steps.length() - 1; i >= 0; i--) {
+                                JSONObject st = steps.optJSONObject(i);
+                                if (st != null && "tool_start".equals(st.optString("type"))) {
+                                    label = liveToolLabel(st.optString("tool", ""), st.optString("query", ""));
+                                    break;
+                                }
+                            }
+                        }
+                        if (label != null) {
+                            liveLabelActive = true;
+                            if (thinkingMsg != null) thinkingMsg.setMessage(label);
+                            RecyclerView.ViewHolder vh = chatRecycler.findViewHolderForAdapterPosition(thinkingPosition);
+                            if (vh != null) {
+                                TextView mv = vh.itemView.findViewById(R.id.message_text);
+                                if (mv != null) mv.setText(label);
+                            }
+                        }
+                        else {
+                            liveLabelActive = false;   // no tool running now → resume the generic "Thinking…" cycle
+                        }
+                    } catch (JSONException ignored) { }
+                    scheduleLiveProgressPoll(pollSessionId);
+                },
+                err -> { if (isAdded()) scheduleLiveProgressPoll(pollSessionId); }) {
+                @Override public Map<String, String> getHeaders() {
+                    Map<String, String> h = new HashMap<>();
+                    h.put("Authorization", "Bearer " + tm.getToken());
+                    return h;
+                }
+            };
+            Volley.newRequestQueue(ctx).add(req);
+        }, 1500);
+    }
+    private void stopLiveProgressPoll() {
+        if (liveProgressHandler != null) { liveProgressHandler.removeCallbacksAndMessages(null); liveProgressHandler = null; }
+        liveLabelActive = false;
+    }
+    private String liveToolLabel(String tool, String q) {
+        String suffix = (q == null || q.isEmpty()) ? "" : ": " + q;
+        switch (tool) {
+            case "search_publications":  return "Searching research" + suffix;
+            case "web_search":           return "Searching the web" + suffix;
+            case "drug_info":            return "Checking drug info" + suffix;
+            case "clinical_trials":      return "Checking clinical trials" + suffix;
+            case "fetch_health_records": return "Checking your " + ((q == null || q.isEmpty()) ? "records" : q);
+            case "log_health_record":    return "Preparing to log " + ((q == null || q.isEmpty()) ? "health data" : q);
+            default:                     return "Working\u2026";
+        }
+    }
+
     // Stop the dot/message cycle and remove the thinking bubble
     private void hideThinkingAnimation() {
+        stopLiveProgressPoll();
         if (thinkingCycleHandler != null) {
             thinkingCycleHandler.removeCallbacksAndMessages(null);
             thinkingCycleHandler = null;
@@ -4299,6 +4385,7 @@ public class AIFragment extends Fragment implements BackPressHandler {
     public void onDestroy() {
         super.onDestroy();
         stopPillAutoScroll();
+        stopLiveProgressPoll();
         stopWelcomeLogoSpin();
         cancelReplyRecoveryPoll();
         if (iconAnimator != null) { iconAnimator.cancel(); iconAnimator = null; }
