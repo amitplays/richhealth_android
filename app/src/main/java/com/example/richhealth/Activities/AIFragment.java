@@ -279,6 +279,10 @@ public class AIFragment extends Fragment implements BackPressHandler {
     // startReplyRecoveryPoll(); cancelled on new sends, new chats, and destroy.
     private Handler replyPollHandler;
     private int replyPollAttempts;
+    private Handler timeoutPollHandler;   // dedicated to inline post-timeout recovery, kept SEPARATE
+    private int timeoutPollAttempts;      // from the reopen-recovery poll so the two never collide
+    private RequestQueue sharedQueue;     // ONE Volley queue for this fragment (was created per-request,
+                                          // ~40/turn during live polling); stopped in onDestroy
     private static final int REPLY_POLL_MAX_ATTEMPTS = 12;   // ~48s of coverage
     private static final int REPLY_POLL_INTERVAL_MS = 4000;
 
@@ -1255,7 +1259,7 @@ public class AIFragment extends Fragment implements BackPressHandler {
         };
 
         request.setRetryPolicy(new com.android.volley.DefaultRetryPolicy(5000, 0, 1f));
-        Volley.newRequestQueue(context).add(request);
+        getSharedQueue(context).add(request);
     }
 
     private void updateUsageBar(int used, int limit) {
@@ -1573,7 +1577,7 @@ public class AIFragment extends Fragment implements BackPressHandler {
             }
         };
 
-        RequestQueue queue = Volley.newRequestQueue(context);
+        RequestQueue queue = getSharedQueue(context);
         queue.add(request);
     }
 
@@ -1713,7 +1717,7 @@ public class AIFragment extends Fragment implements BackPressHandler {
         };
 
         request.setRetryPolicy(new com.android.volley.DefaultRetryPolicy(10000, 0, 1f));
-        Volley.newRequestQueue(context).add(request);
+        getSharedQueue(context).add(request);
     }
 
     private void fetchNonUserDependents(String token) {
@@ -1770,7 +1774,7 @@ public class AIFragment extends Fragment implements BackPressHandler {
         };
 
         request.setRetryPolicy(new com.android.volley.DefaultRetryPolicy(10000, 0, 1f));
-        Volley.newRequestQueue(context).add(request);
+        getSharedQueue(context).add(request);
     }
 
     /**
@@ -2162,7 +2166,7 @@ public class AIFragment extends Fragment implements BackPressHandler {
             }
         };
         request.setRetryPolicy(new com.android.volley.DefaultRetryPolicy(15000, 1, 1f));
-        Volley.newRequestQueue(ctx).add(request);
+        getSharedQueue(ctx).add(request);
     }
 
     /**
@@ -2233,7 +2237,7 @@ public class AIFragment extends Fragment implements BackPressHandler {
             }
         };
         request.setRetryPolicy(new com.android.volley.DefaultRetryPolicy(15000, 1, 1f));
-        Volley.newRequestQueue(ctx).add(request);
+        getSharedQueue(ctx).add(request);
     }
 
     /**
@@ -2470,7 +2474,7 @@ public class AIFragment extends Fragment implements BackPressHandler {
             }
         };
 
-        RequestQueue queue = Volley.newRequestQueue(context);
+        RequestQueue queue = getSharedQueue(context);
         queue.add(request);
     }
 
@@ -2678,7 +2682,7 @@ public class AIFragment extends Fragment implements BackPressHandler {
                     return h;
                 }
             };
-            Volley.newRequestQueue(ctx).add(req);
+            getSharedQueue(ctx).add(req);
         }, 1500);
     }
     private void stopLiveProgressPoll() {
@@ -2771,7 +2775,7 @@ public class AIFragment extends Fragment implements BackPressHandler {
             }
         };
 
-        RequestQueue queue = Volley.newRequestQueue(context);
+        RequestQueue queue = getSharedQueue(context);
         queue.add(request);
     }
 
@@ -2829,7 +2833,7 @@ public class AIFragment extends Fragment implements BackPressHandler {
             }
         };
 
-        RequestQueue queue = Volley.newRequestQueue(context);
+        RequestQueue queue = getSharedQueue(context);
         queue.add(request);
     }
 
@@ -2928,7 +2932,7 @@ public class AIFragment extends Fragment implements BackPressHandler {
             }
         };
 
-        RequestQueue queue = Volley.newRequestQueue(context);
+        RequestQueue queue = getSharedQueue(context);
         queue.add(request);
     }
 
@@ -3049,7 +3053,7 @@ public class AIFragment extends Fragment implements BackPressHandler {
                 return headers;
             }
         };
-        Volley.newRequestQueue(context).add(request);
+        getSharedQueue(context).add(request);
     }
 
     private void cancelReplyRecoveryPoll() {
@@ -3071,23 +3075,23 @@ public class AIFragment extends Fragment implements BackPressHandler {
             showErrorMessage(fallbackMsg);
             return;
         }
-        cancelReplyRecoveryPoll();          // clear any stale poll first
+        cancelTimeoutRecovery();            // clear any stale timeout poll first
         showThinkingAnimation();            // keep the user waiting instead of flashing an error
         sendButton.setEnabled(false);
         messageInput.setEnabled(false);
-        replyPollAttempts = 0;
-        replyPollHandler = new Handler();
+        timeoutPollAttempts = 0;
+        timeoutPollHandler = new Handler();
         scheduleTimeoutRecovery(pollSessionId, fallbackMsg);
     }
 
     private void scheduleTimeoutRecovery(final String pollSessionId, final String fallbackMsg) {
-        if (replyPollHandler == null) return;
-        replyPollHandler.postDelayed(() -> {
-            if (!isAdded() || replyPollHandler == null) return;
+        if (timeoutPollHandler == null) return;
+        timeoutPollHandler.postDelayed(() -> {
+            if (!isAdded() || timeoutPollHandler == null) return;
             // User opened another chat / new chat — abandon quietly (that session drives its own reply).
-            if (sessionId == null || !sessionId.equals(pollSessionId)) { cancelReplyRecoveryPoll(); return; }
-            if (++replyPollAttempts > REPLY_POLL_MAX_ATTEMPTS) {
-                cancelReplyRecoveryPoll();
+            if (sessionId == null || !sessionId.equals(pollSessionId)) { cancelTimeoutRecovery(); return; }
+            if (++timeoutPollAttempts > REPLY_POLL_MAX_ATTEMPTS) {
+                cancelTimeoutRecovery();
                 hideThinkingAnimation();
                 sendButton.setEnabled(true);
                 messageInput.setEnabled(true);
@@ -3106,13 +3110,13 @@ public class AIFragment extends Fragment implements BackPressHandler {
         StringRequest request = new StringRequest(Request.Method.GET, url,
                 response -> {
                     if (!isAdded()) return;
-                    if (sessionId == null || !sessionId.equals(pollSessionId)) { cancelReplyRecoveryPoll(); return; }
+                    if (sessionId == null || !sessionId.equals(pollSessionId)) { cancelTimeoutRecovery(); return; }
                     try {
                         JSONArray arr = new JSONArray(response);
                         boolean replyArrived = arr.length() > 0
                                 && arr.getJSONObject(arr.length() - 1).optBoolean("isFromAI", false);
                         if (replyArrived) {
-                            cancelReplyRecoveryPoll();
+                            cancelTimeoutRecovery();
                             hideThinkingAnimation();      // remove our thinking bubble BEFORE re-rendering
                             renderSessionMessages(arr, pollSessionId);
                             scrollToBottom();
@@ -3133,7 +3137,26 @@ public class AIFragment extends Fragment implements BackPressHandler {
                 return headers;
             }
         };
-        Volley.newRequestQueue(context).add(request);
+        getSharedQueue(context).add(request);
+    }
+
+    private void cancelTimeoutRecovery() {
+        if (timeoutPollHandler != null) {
+            timeoutPollHandler.removeCallbacksAndMessages(null);
+            timeoutPollHandler = null;
+        }
+    }
+
+    // One long-lived Volley queue for the whole fragment. Creating a queue per request (the old
+    // pattern) spun up a disk cache + 4 dispatcher threads every ~1.5s during live polling. Built
+    // on the application context so it never leaks the fragment/activity; stopped in onDestroy.
+    private RequestQueue getSharedQueue(Context c) {
+        if (sharedQueue == null) {
+            Context app = (c != null && c.getApplicationContext() != null) ? c.getApplicationContext()
+                        : (appContext != null ? appContext : c);
+            sharedQueue = Volley.newRequestQueue(app);
+        }
+        return sharedQueue;
     }
 
     private void setupSavedChatsPanel() {
@@ -3890,7 +3913,7 @@ public class AIFragment extends Fragment implements BackPressHandler {
                 150000, 0, 1f
         ));
 
-        RequestQueue queue = Volley.newRequestQueue(context);
+        RequestQueue queue = getSharedQueue(context);
         queue.add(request);
     }
 
@@ -4205,7 +4228,7 @@ public class AIFragment extends Fragment implements BackPressHandler {
                 return headers;
             }
         };
-        Volley.newRequestQueue(context).add(request);
+        getSharedQueue(context).add(request);
     }
 
     /** Parse a card's dateTime (ISO-UTC or yyyy-MM-dd) to a Date; now when blank/invalid. */
@@ -4353,7 +4376,7 @@ public class AIFragment extends Fragment implements BackPressHandler {
                 return headers;
             }
         };
-        Volley.newRequestQueue(context).add(request);
+        getSharedQueue(context).add(request);
     }
 
     private void showErrorMessage(String errorMessage) {
@@ -4406,7 +4429,7 @@ public class AIFragment extends Fragment implements BackPressHandler {
             }
         };
 
-        RequestQueue queue = Volley.newRequestQueue(context);
+        RequestQueue queue = getSharedQueue(context);
         queue.add(request);
     }
 
@@ -4441,7 +4464,7 @@ public class AIFragment extends Fragment implements BackPressHandler {
             }
         };
 
-        RequestQueue queue = Volley.newRequestQueue(context);
+        RequestQueue queue = getSharedQueue(context);
         queue.add(request);
     }
 
@@ -4483,6 +4506,8 @@ public class AIFragment extends Fragment implements BackPressHandler {
         stopLiveProgressPoll();
         stopWelcomeLogoSpin();
         cancelReplyRecoveryPoll();
+        cancelTimeoutRecovery();
+        if (sharedQueue != null) { sharedQueue.stop(); sharedQueue = null; }
         if (iconAnimator != null) { iconAnimator.cancel(); iconAnimator = null; }
         if (thinkingCycleHandler != null) { thinkingCycleHandler.removeCallbacksAndMessages(null); thinkingCycleHandler = null; }
     }
