@@ -3053,6 +3053,83 @@ public class AIFragment extends Fragment implements BackPressHandler {
         }
     }
 
+    // ---- Inline reply recovery after a send timeout -------------------------------------------
+    // Self-contained on purpose: it does NOT reuse the reopen-recovery poll above (which is gated
+    // on lastMessageAwaitingReply and shows no error), so that proven path stays untouched. Here we
+    // KNOW we just sent, we keep the thinking bubble up while polling, and we surface the error only
+    // if the reply never lands. Reuses replyPollHandler/attempts + constants so onDestroy and new
+    // sends (cancelReplyRecoveryPoll) still stop it.
+    private void recoverReplyAfterTimeout(final String pollSessionId, final String fallbackMsg) {
+        if (!isAdded() || chatAdapter == null || pollSessionId == null
+                || sessionId == null || !sessionId.equals(pollSessionId)) {
+            showErrorMessage(fallbackMsg);
+            return;
+        }
+        cancelReplyRecoveryPoll();          // clear any stale poll first
+        showThinkingAnimation();            // keep the user waiting instead of flashing an error
+        sendButton.setEnabled(false);
+        messageInput.setEnabled(false);
+        replyPollAttempts = 0;
+        replyPollHandler = new Handler();
+        scheduleTimeoutRecovery(pollSessionId, fallbackMsg);
+    }
+
+    private void scheduleTimeoutRecovery(final String pollSessionId, final String fallbackMsg) {
+        if (replyPollHandler == null) return;
+        replyPollHandler.postDelayed(() -> {
+            if (!isAdded() || replyPollHandler == null) return;
+            // User opened another chat / new chat — abandon quietly (that session drives its own reply).
+            if (sessionId == null || !sessionId.equals(pollSessionId)) { cancelReplyRecoveryPoll(); return; }
+            if (++replyPollAttempts > REPLY_POLL_MAX_ATTEMPTS) {
+                cancelReplyRecoveryPoll();
+                hideThinkingAnimation();
+                sendButton.setEnabled(true);
+                messageInput.setEnabled(true);
+                showErrorMessage(fallbackMsg);   // recovery window elapsed — now surface the error
+                return;
+            }
+            pollSavedReplyOnce(pollSessionId, fallbackMsg);
+        }, REPLY_POLL_INTERVAL_MS);
+    }
+
+    private void pollSavedReplyOnce(final String pollSessionId, final String fallbackMsg) {
+        Context context = (appContext != null) ? appContext : getContext();
+        if (context == null) return;
+        final String url = ApiConfig.BASE_URL + "/api/chat/sessions/" + pollSessionId + "/messages";
+        final TokenManager tokenManager = TokenManager.getInstance(context);
+        StringRequest request = new StringRequest(Request.Method.GET, url,
+                response -> {
+                    if (!isAdded()) return;
+                    if (sessionId == null || !sessionId.equals(pollSessionId)) { cancelReplyRecoveryPoll(); return; }
+                    try {
+                        JSONArray arr = new JSONArray(response);
+                        boolean replyArrived = arr.length() > 0
+                                && arr.getJSONObject(arr.length() - 1).optBoolean("isFromAI", false);
+                        if (replyArrived) {
+                            cancelReplyRecoveryPoll();
+                            hideThinkingAnimation();      // remove our thinking bubble BEFORE re-rendering
+                            renderSessionMessages(arr, pollSessionId);
+                            scrollToBottom();
+                            sendButton.setEnabled(true);
+                            messageInput.setEnabled(true);
+                        } else {
+                            scheduleTimeoutRecovery(pollSessionId, fallbackMsg); // not saved yet — keep waiting
+                        }
+                    } catch (JSONException e) {
+                        scheduleTimeoutRecovery(pollSessionId, fallbackMsg);
+                    }
+                },
+                error -> { if (isAdded()) scheduleTimeoutRecovery(pollSessionId, fallbackMsg); }) {
+            @Override
+            public Map<String, String> getHeaders() throws AuthFailureError {
+                Map<String, String> headers = new HashMap<>();
+                headers.put("Authorization", "Bearer " + tokenManager.getToken());
+                return headers;
+            }
+        };
+        Volley.newRequestQueue(context).add(request);
+    }
+
     private void setupSavedChatsPanel() {
         savedChatsPanel = new Dialog(requireContext());
         savedChatsPanel.requestWindowFeature(Window.FEATURE_NO_TITLE);
@@ -3760,12 +3837,17 @@ public class AIFragment extends Fragment implements BackPressHandler {
                             return;
 
                         case SERVER_ERROR:
-                            showErrorMessage("Server is temporarily unavailable. Please try again.");
+                        case NETWORK_ERROR: {
+                            // Timeout / dropped connection / gateway 5xx: on a long agentic/search
+                            // turn the backend may have finished and SAVED the reply even though our
+                            // request died. Mirror iOS — poll for that saved reply before surfacing
+                            // an error; only show the error if recovery actually fails.
+                            String fallbackMsg = (parsed.type == ErrorHandler.ErrorType.SERVER_ERROR)
+                                    ? "Server is temporarily unavailable. Please try again."
+                                    : "No internet connection. Please check your network.";
+                            recoverReplyAfterTimeout(sessionId, fallbackMsg);
                             return;
-
-                        case NETWORK_ERROR:
-                            showErrorMessage("No internet connection. Please check your network.");
-                            return;
+                        }
 
                         default:
                             Log.e(TAG, "Error sending message: " + error.toString());
@@ -3791,8 +3873,10 @@ public class AIFragment extends Fragment implements BackPressHandler {
             }
         };
 
+        // 150s (matches iOS's long chat client): agentic/search turns routinely exceed the old
+        // 60s and were cut off while the backend was still finishing and would save the reply.
         request.setRetryPolicy(new com.android.volley.DefaultRetryPolicy(
-                60000, 0, 1f
+                150000, 0, 1f
         ));
 
         RequestQueue queue = Volley.newRequestQueue(context);
