@@ -2639,9 +2639,13 @@ public class AIFragment extends Fragment implements BackPressHandler {
                     if (!isAdded() || thinkingPosition < 0) return;
                     try {
                         JSONObject o = new JSONObject(resp);
+                        boolean generating = o.optBoolean("generating", false);
+                        // Precursor's status headline ("Searching research · saving your note") — emitted
+                        // before any tool runs and covers non-tool actions (memory, synthesis) too.
+                        String status = generating ? o.optString("status", "") : "";
                         String label = null;
                         JSONArray steps = o.optJSONArray("steps");
-                        if (o.optBoolean("generating", false) && steps != null) {
+                        if (generating && steps != null) {
                             for (int i = steps.length() - 1; i >= 0; i--) {
                                 JSONObject st = steps.optJSONObject(i);
                                 if (st != null && "tool_start".equals(st.optString("type"))) {
@@ -2650,17 +2654,19 @@ public class AIFragment extends Fragment implements BackPressHandler {
                                 }
                             }
                         }
-                        if (label != null) {
+                        // Prefer the precursor status; fall back to the specific tool label; else generic cycle.
+                        String show = (status != null && !status.trim().isEmpty()) ? status.trim() : label;
+                        if (show != null) {
                             liveLabelActive = true;
-                            if (thinkingMsg != null) thinkingMsg.setMessage(label);
+                            if (thinkingMsg != null) thinkingMsg.setMessage(show);
                             RecyclerView.ViewHolder vh = chatRecycler.findViewHolderForAdapterPosition(thinkingPosition);
                             if (vh != null) {
                                 TextView mv = vh.itemView.findViewById(R.id.message_text);
-                                if (mv != null) mv.setText(label);
+                                if (mv != null) mv.setText(show);
                             }
                         }
                         else {
-                            liveLabelActive = false;   // no tool running now → resume the generic "Thinking…" cycle
+                            liveLabelActive = false;   // nothing to show now → resume the generic "Thinking…" cycle
                         }
                     } catch (JSONException ignored) { }
                     scheduleLiveProgressPoll(pollSessionId);
