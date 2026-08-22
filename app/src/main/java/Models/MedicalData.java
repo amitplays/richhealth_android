@@ -34,6 +34,10 @@ public class MedicalData {
     public long getUserId() { return userId; }
     public void setUserId(long userId) { this.userId = userId; }
 
+    private String dependentId;   // null = self; set to file this record under a dependent
+    public String getDependentId() { return dependentId; }
+    public void setDependentId(String dependentId) { this.dependentId = dependentId; }
+
     public String getServerId() { return serverId; }
     public void setServerId(String serverId) { this.serverId = serverId; }
 

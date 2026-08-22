@@ -78,6 +78,7 @@ public class MedicalDataApiService {
             sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
             requestBody.put("dateTime", sdf.format(symptom.getRecordedAt()));
             requestBody.put("shareWithFamily", symptom.isShareWithFamily());
+            if (symptom.getDependentId() != null) requestBody.put("dependentId", symptom.getDependentId());
 
         } catch (JSONException e) {
             Log.e(TAG, "Error creating request body", e);
@@ -431,6 +432,7 @@ public class MedicalDataApiService {
             requestBody.put("painLevel", periodLog.getPainLevel());
             requestBody.put("notes", periodLog.getNotes());
             requestBody.put("shareWithFamily", periodLog.isShareWithFamily());
+            if (periodLog.getDependentId() != null) requestBody.put("dependentId", periodLog.getDependentId());
         } catch (JSONException e) {
             Log.e(TAG, "Error creating request body", e);
             listener.onError("Error preparing request: " + e.getMessage());

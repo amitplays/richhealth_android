@@ -4260,6 +4260,7 @@ public class AIFragment extends Fragment implements BackPressHandler {
         symptom.setDescription(card.getDescription());
         symptom.setRecordedAt(parseCardDate(card.getDateTime()));
         symptom.setShareWithFamily(false);
+        symptom.setDependentId(selectedDependentId);
         if (userProfile != null) symptom.setUserId(userProfile.getId());
 
         medicalDataApi().addSymptom(symptom, new MedicalDataApiService.OnMedicalDataListener() {
@@ -4290,6 +4291,7 @@ public class AIFragment extends Fragment implements BackPressHandler {
         log.setPainLevel(card.getPainLevel());
         log.setNotes(card.getNotes());
         log.setShareWithFamily(false);
+        log.setDependentId(selectedDependentId);
 
         medicalDataApi().addPeriodLog(log, new MedicalDataApiService.OnMedicalDataListener() {
             @Override public void onSuccess(JSONObject response) {
@@ -4326,6 +4328,7 @@ public class AIFragment extends Fragment implements BackPressHandler {
             sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
             body.put("dateTime", sdf.format(parseCardDate(card.getDateTime())));
             body.put("shareWithFamily", false);
+            if (selectedDependentId != null) body.put("dependentId", selectedDependentId);
         } catch (JSONException e) { cb.onResult(false); return; }
 
         postJson(url, body, "Measurement logged", "Couldn't save measurement", cb);
@@ -4349,6 +4352,7 @@ public class AIFragment extends Fragment implements BackPressHandler {
             body.put("startDate", msdf.format(parseCardDate(card.getDateTime())));
             if (card.getPurpose() != null && !card.getPurpose().isEmpty()) body.put("purpose", card.getPurpose());
             body.put("shareWithFamily", false);
+            if (selectedDependentId != null) body.put("dependentId", selectedDependentId);
         } catch (JSONException e) { cb.onResult(false); return; }
 
         postJson(url, body, "Medication added", "Couldn't save medication", cb);
