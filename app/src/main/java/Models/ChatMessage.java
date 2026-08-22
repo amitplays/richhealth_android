@@ -75,7 +75,10 @@ public class ChatMessage {
                 switch (tool) {
                     case "search_publications":  line = "Searched research" + (q.isEmpty() ? "" : ": " + q); break;
                     case "web_search":           line = "Searched the web" + (q.isEmpty() ? "" : ": " + q); break;
+                    case "drug_info":            line = "Checked drug information" + (q.isEmpty() ? "" : ": " + q); break;
+                    case "clinical_trials":      line = "Checked clinical trials" + (q.isEmpty() ? "" : ": " + q); break;
                     case "fetch_health_records": line = "Checked your " + (q.isEmpty() ? "records" : q) + " log"; break;
+                    case "log_health_record":    line = "Preparing to log " + (q.isEmpty() ? "health data" : q); break;
                     default:                     line = "Used " + (tool.isEmpty() ? "a tool" : tool);
                 }
                 agentToolLines.add(line);
