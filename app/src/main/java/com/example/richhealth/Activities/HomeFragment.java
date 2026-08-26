@@ -83,6 +83,7 @@ import android.widget.SeekBar;
 
 import androidx.viewpager2.widget.ViewPager2;
 import Adapters.BriefingAdapter;
+import Adapters.MediaRailAdapter;
 import Adapters.PodcastAdapter;
 import Models.BriefingCard;
 import Api.AQIAPIService;
@@ -228,6 +229,10 @@ public class HomeFragment extends Fragment {
     private final Handler seekbarHandler = new Handler(Looper.getMainLooper());
     private boolean userIsSeeking = false;
 
+    // ── Media rails (Services redesign — Podcasts / News, iOS parity) ──
+    private View podcastsRailSection, newsRailSection;
+    private MediaRailAdapter podcastsRailAdapter, newsRailAdapter;
+
     // ── Wearable / fitness (Google Fit, pure Java — no Kotlin) ──
     private static final int REQ_GOOGLE_FIT = 8801;
     private com.google.android.gms.fitness.FitnessOptions fitnessOptions;
@@ -257,6 +262,7 @@ public class HomeFragment extends Fragment {
         fetchDailyDigest();      // Daily Advisory card (digest text, split from the Briefing carousel)
         fetchDietaryInsights();  // Dietary Insights card (eat / avoid)
         updateAqiCard();         // Air Quality card — seed from cached AQI immediately
+        setupMediaRails(view);   // Podcasts / News rails (Services redesign)
         // Request location permission
         fetchLocation();
         Utils.IconAnimator.animateSectionIcons(view);
@@ -639,11 +645,19 @@ public class HomeFragment extends Fragment {
     }
 
     private void refreshWatchConnectState(TextView pill) {
-        if (pill == null) return;
         Context ctx = getContext();
         boolean connected = ctx != null && ctx.getSharedPreferences(HOME_PREFS, Context.MODE_PRIVATE)
                 .getBoolean("watch_connected", false);
         // Standard semantic pill: SUCCESS when connected, NEUTRAL when off.
+        if (watchConnectCard != null) {
+            // Photo card: value + sub inside the glass stat pill (iOS parity).
+            watchConnectCard.setPill(
+                    connected ? Utils.StatusPill.Intent.SUCCESS : Utils.StatusPill.Intent.NEUTRAL,
+                    connected ? "Connected" : "Not connected");
+            watchConnectCard.setDate(connected ? "up to date" : "tap to connect");
+            return;
+        }
+        if (pill == null) return;
         Utils.StatusPill.apply(pill,
                 connected ? Utils.StatusPill.Intent.SUCCESS : Utils.StatusPill.Intent.NEUTRAL,
                 connected ? "Connected" : "Not connected");
@@ -2948,7 +2962,8 @@ public class HomeFragment extends Fragment {
                     // the meta line shows "Last check: X ago".
                     if (nutriStatusPill != null) {
                         if (nutriIsStale) {
-                            Utils.StatusPill.apply(nutriStatusPill, Utils.StatusPill.Intent.WARNING, "Update");
+                            if (nutriCheckCard != null) nutriCheckCard.setPill(Utils.StatusPill.Intent.WARNING, "Update");
+                            else Utils.StatusPill.apply(nutriStatusPill, Utils.StatusPill.Intent.WARNING, "Update");
                             nutriStatusPill.setOnClickListener(v -> showStaleDataInfoDialog("NutriCheck"));
                         } else {
                             nutriStatusPill.setVisibility(View.GONE);
@@ -4317,6 +4332,9 @@ public class HomeFragment extends Fragment {
     }
 
     private void setCheckInPill(Utils.StatusPill.Intent intent, String text) {
+        // Route through the card so the photo variant can restyle the pill
+        // (glass container + coloured text — iOS stat-pill parity).
+        if (checkInHomeCard != null) { checkInHomeCard.setPill(intent, text); return; }
         if (checkInStatusPill == null) return;
         // Clear any inline tint left over from older code paths so the drawable
         // shows its own color (StatusPill.apply sets the background drawable).
@@ -4837,6 +4855,83 @@ public class HomeFragment extends Fragment {
             planPillIcon.setColorFilter(0xFF008b8b);
             planPill.setBackgroundResource(R.drawable.bg_pill_plan_free);
         }
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // Media rails (Services redesign) — Podcasts / News horizontal previews,
+    // Android twin of iOS MediaRowSection. Data: GET /api/feed (same pool the
+    // Feed tab uses). Tapping a card or "See All" opens the Feed tab.
+    // ══════════════════════════════════════════════════════════════════════
+
+    private void setupMediaRails(View view) {
+        podcastsRailSection = view.findViewById(R.id.podcasts_rail_section);
+        newsRailSection = view.findViewById(R.id.news_rail_section);
+        RecyclerView podcastsRail = view.findViewById(R.id.podcasts_rail);
+        RecyclerView newsRail = view.findViewById(R.id.news_rail);
+        if (podcastsRail == null || newsRail == null) return;
+
+        podcastsRailAdapter = new MediaRailAdapter(item -> openFeedTab());
+        newsRailAdapter = new MediaRailAdapter(item -> openFeedTab());
+        podcastsRail.setLayoutManager(new LinearLayoutManager(
+                requireContext(), LinearLayoutManager.HORIZONTAL, false));
+        newsRail.setLayoutManager(new LinearLayoutManager(
+                requireContext(), LinearLayoutManager.HORIZONTAL, false));
+        podcastsRail.setAdapter(podcastsRailAdapter);
+        newsRail.setAdapter(newsRailAdapter);
+
+        View podSeeAll = view.findViewById(R.id.podcasts_rail_see_all);
+        if (podSeeAll != null) podSeeAll.setOnClickListener(v -> openFeedTab());
+        View newsSeeAll = view.findViewById(R.id.news_rail_see_all);
+        if (newsSeeAll != null) newsSeeAll.setOnClickListener(v -> openFeedTab());
+
+        fetchMediaRails();
+    }
+
+    /** Load the shared feed pool and split it into the Podcasts / News rails. */
+    private void fetchMediaRails() {
+        Context context = getContext();
+        if (context == null) return;
+        String token = TokenManager.getInstance(context).getToken();
+        if (token == null) return;
+        String url = ApiConfig.BASE_URL + "/api/feed?limit=20";
+
+        JsonObjectRequest request = new JsonObjectRequest(Request.Method.GET, url, null,
+                response -> {
+                    if (!isAdded()) return;
+                    JSONArray items = response.optJSONArray("items");
+                    if (items == null) return;
+                    java.util.List<MediaRailAdapter.Item> podcasts = new java.util.ArrayList<>();
+                    java.util.List<MediaRailAdapter.Item> news = new java.util.ArrayList<>();
+                    for (int i = 0; i < items.length(); i++) {
+                        JSONObject o = items.optJSONObject(i);
+                        if (o == null) continue;
+                        MediaRailAdapter.Item item = new MediaRailAdapter.Item();
+                        item.title = o.optString("title", "");
+                        item.reason = o.optString("reason", "");
+                        item.imageUrl = o.optString("imageUrl", "");
+                        item.isProOnly = o.optBoolean("isProOnly", false);
+                        item.isPodcast = "podcast".equals(o.optString("type", ""));
+                        if (item.title.isEmpty()) continue;
+                        (item.isPodcast ? podcasts : news).add(item);
+                    }
+                    if (podcastsRailAdapter != null) podcastsRailAdapter.setItems(podcasts);
+                    if (newsRailAdapter != null) newsRailAdapter.setItems(news);
+                    if (podcastsRailSection != null)
+                        podcastsRailSection.setVisibility(podcasts.isEmpty() ? View.GONE : View.VISIBLE);
+                    if (newsRailSection != null)
+                        newsRailSection.setVisibility(news.isEmpty() ? View.GONE : View.VISIBLE);
+                },
+                error -> { /* rails stay hidden on failure — the Feed tab still works */ }) {
+            @Override
+            public java.util.Map<String, String> getHeaders() {
+                java.util.Map<String, String> headers = new java.util.HashMap<>();
+                headers.put("Authorization", "Bearer " + token);
+                return headers;
+            }
+        };
+        request.setRetryPolicy(new com.android.volley.DefaultRetryPolicy(
+                10000, 1, com.android.volley.DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
+        com.android.volley.toolbox.Volley.newRequestQueue(context).add(request);
     }
 
     /**

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Feed media card image placeholder: soft teal→blue diagonal (iOS parity). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <gradient
+        android:angle="315"
+        android:startColor="#66008B8B"
+        android:endColor="#480000FF"
+        android:type="linear" />
+</shape>

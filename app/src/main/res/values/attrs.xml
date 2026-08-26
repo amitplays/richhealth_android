@@ -12,5 +12,10 @@
             <attr name="serviceIcon" format="reference"/>
             <attr name="serviceTitle" format="string"/>
             <attr name="serviceSubtitle" format="string"/>
+            <!-- Photo variant (Services redesign): bundled photo bg + teal→black scrim,
+                 floating glass stat pill. serviceHero bumps min height / title size. -->
+            <attr name="servicePhoto" format="reference"/>
+            <attr name="serviceHero" format="boolean"/>
+            <attr name="serviceStatLabel" format="string"/>
         </declare-styleable>
     </resources>

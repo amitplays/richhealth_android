@@ -45,6 +45,8 @@ public class ServiceCardView extends MaterialCardView {
     private TextView pillView;
     private TextView metaView;
     private ImageView chevronView;
+    /** Photo variant (Services redesign): photo bg + scrim + glass stat pill. */
+    private boolean photoMode = false;
 
     public ServiceCardView(@NonNull Context context) {
         super(context);
@@ -70,7 +72,34 @@ public class ServiceCardView extends MaterialCardView {
         setFocusable(true);
         setForeground(resolveSelectableForeground());
 
-        LayoutInflater.from(context).inflate(R.layout.view_service_card, this, true);
+        // Photo variant? Peek at the attrs BEFORE inflating so the right layout loads.
+        int photoRes = 0; boolean hero = false; CharSequence statLabel = null;
+        if (attrs != null) {
+            TypedArray pa = context.obtainStyledAttributes(attrs, R.styleable.ServiceCardView);
+            photoRes = pa.getResourceId(R.styleable.ServiceCardView_servicePhoto, 0);
+            hero = pa.getBoolean(R.styleable.ServiceCardView_serviceHero, false);
+            statLabel = pa.getText(R.styleable.ServiceCardView_serviceStatLabel);
+            pa.recycle();
+        }
+        photoMode = photoRes != 0;
+
+        LayoutInflater.from(context).inflate(
+                photoMode ? R.layout.view_service_card_photo : R.layout.view_service_card,
+                this, true);
+
+        if (photoMode) {
+            ImageView photoView = findViewById(R.id.service_card_photo);
+            if (photoView != null) photoView.setImageResource(photoRes);
+            View root = findViewById(R.id.service_card_photo_root);
+            if (root != null) root.setMinimumHeight((int) dp(hero ? 400 : 132));
+            TextView labelView = findViewById(R.id.service_card_stat_label);
+            if (labelView != null) {
+                if (statLabel != null && statLabel.length() > 0) labelView.setText(statLabel);
+                else labelView.setVisibility(View.GONE);
+            }
+            // Card ground behind the photo edges stays black (photo + scrim carry the look).
+            setCardBackgroundColor(0xFF000000);
+        }
 
         iconView = findViewById(R.id.service_card_icon);
         titleView = findViewById(R.id.service_card_title);
@@ -87,6 +116,10 @@ public class ServiceCardView extends MaterialCardView {
             if (title != null) setTitle(title);
             CharSequence subtitle = a.getText(R.styleable.ServiceCardView_serviceSubtitle);
             if (subtitle != null) setSubtitle(subtitle);
+            boolean hero2 = a.getBoolean(R.styleable.ServiceCardView_serviceHero, false);
+            if (photoMode && !hero2 && titleView != null) {
+                titleView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 19f);
+            }
             a.recycle();
         }
     }
@@ -110,6 +143,15 @@ public class ServiceCardView extends MaterialCardView {
         if (pillView == null) return;
         pillView.setBackgroundTintList(null);
         StatusPill.apply(pillView, intent, text);
+        if (photoMode) {
+            // Glass stat pill: the container carries the background — the value line is
+            // plain coloured text (iOS parity), so drop the pill chip chrome.
+            pillView.setBackground(null);
+            pillView.setPadding(0, 0, 0, 0);
+            int c = StatusPill.backgroundColor(getContext(), intent);
+            // NEUTRAL's grey chip colour is illegible as text on the scrim → white.
+            pillView.setTextColor(intent == StatusPill.Intent.NEUTRAL ? 0xFFFFFFFF : c);
+        }
     }
 
     public void hidePill() {

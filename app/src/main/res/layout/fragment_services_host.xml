@@ -6,11 +6,14 @@
     android:orientation="vertical"
     android:background="@color/black">
 
-    <!-- Feed / Tools pill tabs (same language as Profile) -->
+    <!-- Feed / Tools pill tabs — HIDDEN (Services redesign: one scroll, iOS parity).
+         The Feed tab is still reachable via the rails' "See All" (showFeedTab());
+         back returns to Tools. Code + ids kept. -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
+        android:visibility="gone"
         android:background="@drawable/pill_tab_container_bg"
         android:padding="4dp"
         android:layout_marginHorizontal="16dp"

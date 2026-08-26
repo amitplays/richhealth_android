@@ -18,11 +18,24 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <!-- ══════ HEALTH ADVISORY — full-width content card ══════ -->
+            <!-- ══════ Page title (iOS large-title parity) ══════ -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Services"
+                android:textColor="@color/white"
+                android:textSize="34sp"
+                android:textStyle="bold"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="16dp" />
+
+            <!-- ══════ HEALTH ADVISORY — HIDDEN (Services redesign: merged into the
+                 Check-In hero, same as iOS). Code + bindings kept. ══════ -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/daily_digest_card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:visibility="gone"
                 android:layout_marginBottom="12dp"
                 app:cardCornerRadius="18dp"
                 app:cardElevation="0dp"
@@ -193,52 +206,186 @@
                  meta date, status-coloured chevron) is applied from HomeFragment.
                  ══════════════════════════════════════════════════════════════ -->
 
-            <!-- ══════ Health Insights ══════ -->
+            <!-- ══════════════════════════════════════════════════════════════
+                 SERVICES REDESIGN (iOS parity, 2026-08): order = Check-In hero,
+                 Devices → Health Connect (photo), Nutrition → NutriCheck (photo),
+                 Podcasts rail, News rail, Workouts row, My Doctor row.
+                 Health Insights / Advisory / AQI / Feed cards are HIDDEN (gone),
+                 ids + Java bindings kept. ══════════════════════════════════ -->
+
+            <!-- ══════ Health Check-In — HERO (photo + scrim + glass stat pill) ══════ -->
+            <Utils.ServiceCardView
+                android:id="@+id/checkin_home_card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                app:serviceIcon="@drawable/ic_heart_check"
+                app:serviceTitle="Health Check-In"
+                app:serviceSubtitle="Richie reads the whole record first, then spends its questions on the gaps that would actually move a prediction"
+                app:servicePhoto="@drawable/card_checkin_hero"
+                app:serviceHero="true"
+                app:serviceStatLabel="Status" />
+
+            <!-- ══════ Devices ══════ -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Devices"
+                android:textColor="@color/white"
+                android:textSize="26sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="12dp" />
+
+            <Utils.ServiceCardView
+                android:id="@+id/watch_connect_card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                app:serviceIcon="@drawable/ic_activity"
+                app:serviceTitle="Health Connect"
+                app:serviceSubtitle="Sync heart rate, steps &amp; more."
+                app:servicePhoto="@drawable/card_health_connect"
+                app:serviceStatLabel="Health Connect" />
+
+            <!-- ══════ Nutrition ══════ -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Nutrition"
+                android:textColor="@color/white"
+                android:textSize="26sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="12dp" />
+
+            <Utils.ServiceCardView
+                android:id="@+id/nutri_check_card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                app:serviceIcon="@drawable/ic_food"
+                app:serviceTitle="NutriCheck"
+                app:serviceSubtitle="See if a food fits your profile."
+                app:servicePhoto="@drawable/card_nutricheck"
+                app:serviceStatLabel="Last check" />
+
+            <!-- ══════ Podcasts rail ══════ -->
+            <LinearLayout
+                android:id="@+id/podcasts_rail_section"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone"
+                android:layout_marginBottom="24dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="12dp">
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Podcasts"
+                        android:textColor="@color/white"
+                        android:textSize="26sp"
+                        android:textStyle="bold" />
+                    <TextView
+                        android:id="@+id/podcasts_rail_see_all"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="See All"
+                        android:textColor="@color/rh_accent"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:padding="4dp" />
+                </LinearLayout>
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/podcasts_rail"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="-16dp"
+                    android:paddingHorizontal="16dp"
+                    android:clipToPadding="false"
+                    android:orientation="horizontal" />
+            </LinearLayout>
+
+            <!-- ══════ News rail ══════ -->
+            <LinearLayout
+                android:id="@+id/news_rail_section"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone"
+                android:layout_marginBottom="24dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="12dp">
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="News"
+                        android:textColor="@color/white"
+                        android:textSize="26sp"
+                        android:textStyle="bold" />
+                    <TextView
+                        android:id="@+id/news_rail_see_all"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="See All"
+                        android:textColor="@color/rh_accent"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:padding="4dp" />
+                </LinearLayout>
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/news_rail"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="-16dp"
+                    android:paddingHorizontal="16dp"
+                    android:clipToPadding="false"
+                    android:orientation="horizontal" />
+            </LinearLayout>
+
+            <!-- ══════ HIDDEN CARDS (redesign) — ids + Java bindings kept ══════ -->
+
+            <!-- Health Insights -->
             <Utils.ServiceCardView
                 android:id="@+id/health_analysis_card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:visibility="gone"
                 android:layout_marginBottom="12dp"
                 app:serviceIcon="@drawable/ic_stethoscope"
                 app:serviceTitle="Health Insights"
                 app:serviceSubtitle="AI analysis of your reports &amp; vitals" />
 
-            <!-- ══════ Connect a Device ══════ -->
-            <Utils.ServiceCardView
-                android:id="@+id/watch_connect_card"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                app:serviceIcon="@drawable/ic_activity"
-                app:serviceTitle="Connect a Device"
-                app:serviceSubtitle="Sync steps, heart rate &amp; sleep" />
-
-            <!-- ══════ Daily Check-In ══════ -->
-            <Utils.ServiceCardView
-                android:id="@+id/checkin_home_card"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                app:serviceIcon="@drawable/ic_heart_check"
-                app:serviceTitle="Daily Check-In"
-                app:serviceSubtitle="A quick daily wellness check" />
-
-            <!-- ══════ Daily Advisory (digest text, split from Briefing carousel) ══════ -->
+            <!-- Daily Advisory (digest text, split from Briefing carousel) -->
             <Utils.ServiceCardView
                 android:id="@+id/daily_advisory_card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:visibility="gone"
                 android:layout_marginBottom="12dp"
                 app:serviceIcon="@drawable/ic_heart_smile"
                 app:serviceTitle="Daily Advisory"
                 app:serviceSubtitle="Reading your latest data…" />
 
-            <!-- ══════ Air Quality ══════ -->
+            <!-- Air Quality -->
             <Utils.ServiceCardView
                 android:id="@+id/aqi_card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
+                android:visibility="gone"
                 app:serviceIcon="@drawable/ic_air"
                 app:serviceTitle="Air Quality"
                 app:serviceSubtitle="Local air quality index" />
@@ -254,32 +401,27 @@
                 app:serviceTitle="Dietary Insights"
                 app:serviceSubtitle="What foods to eat and avoid" />
 
-            <!-- ══════ NutriCheck ══════ -->
-            <Utils.ServiceCardView
-                android:id="@+id/nutri_check_card"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                app:serviceIcon="@drawable/ic_food"
-                app:serviceTitle="NutriCheck"
-                app:serviceSubtitle="See if a food fits your health" />
+            <!-- (NutriCheck moved up into the redesigned photo card.) -->
 
-            <!-- ══════ Health Feed (preview → Feed tab) ══════ -->
+            <!-- Health Feed (preview → Feed tab) — hidden: the Podcasts/News rails
+                 above are the redesign's feed entry points. -->
             <Utils.ServiceCardView
                 android:id="@+id/feed_card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:visibility="gone"
                 android:layout_marginBottom="24dp"
                 app:serviceIcon="@drawable/ic_feed"
                 app:serviceTitle="Health Feed"
                 app:serviceSubtitle="Latest health articles &amp; updates" />
 
-            <!-- ══════ HEALTH SERVICES ══════ -->
+            <!-- ══════ HEALTH SERVICES header — hidden (redesign) ══════ -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
+                android:visibility="gone"
                 android:layout_marginBottom="12dp">
 
                 <TextView
@@ -307,20 +449,96 @@
                     android:letterSpacing="0.14" />
             </LinearLayout>
 
+            <!-- ══════ FITNESS heading — hidden (redesign) ══════ -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:visibility="gone"
+                android:text="Fitness"
+                android:textColor="#666666"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:textAllCaps="true"
+                android:letterSpacing="0.14"
+                android:layout_marginBottom="12dp" />
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
+                android:orientation="vertical"
                 android:baselineAligned="false"
                 android:layout_marginBottom="24dp">
 
-                <!-- Find a Doctor -->
+                <!-- Workouts (launch row, iOS parity) -->
                 <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/doctor_connection_card"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_weight="1"
-                    android:layout_marginEnd="6dp"
+                    android:id="@+id/start_workout_card"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="?android:attr/selectableItemBackground"
+                    app:cardCornerRadius="18dp"
+                    app:cardElevation="0dp"
+                    app:cardBackgroundColor="#0CFFFFFF">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingHorizontal="18dp"
+                        android:paddingVertical="16dp">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_directions_run"
+                            app:tint="#008b8b"
+                            android:layout_marginEnd="14dp" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="Workouts"
+                                android:textColor="@color/white"
+                                android:textSize="16sp"
+                                android:textStyle="bold"
+                                android:maxLines="1"
+                                android:ellipsize="end" />
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="Track your training sessions"
+                                android:textColor="@color/rh_text_secondary"
+                                android:textSize="12sp"
+                                android:maxLines="1"
+                                android:ellipsize="end"
+                                android:layout_marginTop="2dp" />
+                        </LinearLayout>
+
+                        <ImageView
+                            android:layout_width="16dp"
+                            android:layout_height="16dp"
+                            android:src="@drawable/ic_arrow_forward_ios"
+                            app:tint="#008b8b"
+                            android:layout_marginStart="10dp"
+                            android:contentDescription="Open" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Exercises — hidden (redesign; browse lives inside Workouts flow) -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/browse_exercises_card"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:visibility="gone"
                     android:clickable="true"
                     android:focusable="true"
                     android:foreground="?android:attr/selectableItemBackground"
@@ -344,7 +562,7 @@
                             <ImageView
                                 android:layout_width="@dimen/icon_sm"
                                 android:layout_height="@dimen/icon_sm"
-                                android:src="@drawable/ic_medical_consultation"
+                                android:src="@drawable/ic_exercise"
                                 app:tint="#008b8b"
                                 android:layout_marginEnd="10dp" />
 
@@ -352,7 +570,7 @@
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
-                                android:text="Find a Doctor"
+                                android:text="Exercises"
                                 android:textColor="#008b8b"
                                 android:textSize="15sp"
                                 android:textStyle="bold"
@@ -363,12 +581,84 @@
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="Search and connect with doctors"
+                            android:text="Browse the exercise library"
                             android:textColor="#AEB2B8"
                             android:textSize="12sp"
                             android:maxLines="2"
                             android:ellipsize="end"
                             android:layout_marginTop="8dp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:baselineAligned="false"
+                android:layout_marginBottom="12dp">
+
+                <!-- My Doctor (launch row, iOS parity) -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/doctor_connection_card"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="?android:attr/selectableItemBackground"
+                    app:cardCornerRadius="18dp"
+                    app:cardElevation="0dp"
+                    app:cardBackgroundColor="#0CFFFFFF">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingHorizontal="18dp"
+                        android:paddingVertical="16dp">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_stethoscope"
+                            app:tint="#008b8b"
+                            android:layout_marginEnd="14dp" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="My Doctor"
+                                android:textColor="@color/white"
+                                android:textSize="16sp"
+                                android:textStyle="bold"
+                                android:maxLines="1"
+                                android:ellipsize="end" />
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="Find and connect your doctor"
+                                android:textColor="@color/rh_text_secondary"
+                                android:textSize="12sp"
+                                android:maxLines="1"
+                                android:ellipsize="end"
+                                android:layout_marginTop="2dp" />
+                        </LinearLayout>
+
+                        <ImageView
+                            android:layout_width="16dp"
+                            android:layout_height="16dp"
+                            android:src="@drawable/ic_arrow_forward_ios"
+                            app:tint="#008b8b"
+                            android:layout_marginStart="10dp"
+                            android:contentDescription="Open" />
 
                         <TextView
                             android:id="@+id/link_doctor_button"
@@ -378,13 +668,12 @@
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
-                <!-- Wellness Chat -->
+                <!-- Wellness Chat — hidden (redesign; not on the iOS Services page) -->
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/mental_health_card"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_weight="1"
-                    android:layout_marginStart="6dp"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:visibility="gone"
                     android:clickable="true"
                     android:focusable="true"
                     android:foreground="?android:attr/selectableItemBackground"
@@ -445,142 +734,6 @@
                             android:layout_width="0dp"
                             android:layout_height="0dp"
                             android:visibility="gone" />
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
-            </LinearLayout>
-
-            <!-- ══════ FITNESS ══════ -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Fitness"
-                android:textColor="#666666"
-                android:textSize="11sp"
-                android:textStyle="bold"
-                android:textAllCaps="true"
-                android:letterSpacing="0.14"
-                android:layout_marginBottom="12dp" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:baselineAligned="false"
-                android:layout_marginBottom="24dp">
-
-                <!-- Log Workout -->
-                <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/start_workout_card"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_weight="1"
-                    android:layout_marginEnd="6dp"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:foreground="?android:attr/selectableItemBackground"
-                    app:cardCornerRadius="18dp"
-                    app:cardElevation="0dp"
-                    app:cardBackgroundColor="#0CFFFFFF">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:orientation="vertical"
-                        android:padding="16dp"
-                        android:minHeight="104dp">
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical">
-
-                            <ImageView
-                                android:layout_width="@dimen/icon_sm"
-                                android:layout_height="@dimen/icon_sm"
-                                android:src="@drawable/ic_fitness"
-                                app:tint="#008b8b"
-                                android:layout_marginEnd="10dp" />
-
-                            <TextView
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:text="Log Workout"
-                                android:textColor="#008b8b"
-                                android:textSize="15sp"
-                                android:textStyle="bold"
-                                android:maxLines="1"
-                                android:ellipsize="end" />
-                        </LinearLayout>
-
-                        <TextView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:text="Track your training sessions"
-                            android:textColor="#AEB2B8"
-                            android:textSize="12sp"
-                            android:maxLines="2"
-                            android:ellipsize="end"
-                            android:layout_marginTop="8dp" />
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
-
-                <!-- Exercises -->
-                <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/browse_exercises_card"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_weight="1"
-                    android:layout_marginStart="6dp"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:foreground="?android:attr/selectableItemBackground"
-                    app:cardCornerRadius="18dp"
-                    app:cardElevation="0dp"
-                    app:cardBackgroundColor="#0CFFFFFF">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:orientation="vertical"
-                        android:padding="16dp"
-                        android:minHeight="104dp">
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical">
-
-                            <ImageView
-                                android:layout_width="@dimen/icon_sm"
-                                android:layout_height="@dimen/icon_sm"
-                                android:src="@drawable/ic_exercise"
-                                app:tint="#008b8b"
-                                android:layout_marginEnd="10dp" />
-
-                            <TextView
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:text="Exercises"
-                                android:textColor="#008b8b"
-                                android:textSize="15sp"
-                                android:textStyle="bold"
-                                android:maxLines="1"
-                                android:ellipsize="end" />
-                        </LinearLayout>
-
-                        <TextView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:text="Browse the exercise library"
-                            android:textColor="#AEB2B8"
-                            android:textSize="12sp"
-                            android:maxLines="2"
-                            android:ellipsize="end"
-                            android:layout_marginTop="8dp" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
             </LinearLayout>

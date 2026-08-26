@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Translucent black → app-teal wash over photo cards (Services redesign).
+     Matches iOS: brandTeal 45% at top-right → black 65% at bottom-left. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <gradient
+        android:angle="225"
+        android:startColor="#73008B8B"
+        android:endColor="#A6000000"
+        android:type="linear" />
+</shape>
