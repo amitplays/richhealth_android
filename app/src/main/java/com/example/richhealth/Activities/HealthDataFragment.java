@@ -1750,6 +1750,18 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
 
         // End date picker
         endDateButton.setOnClickListener(v -> {
+            // An end date can never precede the start date. Constrain the picker with the
+            // platform's own setMinDate and pull a stale earlier end forward first, so the
+            // dialog always opens on a legal date. Backend rejects end < start with a 400.
+            Calendar endMinCal = null;
+            if (startDateSet[0]) {
+                endMinCal = (Calendar) startCal.clone();
+                endMinCal.set(Calendar.HOUR_OF_DAY, 0);
+                endMinCal.set(Calendar.MINUTE, 0);
+                endMinCal.set(Calendar.SECOND, 0);
+                endMinCal.set(Calendar.MILLISECOND, 0);
+                if (endCal.before(endMinCal)) endCal.setTimeInMillis(endMinCal.getTimeInMillis());
+            }
             DatePickerDialog picker = new DatePickerDialog(requireContext(),
                     (view, year, month, dayOfMonth) -> {
                         endCal.set(year, month, dayOfMonth);
@@ -1761,6 +1773,7 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
                     endCal.get(Calendar.MONTH),
                     endCal.get(Calendar.DAY_OF_MONTH));
             picker.getDatePicker().setMaxDate(System.currentTimeMillis());
+            if (endMinCal != null) picker.getDatePicker().setMinDate(endMinCal.getTimeInMillis());
             picker.show();
         });
 
@@ -1790,6 +1803,11 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         saveButton.setOnClickListener(v -> {
             if (!startDateSet[0]) {
                 Utilities.toast(requireContext(), "Please select a start date");
+                return;
+            }
+
+            if (endDateSet[0] && endCal.getTimeInMillis() < startCal.getTimeInMillis()) {
+                Utilities.toast(requireContext(), "End date can't be before start date");
                 return;
             }
 
@@ -1944,6 +1962,13 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         });
 
         endDateButton.setOnClickListener(v -> {
+            // Same rule as the add dialog: end can never precede start.
+            Calendar endMinCal = (Calendar) startCal.clone();
+            endMinCal.set(Calendar.HOUR_OF_DAY, 0);
+            endMinCal.set(Calendar.MINUTE, 0);
+            endMinCal.set(Calendar.SECOND, 0);
+            endMinCal.set(Calendar.MILLISECOND, 0);
+            if (endCal.before(endMinCal)) endCal.setTimeInMillis(endMinCal.getTimeInMillis());
             DatePickerDialog picker = new DatePickerDialog(requireContext(),
                     (view, year, month, dayOfMonth) -> {
                         endCal.set(year, month, dayOfMonth);
@@ -1953,12 +1978,18 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
                     },
                     endCal.get(Calendar.YEAR), endCal.get(Calendar.MONTH), endCal.get(Calendar.DAY_OF_MONTH));
             picker.getDatePicker().setMaxDate(System.currentTimeMillis());
+            picker.getDatePicker().setMinDate(endMinCal.getTimeInMillis());
             picker.show();
         });
 
         cancelButton.setOnClickListener(v -> dialog.dismiss());
 
         saveButton.setOnClickListener(v -> {
+            if (endDateSet[0] && endCal.getTimeInMillis() < startCal.getTimeInMillis()) {
+                Utilities.toast(requireContext(), "End date can't be before start date");
+                return;
+            }
+
             String flowText = flowDropdown.getText().toString().trim();
             if (flowText.isEmpty()) {
                 Utilities.toast(requireContext(), "Please select flow intensity");

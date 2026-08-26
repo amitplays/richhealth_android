@@ -58,6 +58,10 @@ public class UserProfile {
     private String alcoholConsumption;
     private int alcoholLevel;
     private String caffeineHabit;
+
+    private String saltIntake = "";   // low/moderate/high/very_high ("" = not answered)
+
+    private String sugarIntake = "";  // rarely/weekly/daily/multiple_daily ("" = not answered)
     private String screenTimeBeforeBed;
     private String sunExposure;
     private List<String> familyHistory = new ArrayList<>();
@@ -307,6 +311,12 @@ public class UserProfile {
 
     public String getCaffeineHabit() { return caffeineHabit; }
     public void setCaffeineHabit(String caffeineHabit) { this.caffeineHabit = caffeineHabit; }
+
+    public String getSaltIntake() { return saltIntake; }
+    public void setSaltIntake(String saltIntake) { this.saltIntake = saltIntake; }
+
+    public String getSugarIntake() { return sugarIntake; }
+    public void setSugarIntake(String sugarIntake) { this.sugarIntake = sugarIntake; }
 
     public String getScreenTimeBeforeBed() { return screenTimeBeforeBed; }
     public void setScreenTimeBeforeBed(String screenTimeBeforeBed) { this.screenTimeBeforeBed = screenTimeBeforeBed; }

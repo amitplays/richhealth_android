@@ -395,6 +395,32 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
                                 ),
                                 false, true, 2,
                                 (data, value) -> data.waterIntake = (Integer) value
+                        ),
+                        // Sodium screener — salty/processed food frequency + table-salt habit.
+                        new StepConfig.SectionConfig(
+                                "How salty is your typical week?",
+                                "Think chips, namkeen, instant noodles, restaurant food, pickles \u2014 sodium quietly drives blood pressure.",
+                                Arrays.asList(
+                                        new SelectableOption("Mostly home-cooked, light on salt",             R.drawable.ic_signup_healthy_food, "low"),
+                                        new SelectableOption("Normal salt; packaged snacks sometimes",        R.drawable.ic_signup_meals_3,      "moderate"),
+                                        new SelectableOption("Salty snacks or takeaway most days",            R.drawable.ic_signup_fastfood,     "high"),
+                                        new SelectableOption("Salty food daily, plus extra salt on my plate", R.drawable.ic_signup_hypertension, "very_high")
+                                ),
+                                false, true, 1,
+                                (data, value) -> data.saltIntake = (String) value
+                        ),
+                        // Sugar screener — sugary drinks (soda, sweet tea/coffee, juice) and sweets.
+                        new StepConfig.SectionConfig(
+                                "Sugary drinks or sweets \u2014 how often?",
+                                "A soda, sweet tea or dessert counts \u2014 sugar frequency shapes long-term glucose risk.",
+                                Arrays.asList(
+                                        new SelectableOption("Rarely \u2014 a few times a month", R.drawable.ic_signup_healthy_food, "rarely"),
+                                        new SelectableOption("A few times a week",                 R.drawable.ic_signup_meals_4,      "weekly"),
+                                        new SelectableOption("About once a day",                   R.drawable.ic_signup_energy_drink, "daily"),
+                                        new SelectableOption("Several times a day",                R.drawable.ic_signup_diabetes,     "multiple_daily")
+                                ),
+                                false, true, 1,
+                                (data, value) -> data.sugarIntake = (String) value
                         )
                 )
         ));
@@ -1101,28 +1127,13 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
                 msg -> Utilities.toastLong(this, msg));
     }
 
+    // Network calls live in Utils.EmailVerificationHelper so signup and the post-login
+    // prompt (LoginActivity) share one implementation. The dialog below stays here because
+    // signup's copy is deliberately non-dismissible.
     private void sendOtp(String email, OtpOk onOk, OtpErr onErr) {
-        JSONObject body = new JSONObject();
-        try {
-            body.put("email", email);
-        } catch (JSONException e) {
-            onErr.run("Something went wrong. Please try again.");
-            return;
-        }
-        StringRequest request = new StringRequest(
-                Request.Method.POST,
-                ApiConfig.BASE_URL + "/api/auth/send-otp",
-                response -> { ApiConfig.logRestCall("/api/auth/send-otp", true, "otp sent"); onOk.run(); },
-                error -> {
-                    ApiConfig.logRestCall("/api/auth/send-otp", false, error.toString());
-                    onErr.run(parseError(error, "Couldn't send the code. Please try again."));
-                }
-        ) {
-            @Override public byte[] getBody() { return body.toString().getBytes(StandardCharsets.UTF_8); }
-            @Override public String getBodyContentType() { return "application/json; charset=utf-8"; }
-        };
-        request.setRetryPolicy(new DefaultRetryPolicy(30000, 1, 1f));
-        Volley.newRequestQueue(this).add(request);
+        Utils.EmailVerificationHelper.sendOtp(this, email,
+                onOk == null ? null : onOk::run,
+                onErr == null ? null : onErr::run);
     }
 
     /**
@@ -1220,28 +1231,9 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
     }
 
     private void verifyOtp(String email, String code, OtpOk onOk, OtpErr onErr) {
-        JSONObject body = new JSONObject();
-        try {
-            body.put("email", email);
-            body.put("otp", code);
-        } catch (JSONException e) {
-            onErr.run("Something went wrong. Please try again.");
-            return;
-        }
-        StringRequest request = new StringRequest(
-                Request.Method.POST,
-                ApiConfig.BASE_URL + "/api/auth/verify-otp",
-                response -> { ApiConfig.logRestCall("/api/auth/verify-otp", true, "verified"); onOk.run(); },
-                error -> {
-                    ApiConfig.logRestCall("/api/auth/verify-otp", false, error.toString());
-                    onErr.run(parseError(error, "Incorrect or expired code."));
-                }
-        ) {
-            @Override public byte[] getBody() { return body.toString().getBytes(StandardCharsets.UTF_8); }
-            @Override public String getBodyContentType() { return "application/json; charset=utf-8"; }
-        };
-        request.setRetryPolicy(new DefaultRetryPolicy(30000, 1, 1f));
-        Volley.newRequestQueue(this).add(request);
+        Utils.EmailVerificationHelper.verifyOtp(this, email, code,
+                onOk == null ? null : onOk::run,
+                onErr == null ? null : onErr::run);
     }
 
     /** Best-effort extraction of a server error message from a Volley error. */
@@ -1347,6 +1339,8 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
         p.put("dietType",   d.dietType);
         p.put("mealsPerDay", d.mealsPerDay);
         p.put("waterIntake", d.waterIntake);
+        if (d.saltIntake != null && !d.saltIntake.isEmpty())  p.put("saltIntake",  d.saltIntake);
+        if (d.sugarIntake != null && !d.sugarIntake.isEmpty()) p.put("sugarIntake", d.sugarIntake);
 
         // Sleep + Stress
         p.put("sleepHours",          d.sleepHours);

@@ -282,6 +282,73 @@
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
+    <!-- ═══════ "New questions" banner — backend-driven profile backfill ═══════
+         Visible only when GET /profile returns a non-empty pendingProfileQuestions
+         (fields from userController's PROFILE_BACKFILL_QUESTIONS registry that this
+         user hasn't answered). Tap opens the edit dialog. GONE by default. -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/new_questions_banner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="@dimen/rh_screen_margin"
+        android:layout_marginBottom="8dp"
+        app:cardCornerRadius="18dp"
+        app:cardElevation="0dp"
+        app:cardBackgroundColor="@color/rh_surface"
+        android:visibility="gone"
+        android:clickable="true"
+        android:focusable="true"
+        android:foreground="?attr/selectableItemBackground">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:padding="14dp">
+
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/ic_signup_energy"
+                app:tint="@color/rh_accent"
+                android:layout_marginEnd="10dp"
+                android:contentDescription="@null"/>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/new_questions_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="New questions for your profile"
+                    android:textColor="@color/white"
+                    android:textSize="14sp"
+                    android:fontFamily="sans-serif-medium"/>
+
+                <TextView
+                    android:id="@+id/new_questions_subtitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/rh_text_secondary"
+                    android:textSize="12sp"
+                    android:layout_marginTop="2dp"/>
+            </LinearLayout>
+
+            <ImageView
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:layout_marginStart="8dp"
+                android:src="@drawable/ic_arrow_forward"
+                app:tint="@color/rh_accent"
+                android:contentDescription="Open"/>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
     <!-- ═══════════════════ PILL TABS ═══════════════════ -->
     <LinearLayout
         android:layout_width="match_parent"

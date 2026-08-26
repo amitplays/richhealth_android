@@ -875,6 +875,44 @@ public class DailyCheckInActivity extends AppCompatActivity {
      * Serves a cached ready result instantly; otherwise fetches and, while the read
      * is still generating, polls a bounded number of times before giving up.
      */
+    /**
+     * DELETE one answer from a PAST completed check-in (long-press on an answer row).
+     * The backend refuses deletes on the CURRENT check-in (its analysis was built from
+     * its answers) — that error message is surfaced as-is. On success the caller
+     * refreshes the list so counts and rows match the server.
+     */
+    private void deleteResponse(String responseId, Runnable onSuccess) {
+        String token = tokenManager != null ? tokenManager.getToken() : null;
+        if (token == null || responseId == null || responseId.isEmpty()) return;
+        String url = ApiConfig.BASE_URL + "/api/checkin/responses/" + responseId;
+        StringRequest req = new StringRequest(Request.Method.DELETE, url,
+                response -> {
+                    ApiConfig.logRestCall(url, true, "Answer removed");
+                    if (onSuccess != null) onSuccess.run();
+                },
+                error -> {
+                    ApiConfig.logRestCall(url, false, error.toString());
+                    String msg = "Couldn't remove that answer.";
+                    if (error.networkResponse != null && error.networkResponse.data != null) {
+                        try {
+                            JSONObject body = new JSONObject(new String(error.networkResponse.data, java.nio.charset.StandardCharsets.UTF_8));
+                            String m = body.optString("message", "");
+                            if (!m.isEmpty()) msg = m;
+                        } catch (Exception ignored) { }
+                    }
+                    Utilities.toast(this, msg);
+                }) {
+            @Override
+            public Map<String, String> getHeaders() throws AuthFailureError {
+                Map<String, String> h = new HashMap<>();
+                h.put("Authorization", "Bearer " + token);
+                return h;
+            }
+        };
+        req.setRetryPolicy(new DefaultRetryPolicy(15000, 1, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
+        getPastReadQueue().add(req);
+    }
+
     private void loadPastRead(String sessionId, PastReadCallback cb) {
         if (sessionId == null || sessionId.isEmpty()) {
             if (cb != null) cb.onResult(sessionId, null);
@@ -1658,6 +1696,94 @@ public class DailyCheckInActivity extends AppCompatActivity {
                 readSpinner.setRepeatCount(android.animation.ObjectAnimator.INFINITE);
                 readSpinner.setInterpolator(new android.view.animation.LinearInterpolator());
                 pastReadSpinners.add(readSpinner);
+
+                // Answers list for the expanded row — built programmatically so the XML
+                // layout stays untouched. Filled on expand, cleared on collapse.
+                answersContainer = new LinearLayout(v.getContext());
+                answersContainer.setOrientation(LinearLayout.VERTICAL);
+                answersContainer.setVisibility(View.GONE);
+                readContainer.addView(answersContainer);
+            }
+
+            private final LinearLayout answersContainer;
+
+            /** Render this session's individual answers; long-press one to remove it. */
+            void renderAnswers(SessionItem item) {
+                answersContainer.removeAllViews();
+                if (item.responses == null || item.responses.isEmpty()) {
+                    answersContainer.setVisibility(View.GONE);
+                    return;
+                }
+                android.content.Context ctx = itemView.getContext();
+                TextView header = new TextView(ctx);
+                header.setText("WHAT YOU ANSWERED");
+                header.setTextSize(11f);
+                header.setLetterSpacing(0.1f);
+                header.setTypeface(header.getTypeface(), android.graphics.Typeface.BOLD);
+                header.setTextColor(0xFF7FA8A8);
+                header.setPadding(0, dpToPx(10), 0, dpToPx(4));
+                answersContainer.addView(header);
+
+                for (JSONObject r : item.responses) {
+                    final String rid = r.optString("_id", "");
+                    String q = r.optString("questionText", "");
+                    String emoji = r.optString("selectedEmoji", "");
+                    String label = r.optString("selectedLabel", r.optString("selectedValue", "\u2014"));
+
+                    // Row: [ question + answer (weight 1) ] [ visible trash icon ]
+                    LinearLayout row = new LinearLayout(ctx);
+                    row.setOrientation(LinearLayout.HORIZONTAL);
+                    row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+                    row.setPadding(0, dpToPx(6), 0, dpToPx(6));
+
+                    LinearLayout textCol = new LinearLayout(ctx);
+                    textCol.setOrientation(LinearLayout.VERTICAL);
+                    textCol.setLayoutParams(new LinearLayout.LayoutParams(0,
+                            LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+                    if (!q.isEmpty()) {
+                        TextView qv = new TextView(ctx);
+                        qv.setText(q);
+                        qv.setTextSize(12f);
+                        qv.setTextColor(0xFF9E9E9E);
+                        textCol.addView(qv);
+                    }
+                    TextView av = new TextView(ctx);
+                    av.setText(emoji.isEmpty() ? label : emoji + "  " + label);
+                    av.setTextSize(14f);
+                    av.setTypeface(av.getTypeface(), android.graphics.Typeface.BOLD);
+                    av.setTextColor(0xFFFFFFFF);
+                    textCol.addView(av);
+                    row.addView(textCol);
+
+                    if (!rid.isEmpty()) {
+                        Runnable confirmDelete = () ->
+                                new androidx.appcompat.app.AlertDialog.Builder(ctx)
+                                        .setTitle("Remove this answer?")
+                                        .setMessage("Only this one answer is removed \u2014 the rest of the check-in stays.")
+                                        .setPositiveButton("Remove", (d, w) -> deleteResponse(rid, () -> {
+                                            item.responses.remove(r);
+                                            renderAnswers(item);
+                                            sessionSummary.setText(summaryLine(item));
+                                        }))
+                                        .setNegativeButton("Cancel", null)
+                                        .show();
+
+                        // Visible affordance (icon) + long-press kept as a shortcut.
+                        android.widget.ImageButton del = new android.widget.ImageButton(ctx);
+                        del.setImageResource(R.drawable.ic_delete);   // app's own delete glyph, not the system one
+                        del.setColorFilter(0xFF9E9E9E);
+                        del.setBackground(null);
+                        del.setPadding(dpToPx(6), dpToPx(6), 0, dpToPx(6));
+                        del.setContentDescription("Remove this answer");
+                        LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(dpToPx(32), dpToPx(32));
+                        del.setLayoutParams(dlp);
+                        del.setOnClickListener(view -> confirmDelete.run());
+                        row.addView(del);
+                        row.setOnLongClickListener(view -> { confirmDelete.run(); return true; });
+                    }
+                    answersContainer.addView(row);
+                }
+                answersContainer.setVisibility(View.VISIBLE);
             }
 
             void bind(SessionItem item) {
@@ -1704,7 +1830,13 @@ public class DailyCheckInActivity extends AppCompatActivity {
                         // Every completed session can show Richie's read on demand.
                         accordionHeader.setVisibility(View.VISIBLE);
                         if (readToggleLabel != null) readToggleLabel.setText("See Richie's read");
-                        accordionHeader.setOnClickListener(v -> toggleRead(item.sessionId));
+                        accordionHeader.setOnClickListener(v -> {
+                            toggleRead(item.sessionId);
+                            // Show the individual answers alongside the read; long-press
+                            // an answer to remove just that one (backend blocks the
+                            // CURRENT check-in — its analysis must match its answers).
+                            if (expanded) renderAnswers(item);
+                        });
                         break;
 
                     case "missed":
@@ -1756,6 +1888,7 @@ public class DailyCheckInActivity extends AppCompatActivity {
 
             private void collapseRead() {
                 stopReadSpinner();
+                if (answersContainer != null) answersContainer.setVisibility(View.GONE);
                 readContainer.setVisibility(View.GONE);
                 readProcessing.setVisibility(View.GONE);
                 readHeadline.setVisibility(View.GONE);

@@ -195,6 +195,9 @@ public class ProfileFragment extends Fragment {
     // medicationsGroup removed - medications section not in layout
     private ChipGroup allergiesGroup;
     private View rootView;
+    // Backend-driven profile backfill: labels of unanswered "new questions" from GET /profile
+    // (userController PROFILE_BACKFILL_QUESTIONS). Drives the new_questions_banner card.
+    private final java.util.List<String> pendingProfileQuestionLabels = new java.util.ArrayList<>();
 
     // Menstrual section
     private LinearLayout menstrualCard;
@@ -652,6 +655,12 @@ public class ProfileFragment extends Fragment {
         if (values.containsKey("caffeineHabit") && CAFFEINE_OPTIONS.containsKey(values.get("caffeineHabit"))) {
             userProfile.setCaffeineHabit(CAFFEINE_OPTIONS.get(values.get("caffeineHabit")));
         }
+        if (values.containsKey("saltIntake") && SALT_OPTIONS.containsKey(values.get("saltIntake"))) {
+            userProfile.setSaltIntake(SALT_OPTIONS.get(values.get("saltIntake")));
+        }
+        if (values.containsKey("sugarIntake") && SUGAR_OPTIONS.containsKey(values.get("sugarIntake"))) {
+            userProfile.setSugarIntake(SUGAR_OPTIONS.get(values.get("sugarIntake")));
+        }
 
         if (values.containsKey("familyHistory")) {
             userProfile.setFamilyHistory(parseCommaSeparatedList(values.get("familyHistory")));
@@ -805,6 +814,8 @@ public class ProfileFragment extends Fragment {
         profileInitials = view.findViewById(R.id.profile_initials);
         profileVerifiedPill = view.findViewById(R.id.profile_verified_pill);
         profileOptionsButton = view.findViewById(R.id.profile_options_button);
+        View newQuestionsBanner = view.findViewById(R.id.new_questions_banner);
+        if (newQuestionsBanner != null) newQuestionsBanner.setOnClickListener(v -> showEditProfileDialog());
         profileOptionsBadge = view.findViewById(R.id.profile_options_badge);
         completenessRing = view.findViewById(R.id.completeness_ring);
         completenessPercent = view.findViewById(R.id.completeness_percent);
@@ -1436,6 +1447,21 @@ public class ProfileFragment extends Fragment {
         if (u.has("smokingFrequency") && !u.isNull("smokingFrequency")) profile.setSmokingFrequency(u.optString("smokingFrequency"));
         if (u.has("alcoholConsumption") && !u.isNull("alcoholConsumption")) profile.setAlcoholConsumption(u.optString("alcoholConsumption"));
         if (u.has("caffeineHabit") && !u.isNull("caffeineHabit")) profile.setCaffeineHabit(u.optString("caffeineHabit"));
+        if (u.has("saltIntake") && !u.isNull("saltIntake")) profile.setSaltIntake(u.optString("saltIntake"));
+        if (u.has("sugarIntake") && !u.isNull("sugarIntake")) profile.setSugarIntake(u.optString("sugarIntake"));
+        // Backend-driven backfill list — labels only; empty array = nothing pending.
+        pendingProfileQuestionLabels.clear();
+        JSONArray pendingQs = u.optJSONArray("pendingProfileQuestions");
+        if (pendingQs != null) {
+            for (int i = 0; i < pendingQs.length(); i++) {
+                JSONObject q = pendingQs.optJSONObject(i);
+                if (q != null) {
+                    String label = q.optString("label", "");
+                    if (!label.isEmpty()) pendingProfileQuestionLabels.add(label);
+                }
+            }
+        }
+        updateNewQuestionsBanner();
         if (u.has("screenTimeBeforeBed") && !u.isNull("screenTimeBeforeBed")) profile.setScreenTimeBeforeBed(u.optString("screenTimeBeforeBed"));
         if (u.has("sunExposure") && !u.isNull("sunExposure")) profile.setSunExposure(u.optString("sunExposure"));
         if (u.has("contraceptionMethod") && !u.isNull("contraceptionMethod")) profile.setContraceptionMethod(u.optString("contraceptionMethod"));
@@ -1965,6 +1991,10 @@ public class ProfileFragment extends Fragment {
             profileData.put("alcoholConsumption", profile.getAlcoholConsumption());
             profileData.put("alcoholLevel", profile.getAlcoholLevel());
             profileData.put("caffeineHabit", profile.getCaffeineHabit());
+            if (profile.getSaltIntake() != null && !profile.getSaltIntake().isEmpty())
+                profileData.put("saltIntake", profile.getSaltIntake());
+            if (profile.getSugarIntake() != null && !profile.getSugarIntake().isEmpty())
+                profileData.put("sugarIntake", profile.getSugarIntake());
             JSONArray familyHistoryArray = new JSONArray(
                     profile.getFamilyHistory() != null ? profile.getFamilyHistory() : new ArrayList<>());
             profileData.put("familyHistory", familyHistoryArray);
@@ -2021,6 +2051,9 @@ public class ProfileFragment extends Fragment {
                         progress.hide();
                         Utilities.toast(requireContext(), "Profile updated successfully");
                         loadAndDisplayProfile();
+                        // Refetch from server so the backend-driven "new questions" banner
+                        // updates immediately after answering (list is computed server-side).
+                        refreshProfileFromServer();
                     },
                     error -> {
                         ApiConfig.logRestCall(url, false, error.toString());
@@ -2183,6 +2216,19 @@ public class ProfileFragment extends Fragment {
         put("Coffee lover", "coffee");
         put("Energy drinks", "energy_drinks");
     }};
+    // Sodium & sugar screeners — labels/values aligned with onboarding's diet step.
+    private static final java.util.LinkedHashMap<String, String> SALT_OPTIONS = new java.util.LinkedHashMap<String, String>() {{
+        put("Home-cooked, light on salt", "low");
+        put("Normal salt; snacks sometimes", "moderate");
+        put("Salty snacks/takeaway most days", "high");
+        put("Daily salty food + extra salt", "very_high");
+    }};
+    private static final java.util.LinkedHashMap<String, String> SUGAR_OPTIONS = new java.util.LinkedHashMap<String, String>() {{
+        put("Rarely — few times a month", "rarely");
+        put("A few times a week", "weekly");
+        put("About once a day", "daily");
+        put("Several times a day", "multiple_daily");
+    }};
     // Contraception — labels/values aligned with onboarding's contraception step.
     private static final java.util.LinkedHashMap<String, String> CONTRACEPTION_OPTIONS = new java.util.LinkedHashMap<String, String>() {{
         put("None", "none");
@@ -2211,6 +2257,29 @@ public class ProfileFragment extends Fragment {
         return map.keySet().toArray(new String[0]);
     }
 
+    /** Show/hide the backend-driven "New questions" banner and set its copy. */
+    private void updateNewQuestionsBanner() {
+        if (rootView == null) return;
+        View banner = rootView.findViewById(R.id.new_questions_banner);
+        if (banner == null) return;
+        if (pendingProfileQuestionLabels.isEmpty()) {
+            banner.setVisibility(View.GONE);
+            return;
+        }
+        TextView title = rootView.findViewById(R.id.new_questions_title);
+        TextView subtitle = rootView.findViewById(R.id.new_questions_subtitle);
+        int n = pendingProfileQuestionLabels.size();
+        if (title != null) {
+            title.setText(n == 1 ? "New question for your profile"
+                                 : n + " new questions for your profile");
+        }
+        if (subtitle != null) {
+            subtitle.setText(String.join(", ", pendingProfileQuestionLabels)
+                    + " \u2014 quick answers that sharpen Richie's advice.");
+        }
+        banner.setVisibility(View.VISIBLE);
+    }
+
     private void showEditProfileDialog() {
         // Create all fields for the edit dialog
         String[] activityLevels = keysArray(ACTIVITY_OPTIONS);
@@ -2227,6 +2296,8 @@ public class ProfileFragment extends Fragment {
         String[] smokingChoices = keysArray(SMOKING_OPTIONS);
         String[] alcoholChoices = keysArray(ALCOHOL_OPTIONS);
         String[] caffeineChoices = keysArray(CAFFEINE_OPTIONS);
+        String[] saltChoices = keysArray(SALT_OPTIONS);
+        String[] sugarChoices = keysArray(SUGAR_OPTIONS);
 
         // Get current values with safe defaults
         String currentName = userProfile.getName() != null ? userProfile.getName() : "";
@@ -2277,6 +2348,8 @@ public class ProfileFragment extends Fragment {
         }
         String currentAlcoholLabel = labelForValue(ALCOHOL_OPTIONS, userProfile.getAlcoholConsumption());
         String currentCaffeineLabel = labelForValue(CAFFEINE_OPTIONS, userProfile.getCaffeineHabit());
+        String currentSaltLabel = labelForValue(SALT_OPTIONS, userProfile.getSaltIntake());
+        String currentSugarLabel = labelForValue(SUGAR_OPTIONS, userProfile.getSugarIntake());
 
         // Family History (comma-separated)
         String currentFamilyHistory = userProfile.getFamilyHistory() != null
@@ -2355,6 +2428,9 @@ public class ProfileFragment extends Fragment {
         fieldList.add(new DialogUtils.DialogField("smokingChoice", "Smoking", smokingChoices, currentSmokingLabel));
         fieldList.add(new DialogUtils.DialogField("alcoholConsumption", "Alcohol", alcoholChoices, currentAlcoholLabel));
         fieldList.add(new DialogUtils.DialogField("caffeineHabit", "Caffeine", caffeineChoices, currentCaffeineLabel));
+        // New questions — sodium & sugar screeners (backfill for pre-existing accounts).
+        fieldList.add(new DialogUtils.DialogField("saltIntake", "Salt intake", saltChoices, currentSaltLabel));
+        fieldList.add(new DialogUtils.DialogField("sugarIntake", "Sugary drinks & sweets", sugarChoices, currentSugarLabel));
 
         // Habit / condition follow-ups
         fieldList.add(new DialogUtils.DialogField("smokingDuration", "Years Smoked",
@@ -2435,6 +2511,15 @@ public class ProfileFragment extends Fragment {
                         updateUserProfileWithValues(values);
 
                         saveProfileToServer(userProfile);
+                        // ═══════════════════════════════════════════════════════════════
+                        // URGENT TODO: Android still mirrors the profile into a local SQLite
+                        // DB (DatabaseHelper) whose schema is NOT updated for new fields
+                        // (e.g. saltIntake / sugarIntake are NOT persisted locally). This
+                        // local-DB layer must be REMOVED and Android switched to backend-
+                        // only profile storage to match iOS (which has no local profile DB).
+                        // Until then, any new profile field silently drops out of the local
+                        // copy and only survives via the server round-trip.
+                        // ═══════════════════════════════════════════════════════════════
                         saveProfileToLocalDatabase();
                     } catch (NumberFormatException e) {
                         Log.e(TAG, "Number format error while updating profile", e);
@@ -2716,7 +2801,7 @@ public class ProfileFragment extends Fragment {
         if (loc == null) return; // no fix available right now
 
         String url = "https://api.airvisual.com/v2/nearest_city?lat=" + loc.getLatitude()
-                + "&lon=" + loc.getLongitude() + "&key=49b9397d-7ef6-479f-8426-d65b32cc3e7f";
+                + "&lon=" + loc.getLongitude() + "&key=14e2baae-46bf-441a-8ec8-642da0410050";
 
         StringRequest request = new StringRequest(Request.Method.GET, url,
                 response -> {

@@ -4269,7 +4269,10 @@ public class AIFragment extends Fragment implements BackPressHandler {
                 cb.onResult(true);
             }
             @Override public void onError(String errorMessage) {
-                safeToast("Couldn't save symptom");
+                // handleVolleyError already extracted the server's message — show it, so a
+                // deliberate refusal (e.g. a validation rule) isn't hidden behind a generic line.
+                safeToast(errorMessage == null || errorMessage.isEmpty()
+                        ? "Couldn't save symptom" : errorMessage);
                 cb.onResult(false);
             }
         });
@@ -4299,7 +4302,9 @@ public class AIFragment extends Fragment implements BackPressHandler {
                 cb.onResult(true);
             }
             @Override public void onError(String errorMessage) {
-                safeToast("Couldn't save period log");
+                // Surfaces the backend's period range/overlap message instead of a generic line.
+                safeToast(errorMessage == null || errorMessage.isEmpty()
+                        ? "Couldn't save period log" : errorMessage);
                 cb.onResult(false);
             }
         });

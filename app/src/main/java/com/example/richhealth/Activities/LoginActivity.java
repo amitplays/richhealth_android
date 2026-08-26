@@ -68,6 +68,9 @@ public class LoginActivity extends AppCompatActivity {
     private DatabaseHelper dbHelper;
     private ImageView logo;
     private ObjectAnimator spinningAnimator;
+    /** From the login response — drives the post-login "verify your email" offer. */
+    private boolean loggedInEmailVerified = true;
+    private String loggedInEmail = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -457,6 +460,12 @@ public class LoginActivity extends AppCompatActivity {
             // Save to TokenManager
             tokenManager.saveLoginInfo(token, userId);
 
+            // Remember whether this account's email is confirmed — offerEmailVerification()
+            // (between T&C and the biometric offer) uses it. Default true so a server that
+            // omits the field never nags the user.
+            loggedInEmailVerified = userDetails == null || userDetails.optBoolean("emailVerified", true);
+            loggedInEmail = email != null ? email : "";
+
             // Sync account-level T&C acceptance to this device so an already-accepted
             // user isn't re-prompted after reinstalling or switching devices.
             if (userDetails != null && userDetails.optBoolean("termsAccepted", false)) {
@@ -495,15 +504,15 @@ public class LoginActivity extends AppCompatActivity {
         // Already accepted on this account (synced from the cloud) — skip straight
         // ahead instead of re-prompting on every login.
         if (TermsAndConditionsDialog.areTermsAccepted(this)) {
-            offerBiometricSetup();
+            offerEmailVerification();
             return;
         }
         TermsAndConditionsDialog termsDialog = new TermsAndConditionsDialog(this, new TermsAndConditionsDialog.OnTermsActionListener() {
             @Override
             public void onTermsAccepted() {
                 Utilities.toast(LoginActivity.this, "Login successful!");
-                // After terms accepted, offer biometric setup if device supports it
-                offerBiometricSetup();
+                // After terms accepted, confirm the email (if unverified), then offer biometric
+                offerEmailVerification();
             }
 
             @Override
@@ -515,6 +524,19 @@ public class LoginActivity extends AppCompatActivity {
         });
 
         termsDialog.show();
+    }
+
+    /**
+     * Ask an unverified account to confirm its email, right after login. Dismissible —
+     * "later" still continues into the app, so this never blocks sign-in. The prompt
+     * disappears for good once EmailVerificationHelper flips User.emailVerified server-side.
+     */
+    private void offerEmailVerification() {
+        if (loggedInEmailVerified || loggedInEmail.isEmpty()) {
+            offerBiometricSetup();
+            return;
+        }
+        Utils.EmailVerificationHelper.show(this, loggedInEmail, this::offerBiometricSetup);
     }
 
     /**

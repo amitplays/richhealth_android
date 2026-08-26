@@ -1,3 +1,31 @@
+## [2026-08-25c] AirVisual API key replaced (AQI was silently dead)
+The shipped key `49b9397d-…` returns HTTP 402 from AirVisual (account expired / over quota — a
+wrong key returns 403, so it was recognised but unusable). Android never showed this: on error
+`HomeFragment` falls back to `cached_aqi` in SharedPreferences, so a stale number kept appearing.
+Replaced with the owner's new key `14e2baae-…` in `HomeFragment:1320` and `ProfileFragment:2719`,
+verified live (`"status":"success"`). **Note:** the key is still hardcoded in the APK — moving the
+call server-side is still the open decision.
+
+## [2026-08-25b] Chat health cards surface the server's real error
+`AIFragment.saveSymptomCard` / `savePeriodCard` toasted "Couldn't save symptom" /
+"Couldn't save period log" and threw away the message `MedicalDataApiService.handleVolleyError`
+had already extracted. They now show it, so the backend's period range/overlap refusal (and the
+symptom validation messages) reach the user instead of a generic line.
+
+**Known, unchanged:** `HealthDataFragment.savePeriodLog` writes to local SQLite BEFORE the server
+call, so a server rejection still leaves a local-only row ("Saved locally but couldn't sync").
+That is Android's local-DB design, not something this change introduced — flagged, not restructured.
+
+## [2026-08-25] Tester work order — email verification prompt, period validation, push registrar
+
+**#1 Post-login email verification** — new `Utils/EmailVerificationHelper.java`: the ONE place the app calls `/api/auth/send-otp` and `/api/auth/verify-otp`, plus a dismissible post-login dialog (same `dialog_edit_profile` + `DialogTheme` styling as signup, Verify / Resend, back-or-outside = later). `LoginActivity` captures `emailVerified` from the login response and runs `offerEmailVerification()` between the T&C dialog and the biometric offer; verified accounts skip straight through. `OnboardingActivity.sendOtp/verifyOtp` now delegate to the helper so the OTP network code exists once — its non-dismissible signup dialog is unchanged (its now-unused private `parseError` was kept, not deleted).
+
+**#10 Period start/end** — `HealthDataFragment` add AND edit dialogs: the end `DatePickerDialog` gets a native `setMinDate` derived from the chosen start (normalised to start-of-day, with a stale earlier end pulled forward first), and Save rejects end < start with a toast. Previously neither dialog constrained or validated the pair, so end < start could be saved locally and POSTed; the backend now rejects it with a 400 too.
+
+**#6 Push (FCM) — registrar only** — new `Utils/PushTokenRegistrar.java` posts/deletes `/api/user/device-token` and remembers the last registered token in `push_prefs`. `TokenManager.logout()` unregisters BEFORE clearing prefs, passing the Bearer token in explicitly (Volley builds headers at execution time, so reading it back mid-logout would race). **Deliberately has NO Firebase dependency so the project still builds today.** Completing FCM needs the owner's `google-services.json` + the google-services Gradle plugin + `firebase-messaging` + a `FirebaseMessagingService` calling `PushTokenRegistrar.register` from `onNewToken` — adding the plugin without the JSON fails the build, so it was left out.
+
+Files: `Utils/EmailVerificationHelper.java` (new), `Utils/PushTokenRegistrar.java` (new), `Activities/LoginActivity.java`, `Activities/OnboardingActivity.java`, `Activities/TokenManager.java`, `Activities/HealthDataFragment.java`.
+
 ## [2026-08-17] Health Check-In redesign (meaningful summary)
 
 ## [2026-08-17] Android Check-In rebuilt to Richie's Brief (mirrors iOS)

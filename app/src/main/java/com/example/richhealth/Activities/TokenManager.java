@@ -115,6 +115,13 @@ public class TokenManager {
 
     // Logout — clear all user-specific caches
     public void logout() {
+        // Drop this device's push registration BEFORE the token is cleared — the DELETE needs
+        // the Bearer header, so the auth token is captured and passed in explicitly.
+        // Best-effort and asynchronous: logout never waits on it.
+        try {
+            Utils.PushTokenRegistrar.unregister(context, getToken());
+        } catch (Exception ignored) {}
+
         editor.clear();
         editor.apply();
 

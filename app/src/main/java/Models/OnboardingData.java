@@ -52,6 +52,8 @@ public class OnboardingData {
     // Step: Meals + Water
     public int mealsPerDay = 3;
     public int waterIntake = 6;              // glasses per day
+    public String saltIntake = "";           // low / moderate / high / very_high (empty = skipped)
+    public String sugarIntake = "";          // rarely / weekly / daily / multiple_daily (empty = skipped)
 
     // Step: Sleep
     public int sleepHours = 8;
