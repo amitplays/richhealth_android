@@ -631,11 +631,20 @@
                                 android:textColor="@android:color/white" />
                         </com.google.android.material.textfield.TextInputLayout>
 
-                        <!-- Blood Pressure Row - Added -->
+                        <!-- Blood Pressure Row - HIDDEN.
+                             BP is a measurement, not a profile attribute: it is logged
+                             with a timestamp from the Health Hub and read back as a
+                             trend. A single value typed once at signup never ages out
+                             and competed with those readings. iOS never collected it at
+                             all, so this also puts the two apps on the same footing.
+                             Views kept (not deleted) so SignupActivity's findViewById
+                             calls still resolve; every read there is guarded on
+                             isEmpty(), so a hidden field sends nothing. -->
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="horizontal"
+                            android:visibility="gone"
                             android:layout_marginBottom="16dp">
 
                             <com.google.android.material.textfield.TextInputLayout

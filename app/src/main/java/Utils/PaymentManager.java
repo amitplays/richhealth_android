@@ -120,7 +120,10 @@ public class PaymentManager {
         startGooglePlayFlow(activity, plan, callback);
     }
 
-    /** Play product IDs must match Play Console + backend GOOGLE_PRODUCT_PLAN. */
+    /** Play product IDs must match Play Console + backend GOOGLE_PRODUCT_PLAN.
+     *  Unused since the flow moved to PlayBillingManager, which derives the same string
+     *  from PlanOption.getTierKey() ("plus"/"pro"/"ultra"). Kept, not deleted. */
+    @SuppressWarnings("unused")
     private static String googleProductId(int planId) {
         switch (planId) {
             case 1:  return "richhealth.plus";
@@ -129,39 +132,37 @@ public class PaymentManager {
         }
     }
 
-    /** Google Play Billing purchase → backend verify (which acknowledges) → sync Pro. */
+    /**
+     * Google Play Billing purchase → backend verify (which acknowledges) → sync Pro.
+     *
+     * Runs through PlayBillingManager rather than GooglePlayBillingManager. The latter is
+     * kept (not deleted) but no longer called: it never acknowledged a purchase, dropped
+     * PENDING ones outright — which is what a UPI autopay mandate is until the bank
+     * confirms, so an Indian subscriber's purchase silently vanished — and never called
+     * endConnection(), leaking a BillingClient per attempt.
+     */
     public void startGooglePlayFlow(Activity activity, PlanOption plan, PaymentCallback callback) {
         this.callback = callback;
         this.currentActivity = activity;
         this.selectedPlanType = plan.getPlanId();
-        final String productId = googleProductId(plan.getPlanId());
         progressDialog = SimpleProgress.show(activity, "Opening Google Play…");
         if (callback != null) callback.onPaymentInitiated();
 
-        new GooglePlayBillingManager(activity).purchaseSubscription(productId,
-                new GooglePlayBillingManager.PurchaseCallback() {
-            @Override public void onPurchased(String purchaseToken, String pid) {
+        new PlayBillingManager(activity).startPurchase(activity, plan, new PaymentCallback() {
+            @Override public void onPaymentInitiated() {
+                // PENDING — the sheet is closed and the mandate is with the bank. Drop the
+                // spinner; the backend is the source of truth once the purchase settles.
                 if (progressDialog != null) progressDialog.hide();
-                final SimpleProgress verifying = SimpleProgress.show(activity, "Verifying…");
-                paymentService.verifyGoogle(pid, purchaseToken, new PaymentService.PaymentCallback() {
-                    @Override public void onSuccess(ProStatusResult result) {
-                        verifying.hide();
-                        proStatusManager.setProStatusComplete(true, result.getExpiryDate(), result.getPlan(), null);
-                        proStatusManager.setFamilyPlanInfo("family".equals(result.getPlan()), false, null,
-                                result.getFamilyProMemberCount(), result.getMaxFamilyMembers());
-                        if (callback != null) callback.onPaymentSuccess(result.getPlan());
-                    }
-                    @Override public void onError(String errorMessage) {
-                        verifying.hide();
-                        if (callback != null) callback.onPaymentFailed(errorMessage);
-                    }
-                });
             }
-            @Override public void onError(String message) {
+            @Override public void onPaymentSuccess(String planName) {
                 if (progressDialog != null) progressDialog.hide();
-                if (callback != null) callback.onPaymentFailed(message);
+                if (callback != null) callback.onPaymentSuccess(planName);
             }
-            @Override public void onCancelled() {
+            @Override public void onPaymentFailed(String reason) {
+                if (progressDialog != null) progressDialog.hide();
+                if (callback != null) callback.onPaymentFailed(reason);
+            }
+            @Override public void onPaymentCancelled() {
                 if (progressDialog != null) progressDialog.hide();
                 if (callback != null) callback.onPaymentCancelled();
             }

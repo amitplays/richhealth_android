@@ -12,7 +12,6 @@ import com.android.billingclient.api.BillingClient;
 import com.android.billingclient.api.BillingClientStateListener;
 import com.android.billingclient.api.BillingFlowParams;
 import com.android.billingclient.api.BillingResult;
-import com.android.billingclient.api.PendingPurchasesParams;
 import com.android.billingclient.api.ProductDetails;
 import com.android.billingclient.api.ProductDetailsResponseListener;
 import com.android.billingclient.api.Purchase;
@@ -63,10 +62,12 @@ public class PlayBillingManager implements PurchasesUpdatedListener {
         this.productId = productIdFor(plan);
         this.callback = callback;
 
+        // com.android.billingclient:billing is pinned at 6.2.1 (app/build.gradle:34), which
+        // has only the no-arg overload — PendingPurchasesParams arrived in 7.0. Bumping the
+        // library changes queryProductDetailsAsync's contract too, so it stays as-is.
         billingClient = BillingClient.newBuilder(context)
                 .setListener(this)
-                .enablePendingPurchases(
-                        PendingPurchasesParams.newBuilder().enableOneTimeProducts().build())
+                .enablePendingPurchases()
                 .build();
 
         billingClient.startConnection(new BillingClientStateListener() {
@@ -148,7 +149,10 @@ public class PlayBillingManager implements PurchasesUpdatedListener {
             return;
         }
         // Server verifies the token with Google, activates Pro, and returns the plan/expiry.
-        paymentService.verifyGooglePurchase(purchase.getPurchaseToken(), productId,
+        // verifyGoogle(productId, purchaseToken) — note the order; this class called a
+        // verifyGooglePurchase(token, productId) that was never written, which is why it
+        // has never compiled and so was never wired up.
+        paymentService.verifyGoogle(productId, purchase.getPurchaseToken(),
                 new PaymentService.PaymentCallback() {
                     @Override
                     public void onSuccess(ProStatusResult resultData) {
@@ -166,6 +170,11 @@ public class PlayBillingManager implements PurchasesUpdatedListener {
                         }
                         proStatusManager.setProStatusComplete(true, resultData.getExpiryDate(),
                                 resultData.getPlan(), resultData.getTransactionId());
+                        // Kept from the path this replaces — dropping it would leave a
+                        // family purchaser without their seat count.
+                        proStatusManager.setFamilyPlanInfo("family".equals(resultData.getPlan()),
+                                false, null, resultData.getFamilyProMemberCount(),
+                                resultData.getMaxFamilyMembers());
                         if (callback != null) callback.onPaymentSuccess(resultData.getPlan());
                         endConnection();
                     }
