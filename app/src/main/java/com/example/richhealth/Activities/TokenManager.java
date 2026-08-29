@@ -113,6 +113,25 @@ public class TokenManager {
         return sharedPreferences.getString(KEY_USER_ID, null);
     }
 
+    /**
+     * Preference files that belong to the signed-in account and must not outlive them.
+     * Deliberately excludes nothing that holds another user's data — add here, not inline.
+     */
+    private static final String[] ACCOUNT_SCOPED_PREFS = {
+            "user_analysis_cache", "aqi_prefs", "dietary_insights_prefs", "pro_status_prefs",
+            "AppPreferences",        // terms acceptance, keyed by user id
+            "RichHealthSession",     // legacy session file (SessionManager)
+            "med_reminder_prefs",    // medication plans + the offline dose queue
+            "advisory_cache",        // cached AI health advisory text
+            "chat_suggestions",      // personalised AI prompts
+            "rh_home_prefs",         // fit_steps, watch_connected
+            "rh_chat_prefs",
+            "feed_prefs",            // hidden_feed_ids
+            "checkin_notif_prefs",
+            "notif_perm_prefs",
+            "push_prefs",
+    };
+
     // Logout — clear all user-specific caches
     public void logout() {
         // Drop this device's push registration BEFORE the token is cleared — the DELETE needs
@@ -125,11 +144,14 @@ public class TokenManager {
         editor.clear();
         editor.apply();
 
-        // Clear all cached health data so next user doesn't see stale data
-        context.getSharedPreferences("user_analysis_cache", Context.MODE_PRIVATE).edit().clear().apply();
-        context.getSharedPreferences("aqi_prefs", Context.MODE_PRIVATE).edit().clear().apply();
-        context.getSharedPreferences("dietary_insights_prefs", Context.MODE_PRIVATE).edit().clear().apply();
-        context.getSharedPreferences("pro_status_prefs", Context.MODE_PRIVATE).edit().clear().apply();
+        // Every account-scoped preferences file, not the four that happened to be listed.
+        // The ones added below were all surviving logout, so the next user on this device
+        // inherited the previous user's medication plans (and their still-scheduled alarms),
+        // pending offline doses, cached AI advisory text, personalised chat suggestions,
+        // step count, hidden feed items and check-in notification state.
+        for (String prefsFile : ACCOUNT_SCOPED_PREFS) {
+            context.getSharedPreferences(prefsFile, Context.MODE_PRIVATE).edit().clear().apply();
+        }
 
         // Clear local SQLite database (symptoms, measurements, medications, chat, reports, profile)
         new DatabaseHelper(context).clearUserData();

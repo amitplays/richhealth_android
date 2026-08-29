@@ -45,27 +45,46 @@ public class EmailVerificationHelper {
 
     public interface Ok { void run(); }
     public interface Err { void run(String message); }
+    /** Verify success, carrying the server's body — verify-otp now returns a session. */
+    public interface OkData { void run(JSONObject response); }
 
     private EmailVerificationHelper() {}
+
+    /** Addresses always leave the app trimmed AND lowercased. They used to be trimmed
+     *  only, so an account created as "Alice@x.com" had its code filed under a different
+     *  key than a later "alice@x.com" login, and the code never matched. */
+    public static String normalize(String email) {
+        return email == null ? "" : email.trim().toLowerCase(java.util.Locale.ROOT);
+    }
 
     /** POST /api/auth/send-otp — emails a fresh 6-digit code. No auth token needed. */
     public static void sendOtp(Context context, String email, Ok onOk, Err onErr) {
         JSONObject body = new JSONObject();
         try {
-            body.put("email", email);
+            body.put("email", normalize(email));
         } catch (JSONException e) {
             if (onErr != null) onErr.run("Something went wrong. Please try again.");
             return;
         }
         post(context, "/api/auth/send-otp", body, "otp sent",
-                "Couldn't send the code. Please try again.", onOk, onErr);
+                "Couldn't send the code. Please try again.",
+                json -> { if (onOk != null) onOk.run(); }, onErr);
     }
 
     /** POST /api/auth/verify-otp — confirms the code and marks the email verified. */
     public static void verifyOtp(Context context, String email, String code, Ok onOk, Err onErr) {
+        verifyOtp(context, email, code, json -> { if (onOk != null) onOk.run(); }, onErr);
+    }
+
+    /**
+     * Same call, handing back the parsed body. A successful verify now returns
+     * {verified, token, userId, user} because signup deliberately issues no session —
+     * this is the moment the account becomes usable, so the caller needs the token.
+     */
+    public static void verifyOtp(Context context, String email, String code, OkData onOk, Err onErr) {
         JSONObject body = new JSONObject();
         try {
-            body.put("email", email);
+            body.put("email", normalize(email));
             body.put("otp", code);
         } catch (JSONException e) {
             if (onErr != null) onErr.run("Something went wrong. Please try again.");
@@ -76,13 +95,15 @@ public class EmailVerificationHelper {
     }
 
     private static void post(Context context, String path, JSONObject body, String okLog,
-                             String fallbackError, Ok onOk, Err onErr) {
+                             String fallbackError, OkData onOk, Err onErr) {
         StringRequest request = new StringRequest(
                 Request.Method.POST,
                 ApiConfig.BASE_URL + path,
                 response -> {
                     ApiConfig.logRestCall(path, true, okLog);
-                    if (onOk != null) onOk.run();
+                    JSONObject parsed;
+                    try { parsed = new JSONObject(response); } catch (JSONException e) { parsed = new JSONObject(); }
+                    if (onOk != null) onOk.run(parsed);
                 },
                 error -> {
                     ApiConfig.logRestCall(path, false, error.toString());
@@ -119,22 +140,18 @@ public class EmailVerificationHelper {
     }
 
     /**
-     * Post-login verification prompt. Unlike the signup dialog this one is DISMISSIBLE —
-     * the user is already inside the app, so back / tap-outside means "later" and still
-     * runs {@code onDone}. {@code onDone} always runs exactly once so the caller can
-     * continue its login chain either way.
+     * Email verification gate, shown when login is refused with requiresEmailVerification.
+     *
+     * This used to be a post-login "prompt": the user was already signed in, back or a
+     * tap outside ran {@code onDone}, and {@code onDone} walked straight into the app. It
+     * verified nothing. The server now refuses to issue a session at all until the address
+     * is confirmed, so there is no token behind this dialog — {@code onVerified} runs ONLY
+     * on success and carries the session the server hands back. Dismissing returns the user
+     * to the login form, which is where they already are.
      */
-    public static void show(Activity activity, String email, Ok onDone) {
-        if (activity == null || activity.isFinishing() || activity.isDestroyed()) {
-            if (onDone != null) onDone.run();
-            return;
-        }
-        final boolean[] finished = {false};
-        final Ok done = () -> {
-            if (finished[0]) return;
-            finished[0] = true;
-            if (onDone != null) onDone.run();
-        };
+    public static android.app.Dialog show(Activity activity, String email, OkData onVerified) {
+        if (activity == null || activity.isFinishing() || activity.isDestroyed()) return null;
+        final String target = normalize(email);
 
         LayoutInflater inflater = LayoutInflater.from(activity);
         View dialogView = inflater.inflate(R.layout.dialog_edit_profile, null);
@@ -145,8 +162,8 @@ public class EmailVerificationHelper {
 
         int gap = (int) (12 * activity.getResources().getDisplayMetrics().density);
         TextView info = new TextView(activity);
-        info.setText("Enter the code we emailed to " + email + " to verify your account. "
-                + "You can also resend it, or skip for now.");
+        info.setText("We emailed " + target + ". Tap \u201cVerify my email\u201d in that message and this screen continues by itself \u2014 "
+                + "on this phone or any other device. Prefer to type it? Enter the 6-digit code from the same email.");
         info.setTextColor(0xFFB0B0B0);
         info.setTextSize(14);
         info.setPadding(0, 0, 0, gap);
@@ -163,9 +180,11 @@ public class EmailVerificationHelper {
         final Dialog dialog = new Dialog(activity, R.style.DialogTheme);
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
         dialog.setContentView(dialogView);
-        dialog.setCancelable(true);                  // "later" = back or tap outside
-        dialog.setCanceledOnTouchOutside(true);
-        dialog.setOnDismissListener(d -> done.run());
+        // Dismissible on purpose: there is no session behind this dialog, so closing it
+        // lands back on the login form rather than inside the app. Someone who mistyped
+        // their address needs that way out.
+        dialog.setCancelable(true);
+        dialog.setCanceledOnTouchOutside(false);
         if (dialog.getWindow() != null) {
             WindowManager.LayoutParams wlp = new WindowManager.LayoutParams();
             wlp.copyFrom(dialog.getWindow().getAttributes());
@@ -182,27 +201,29 @@ public class EmailVerificationHelper {
 
         verifyButton.setOnClickListener(v -> {
             String code = codeInput.getText() != null ? codeInput.getText().toString().trim() : "";
-            if (code.length() < 4) {
-                codeLayout.setError("Enter the code from your email");
+            // Was `< 4` while the input filter caps at 6 and the copy says six digits.
+            if (code.length() != 6) {
+                codeLayout.setError("Enter the 6-digit code from your email");
                 return;
             }
             codeLayout.setError(null);
             verifyButton.setEnabled(false);
-            verifyOtp(activity, email, code,
-                    () -> {
+            verifyOtp(activity, target, code,
+                    (OkData) json -> {
                         Utilities.toast(activity, "Email verified");
-                        if (dialog.isShowing()) dialog.dismiss();   // dismiss listener runs done
-                        else done.run();
+                        if (dialog.isShowing()) dialog.dismiss();
+                        if (onVerified != null) onVerified.run(json);
                     },
                     msg -> {
                         verifyButton.setEnabled(true);
+                        codeInput.setText("");   // was left in place, so Verify stayed live on a dead code
                         codeLayout.setError(msg);
                     });
         });
 
         resendButton.setOnClickListener(v -> {
             resendButton.setEnabled(false);
-            sendOtp(activity, email,
+            sendOtp(activity, target,
                     () -> {
                         resendButton.setEnabled(true);
                         Utilities.toast(activity, "New code sent.");
@@ -215,6 +236,64 @@ public class EmailVerificationHelper {
 
         dialog.show();
         // Fire the first code as the dialog opens, so the box is never empty-handed.
-        sendOtp(activity, email, null, msg -> Utilities.toastLong(activity, msg));
+        // Success is now acknowledged too — it used to pass null, so a working send was
+        // silent and only failures said anything.
+        sendOtp(activity, target,
+                () -> Utilities.toast(activity, "Code sent to " + target),
+                msg -> Utilities.toastLong(activity, msg));
+        return dialog;
     }
+
+    /**
+     * Watches for the emailed LINK being tapped, so the user can verify on a laptop and
+     * have the phone let them straight in.
+     *
+     * The check is just a silent re-login: the server answers 403 while the address is
+     * unconfirmed and hands back a session the moment it is not. That means no extra
+     * endpoint and, in particular, no public "is this address verified?" oracle. Stops on
+     * success, when the activity goes away, or when {@code stop} flips.
+     */
+    public static void watchForLinkVerification(Activity activity, String email, String password,
+                                                boolean[] stop, OkData onVerified) {
+        final android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
+        final String target = normalize(email);
+        final Runnable[] tick = new Runnable[1];
+        tick[0] = () -> {
+            if (stop[0] || activity.isFinishing() || activity.isDestroyed()) return;
+            JSONObject body = new JSONObject();
+            try {
+                body.put("email", target);
+                body.put("password", password);
+            } catch (JSONException e) {
+                return;   // nothing recoverable; the code path still works
+            }
+            StringRequest req = new StringRequest(
+                    Request.Method.POST,
+                    ApiConfig.BASE_URL + "/api/auth/login",
+                    response -> {
+                        if (stop[0]) return;
+                        try {
+                            JSONObject json = new JSONObject(response);
+                            if (json.has("token")) {
+                                stop[0] = true;
+                                if (onVerified != null) onVerified.run(json);
+                                return;
+                            }
+                        } catch (JSONException ignored) {}
+                        handler.postDelayed(tick[0], POLL_INTERVAL_MS);
+                    },
+                    error -> {                       // still unverified, or offline
+                        if (!stop[0]) handler.postDelayed(tick[0], POLL_INTERVAL_MS);
+                    }
+            ) {
+                @Override public byte[] getBody() { return body.toString().getBytes(StandardCharsets.UTF_8); }
+                @Override public String getBodyContentType() { return "application/json; charset=utf-8"; }
+            };
+            req.setRetryPolicy(new DefaultRetryPolicy(15000, 0, 1f));
+            Volley.newRequestQueue(activity.getApplicationContext()).add(req);
+        };
+        handler.postDelayed(tick[0], POLL_INTERVAL_MS);
+    }
+
+    private static final long POLL_INTERVAL_MS = 4000L;
 }

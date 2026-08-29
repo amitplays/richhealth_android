@@ -77,10 +77,15 @@ public class MainActivity extends AppCompatActivity implements PaymentResultWith
 
         Log.d("MainActivity", "Is Logged In: " + isLoggedIn);
 
-        // Login gate is handled by SplashActivity — MainActivity is only reached when authenticated.
-        // Log for debug purposes.
+        // This used to only log. SplashActivity is not the only way in — a medication
+        // notification starts MainActivity directly (MedicationReminderReceiver), and any
+        // future entry point would land here too — so the destination gates itself.
         if (!isLoggedIn) {
-            Log.e("MainActivity", "Unexpected: reached MainActivity without login — SplashActivity should have caught this");
+            Log.e("MainActivity", "Reached MainActivity without a session — returning to login");
+            startActivity(new Intent(this, LoginActivity.class)
+                    .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK));
+            finish();
+            return;
         }
 
         // Initialize SharedPreferences

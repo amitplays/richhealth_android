@@ -105,7 +105,9 @@ public class OnboardingAccountFragment extends BaseOnboardingFragment {
         if (password.isEmpty()) {
             layoutPassword.setError("Password is required");
             valid = false;
-        } else if (password.length() < 6) {
+            // 8, not 6: ForgotPasswordDialog has always required 8, so an account made
+            // at 6 could never be reset to a password of its own class.
+        } else if (password.length() < 8) {
             layoutPassword.setError("Password must be at least 6 characters");
             valid = false;
         } else {

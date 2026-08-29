@@ -197,7 +197,9 @@ public class LoginActivity extends AppCompatActivity {
         }
 
         // Get input values
-        final String email = emailInput.getText().toString().trim();
+        // Lowercased too: the account is stored under a normalized address, so a
+        // capitalised login used to miss it outright.
+        final String email = Utils.EmailVerificationHelper.normalize(emailInput.getText().toString());
         final String password = passwordInput.getText().toString();
 
         Log.d(TAG, "Attempting login for email: " + email);
@@ -229,16 +231,31 @@ public class LoginActivity extends AppCompatActivity {
                     },
                     error -> {
                         ApiConfig.logRestCall(API_URL, false, "JSON login failed: " + error.toString());
-                        Log.e(TAG, "JSON login failed, Error : "+error+". Trying form URL encoded approach");
-                        // Only try next approach if it's likely a format issue, not a timeout or server error
-                        if (error.networkResponse != null && (error.networkResponse.statusCode == 400 || error.networkResponse.statusCode == 415)) {
+                        Log.e(TAG, "JSON login failed: " + error);
+                        int status = error.networkResponse != null ? error.networkResponse.statusCode : -1;
+                        // The password was right; the address has never been confirmed.
+                        if (status == 403 && isVerificationRequired(error)) {
+                            stopLogoSpin();
+                            showVerificationGate(email, password);
+                            return;
+                        }
+                        // 401 means the credentials are wrong. Retrying the identical
+                        // credentials as form-url-encoded doubled every failed attempt
+                        // against the rate limiter and put the password on the wire twice.
+                        if (status == 401) {
+                            stopLogoSpin();
+                            handleLoginError(Utils.EmailVerificationHelper.parseError(error, "Invalid email or password"), error);
+                            return;
+                        }
+                        // Only fall back when the shape is the plausible problem.
+                        if (status == 400 || status == 415) {
                             tryFormUrlEncodedLogin(email, password);
                         } else if (error instanceof com.android.volley.TimeoutError || error instanceof com.android.volley.NoConnectionError) {
                             stopLogoSpin();
                             handleLoginError("Connection timeout. Please check your internet or try again later.", error);
                         } else {
-                            // For other errors, try the fallback approach anyway just in case
-                            tryFormUrlEncodedLogin(email, password);
+                            stopLogoSpin();
+                            handleLoginError(Utils.EmailVerificationHelper.parseError(error, "Login failed. Please try again."), error);
                         }
                     }
             ) {
@@ -348,8 +365,6 @@ public class LoginActivity extends AppCompatActivity {
         try {
             // Parse login response
             JSONObject responseJson = new JSONObject(responseData);
-            Log.d(TAG, "Full response: " + responseData);
-            ProStatusManager.syncProStatusOnLogin(this);
             // Extract token and user ID
             String token = responseJson.getString("token");
             String userId = responseJson.getString("userId");
@@ -460,10 +475,17 @@ public class LoginActivity extends AppCompatActivity {
             // Save to TokenManager
             tokenManager.saveLoginInfo(token, userId);
 
-            // Remember whether this account's email is confirmed — offerEmailVerification()
-            // (between T&C and the biometric offer) uses it. Default true so a server that
-            // omits the field never nags the user.
-            loggedInEmailVerified = userDetails == null || userDetails.optBoolean("emailVerified", true);
+            // Must come AFTER saveLoginInfo: this reads the bearer token, and running it
+            // first meant a clean first login synced with no token at all, and a second
+            // account on a shared device synced with the previous user's token.
+            ProStatusManager.syncProStatusOnLogin(this);
+
+            // Fail closed. This defaulted to TRUE when the response had no user object or
+            // no emailVerified key, so any response shape drift silently marked everyone
+            // verified and the prompt never appeared. The server refuses to issue a token
+            // to an unverified account at all now, so reaching here already implies true —
+            // this stays as a second line of defence, not the first.
+            loggedInEmailVerified = userDetails != null && userDetails.optBoolean("emailVerified", false);
             loggedInEmail = email != null ? email : "";
 
             // Sync account-level T&C acceptance to this device so an already-accepted
@@ -526,17 +548,61 @@ public class LoginActivity extends AppCompatActivity {
         termsDialog.show();
     }
 
+    /** Guards against a second gate dialog stacking on top of the first. */
+    private boolean verificationGateShowing = false;
+
+    /** True when a 403 body carries requiresEmailVerification. */
+    private boolean isVerificationRequired(com.android.volley.VolleyError error) {
+        if (error == null || error.networkResponse == null || error.networkResponse.data == null) return false;
+        try {
+            JSONObject body = new JSONObject(new String(error.networkResponse.data,
+                    java.nio.charset.StandardCharsets.UTF_8));
+            return body.optBoolean("requiresEmailVerification", false);
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
     /**
-     * Ask an unverified account to confirm its email, right after login. Dismissible —
-     * "later" still continues into the app, so this never blocks sign-in. The prompt
-     * disappears for good once EmailVerificationHelper flips User.emailVerified server-side.
+     * The account exists and the password was right, but the address has never been
+     * confirmed, so the server issued no token. Nothing is stored and nothing is entered
+     * until the code is accepted; a successful verify returns the session and login
+     * resumes from exactly where it would have.
+     */
+    private void showVerificationGate(String email, String password) {
+        if (verificationGateShowing) return;      // a retry must not stack a second dialog
+        verificationGateShowing = true;
+        final boolean[] stopWatch = {false};
+        final android.app.Dialog[] gate = new android.app.Dialog[1];
+        gate[0] = Utils.EmailVerificationHelper.show(this, email, json -> {
+            stopWatch[0] = true;
+            verificationGateShowing = false;
+            handleLoginSuccess(json.toString());
+        });
+        if (gate[0] == null) { verificationGateShowing = false; return; }
+        gate[0].setOnDismissListener(d -> {        // closed without verifying: back to the form
+            stopWatch[0] = true;
+            verificationGateShowing = false;
+        });
+        // The link half: verify on a laptop and this screen finishes the sign-in itself.
+        Utils.EmailVerificationHelper.watchForLinkVerification(this, email, password, stopWatch, json -> {
+            verificationGateShowing = false;
+            if (gate[0] != null && gate[0].isShowing()) gate[0].dismiss();
+            handleLoginSuccess(json.toString());
+        });
+    }
+
+    /**
+     * Second line of defence only. The server no longer issues a session to an unverified
+     * account, so reaching here with loggedInEmailVerified == false means the response was
+     * missing its user object; re-verify rather than walking into the app.
      */
     private void offerEmailVerification() {
         if (loggedInEmailVerified || loggedInEmail.isEmpty()) {
             offerBiometricSetup();
             return;
         }
-        Utils.EmailVerificationHelper.show(this, loggedInEmail, this::offerBiometricSetup);
+        Utils.EmailVerificationHelper.show(this, loggedInEmail, json -> offerBiometricSetup());
     }
 
     /**

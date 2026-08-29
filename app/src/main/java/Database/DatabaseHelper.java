@@ -1769,6 +1769,12 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         db.delete(TABLE_CHAT_SESSIONS, null, null);
         db.delete(TABLE_SUGGESTIONS, null, null);
         db.delete(TABLE_MEDICAL_REPORTS, null, null);
+        // These four were left populated, so the next account on this device inherited the
+        // previous user's workouts, saved contacts and podcast bookmarks.
+        db.delete(TABLE_WORKOUTS, null, null);
+        db.delete(TABLE_WORKOUT_EXERCISES, null, null);
+        db.delete(TABLE_CONTACTS, null, null);
+        db.delete(TABLE_PODCAST_BOOKMARKS, null, null);
         db.close();
     }
 }

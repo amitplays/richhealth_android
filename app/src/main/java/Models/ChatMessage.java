@@ -79,6 +79,9 @@ public class ChatMessage {
                     case "clinical_trials":      line = "Checked clinical trials" + (q.isEmpty() ? "" : ": " + q); break;
                     case "fetch_health_records": line = "Checked your " + (q.isEmpty() ? "records" : q) + " log"; break;
                     case "log_health_record":    line = "Preparing to log " + (q.isEmpty() ? "health data" : q); break;
+                    case "lookup_health_topic":  line = "Looked up " + (q.isEmpty() ? "what that means" : q); break;
+                    // Any tool added to the backend registry without a line here falls
+                    // through and shows the raw tool name — keep this in step with it.
                     default:                     line = "Used " + (tool.isEmpty() ? "a tool" : tool);
                 }
                 agentToolLines.add(line);

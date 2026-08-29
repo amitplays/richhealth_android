@@ -1037,7 +1037,10 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
 
         final JSONObject body = new JSONObject();
         try {
-            body.put("email", onboardingData.email);
+            // Trimmed AND lowercased, matching the signup payload and the OTP calls —
+            // they were trimmed only, so a capitalised address checked one key and
+            // registered under another.
+            body.put("email", Utils.EmailVerificationHelper.normalize(onboardingData.email));
         } catch (JSONException e) {
             checkingEmail = false;
             advanceAfterStep(fragmentIndex); // fail open
@@ -1194,21 +1197,37 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
 
         verifyButton.setOnClickListener(v -> {
             String code = codeInput.getText() != null ? codeInput.getText().toString().trim() : "";
-            if (code.length() < 4) {
-                codeLayout.setError("Enter the code from your email");
+            // Was `< 4`, while the filter caps at 6 and the copy says six digits.
+            if (code.length() != 6) {
+                codeLayout.setError("Enter the 6-digit code from your email");
                 return;
             }
             codeLayout.setError(null);
             showLoading(true, "Verifying...");
+            verifyButton.setEnabled(false);
+            resendButton.setEnabled(false);
             verifyOtp(email, code,
-                    () -> {
+                    json -> {
                         showLoading(false);
+                        otpWatchStop[0] = true;
+                        if (!handleVerifiedSession(json)) {
+                            verifyButton.setEnabled(true);
+                            resendButton.setEnabled(true);
+                            codeLayout.setError("Verified, but the session didn't arrive. Please sign in.");
+                            return;
+                        }
                         awaitingOtpVerification = false;
                         otpDialog = null;
                         dialog.dismiss();
                         goToMainAfterVerification(name);
                     },
-                    msg -> { showLoading(false); codeLayout.setError(msg); });
+                    msg -> {
+                        showLoading(false);
+                        verifyButton.setEnabled(true);
+                        resendButton.setEnabled(true);
+                        codeInput.setText("");   // stale code kept Verify live on a dead value
+                        codeLayout.setError(msg);
+                    });
         });
 
         resendButton.setOnClickListener(v -> {
@@ -1220,6 +1239,51 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
 
         otpDialog = dialog;
         dialog.show();
+        // The link half: tapping "Verify my email" anywhere finishes signup on its own.
+        otpWatchStop[0] = false;
+        Utils.EmailVerificationHelper.watchForLinkVerification(
+                this, email, onboardingData.password, otpWatchStop,
+                json -> {
+                    otpWatchStop[0] = true;
+                    if (!handleVerifiedSession(json)) return;
+                    awaitingOtpVerification = false;
+                    otpDialog = null;
+                    if (dialog.isShowing()) dialog.dismiss();
+                    goToMainAfterVerification(name);
+                });
+    }
+
+    /**
+     * Stores the session the server hands back on a successful verify. This is the only
+     * point at which this device becomes logged in, so a kill anywhere before it leaves
+     * no token behind and the next launch lands on the login screen, not inside the app.
+     * Returns false if the response carried no token, so the caller can keep the dialog up.
+     */
+    /** Stops the link watcher — flipped on success, and whenever the dialog goes away. */
+    private final boolean[] otpWatchStop = {true};
+
+    private boolean handleVerifiedSession(JSONObject json) {
+        if (json == null) return false;
+        String token = json.optString("token", "");
+        String userId = json.optString("userId", "");
+        if (token.isEmpty() || userId.isEmpty()) return false;
+        TokenManager.getInstance(this).saveLoginInfo(token, userId);
+        try {
+            UserProfile stored = new DatabaseHelper(this).getUserProfile();
+            if (stored != null) {
+                stored.setAuthToken(token);
+                stored.setLoggedIn(true);
+                new DatabaseHelper(this).insertUserProfile(stored);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Could not attach token to stored profile", e);
+        }
+        // Terms are accepted as part of onboarding, so record it against this account —
+        // signup never did, which is why a brand-new user was ambushed by the terms
+        // dialog on their SECOND launch, where declining wiped their fresh profile.
+        TermsAndConditionsDialog.markAcceptedLocally(this, userId);
+        Utils.ProStatusManager.syncProStatusOnLogin(this);
+        return true;
     }
 
     /** Verified — enter the app. */
@@ -1230,9 +1294,8 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
         startActivity(intent);
     }
 
-    private void verifyOtp(String email, String code, OtpOk onOk, OtpErr onErr) {
-        Utils.EmailVerificationHelper.verifyOtp(this, email, code,
-                onOk == null ? null : onOk::run,
+    private void verifyOtp(String email, String code, Utils.EmailVerificationHelper.OkData onOk, OtpErr onErr) {
+        Utils.EmailVerificationHelper.verifyOtp(this, email, code, onOk,
                 onErr == null ? null : onErr::run);
     }
 
@@ -1305,7 +1368,7 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
         JSONObject p = new JSONObject();
 
         // Account
-        p.put("email",           d.email);
+        p.put("email",           Utils.EmailVerificationHelper.normalize(d.email));
         p.put("password",        d.password);
         p.put("confirmPassword", d.confirmPassword);
         p.put("name",            d.name);
@@ -1416,11 +1479,11 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
         showLoading(false);
         try {
             JSONObject json = new JSONObject(response);
-            String token  = json.getString("token");
-            String userId = json.getString("userId");
-
-            TokenManager.getInstance(this).saveLoginInfo(token, userId);
-
+            // No token here any more. saveLoginInfo used to run at this point, ~70 lines
+            // before the code dialog even appeared, so the device was "logged in" before
+            // the email was confirmed — and killing the app on that dialog re-entered
+            // through SplashActivity straight into MainActivity, unverified, with the
+            // dialog gone for good. The session now arrives with the verify-otp response.
             OnboardingData d = onboardingData;
             UserProfile profile = new UserProfile();
             profile.setName(d.name);
@@ -1478,8 +1541,10 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
                 profile.setMenstrualSymptoms(d.menstrualSymptoms != null ? d.menstrualSymptoms : new ArrayList<>());
             }
 
-            profile.setAuthToken(token);
-            profile.setLoggedIn(true);
+            // Not logged in yet, and no token to record — both are set once the code
+            // is accepted (handleVerifiedSession below). The profile row is written now
+            // so the account's answers survive the verification step.
+            profile.setLoggedIn(false);
             profile.setLastLogin(new Date());
             profile.setMetric(true);
 
