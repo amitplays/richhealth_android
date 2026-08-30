@@ -81,6 +81,21 @@ public class OnboardingData {
     public String conditionsDiagnosed = "";  // how long since first diagnosed
     public String conditionsMedicated = "";  // on medication for condition(s)?
 
+    // ── Numeric habit quantities (2026-08 signup rework — slider answers) ──
+    // 0 = not asked/answered; the payload only sends positive values.
+    public float smokingCigsPerDay = 0f;     // cigarettes/day (current, or typical for ex)
+    public float smokingYears = 0f;          // years smoked
+    public float smokingQuitYearsAgo = 0f;   // ex-smokers: years since quitting
+    public float alcoholDrinksPerWeek = 0f;  // standard drinks/week
+    public float caffeineCupsPerDay = 0f;    // cups of tea/coffee per day
+    public double sleepHoursVal = 7.0;       // slider hours (sleepHours int kept for legacy)
+
+    // Per-condition detail (2026-08): condition → answer maps.
+    public java.util.Map<String, String> conditionDiagnosedMap = new java.util.HashMap<>();
+    public java.util.Map<String, String> conditionMedicatedMap = new java.util.HashMap<>();
+    // Family condition → relatives who had it.
+    public java.util.Map<String, List<String>> familyRelativesMap = new java.util.HashMap<>();
+
     // Step: Family Health Story
     public List<String> familyHistory = new ArrayList<>();
     public List<String> familyHistoryRelatives = new ArrayList<>(); // parent / grandparent / sibling

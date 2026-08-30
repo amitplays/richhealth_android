@@ -25,6 +25,7 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.slider.Slider;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -48,7 +49,11 @@ public class CardStepFragment extends BaseOnboardingFragment {
     private static final String ARG_STEP_INDEX = "step_index";
 
     private StepConfig config;
+    // Parallel to config.sections: card sections put their adapter here and null
+    // into sliders; slider sections do the reverse. Keeps validate()/collectData()
+    // index-aligned.
     private final List<SelectableCardAdapter> adapters = new ArrayList<>();
+    private final List<Slider> sliders = new ArrayList<>();
     private final List<View> animTargets = new ArrayList<>();
 
     public static CardStepFragment newInstance(int stepIndex) {
@@ -66,6 +71,7 @@ public class CardStepFragment extends BaseOnboardingFragment {
         int stepIndex = getArguments() != null ? getArguments().getInt(ARG_STEP_INDEX) : 0;
         config = hostActivity.getCardStepConfig(stepIndex);
         adapters.clear();
+        sliders.clear();
         animTargets.clear();
 
         Context ctx = requireContext();
@@ -186,6 +192,49 @@ public class CardStepFragment extends BaseOnboardingFragment {
                 content.addView(spacer);
             }
 
+            // ── Slider section (2026-08 rework): numeric answer, live readout ──
+            if (section.slider != null) {
+                final StepConfig.SliderSpec spec = section.slider;
+
+                TextView tvValue = new TextView(ctx);
+                LinearLayout.LayoutParams valParams = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                valParams.bottomMargin = dp(ctx, 4);
+                tvValue.setLayoutParams(valParams);
+                tvValue.setTextColor(Color.parseColor("#008b8b"));
+                tvValue.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
+                tvValue.setTypeface(null, Typeface.BOLD);
+
+                Slider slider = new Slider(ctx);
+                LinearLayout.LayoutParams slParams = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                slParams.bottomMargin = dp(ctx, 32);
+                slider.setLayoutParams(slParams);
+                slider.setValueFrom(spec.valueFrom);
+                slider.setValueTo(spec.valueTo);
+                slider.setStepSize(spec.stepSize);
+                slider.setValue(spec.defaultValue);
+
+                Runnable updateLabel = () -> {
+                    float v = slider.getValue();
+                    String num = (spec.stepSize < 1f && v != Math.round(v))
+                            ? String.format(java.util.Locale.US, "%.1f", v)
+                            : String.valueOf(Math.round(v));
+                    tvValue.setText(num + (spec.unit.isEmpty() ? "" : " " + spec.unit));
+                };
+                updateLabel.run();
+                slider.addOnChangeListener((s, value, fromUser) -> updateLabel.run());
+
+                content.addView(tvValue);
+                content.addView(slider);
+                animTargets.add(tvValue);
+                animTargets.add(slider);
+
+                adapters.add(null);
+                sliders.add(slider);
+                continue;
+            }
+
             // Card grid RecyclerView
             RecyclerView rv = new RecyclerView(ctx);
             LinearLayout.LayoutParams rvParams = new LinearLayout.LayoutParams(
@@ -213,6 +262,7 @@ public class CardStepFragment extends BaseOnboardingFragment {
                 adapter.setClearOthersPosition(section.clearOthersPosition);
             }
             adapters.add(adapter);
+            sliders.add(null);
             rv.setAdapter(adapter);
 
             content.addView(rv);
@@ -250,6 +300,7 @@ public class CardStepFragment extends BaseOnboardingFragment {
     public boolean validate() {
         for (int i = 0; i < config.sections.size(); i++) {
             StepConfig.SectionConfig section = config.sections.get(i);
+            if (section.slider != null) continue; // sliders always have a value
             if (section.required && !adapters.get(i).hasSelection()) {
                 String label = section.sectionTitle != null ? section.sectionTitle : config.title;
                 Utilities.toast(getContext(), "Please make a selection for: " + label);
@@ -263,6 +314,11 @@ public class CardStepFragment extends BaseOnboardingFragment {
     public void collectData(OnboardingData data) {
         for (int i = 0; i < config.sections.size(); i++) {
             StepConfig.SectionConfig section = config.sections.get(i);
+            if (section.slider != null) {
+                Slider slider = sliders.get(i);
+                if (slider != null) section.dataWriter.write(data, slider.getValue());
+                continue;
+            }
             SelectableCardAdapter adapter = adapters.get(i);
             if (!adapter.hasSelection()) continue;
 

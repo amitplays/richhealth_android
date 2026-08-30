@@ -21,6 +21,27 @@ public class StepConfig {
         void write(OnboardingData data, Object selectedValue);
     }
 
+    // ── Slider spec — a numeric-answer section (2026-08 signup rework) ───────
+
+    /** Numeric slider question (cigs/day, years, drinks/week, cups, sleep hours). */
+    public static class SliderSpec {
+        public final float valueFrom;
+        public final float valueTo;
+        public final float stepSize;
+        public final float defaultValue;
+        /** Unit label appended to the live readout, e.g. "cigarettes", "hrs". */
+        public final String unit;
+
+        public SliderSpec(float valueFrom, float valueTo, float stepSize,
+                          float defaultValue, String unit) {
+            this.valueFrom = valueFrom;
+            this.valueTo = valueTo;
+            this.stepSize = stepSize;
+            this.defaultValue = defaultValue;
+            this.unit = unit;
+        }
+    }
+
     // ── Section — one question block within a step ───────────────────────────
 
     public static class SectionConfig {
@@ -41,6 +62,8 @@ public class StepConfig {
          * -1 = disabled.
          */
         public final int clearOthersPosition;
+        /** Non-null → this section renders a slider instead of a card grid. */
+        public final SliderSpec slider;
 
         // Legacy ctor — no why subtitle, no clearOthers
         public SectionConfig(String sectionTitle, List<SelectableOption> options,
@@ -77,6 +100,21 @@ public class StepConfig {
             this.spanCount = spanCount;
             this.dataWriter = dataWriter;
             this.clearOthersPosition = clearOthersPosition;
+            this.slider = null;
+        }
+
+        /** Slider section (2026-08): numeric answer, always valid, writer gets a Float. */
+        public SectionConfig(String sectionTitle, String whySubtitle,
+                             SliderSpec slider, DataWriter dataWriter) {
+            this.sectionTitle = sectionTitle;
+            this.whySubtitle = whySubtitle;
+            this.options = null;
+            this.multiSelect = false;
+            this.required = false;
+            this.spanCount = 1;
+            this.dataWriter = dataWriter;
+            this.clearOthersPosition = -1;
+            this.slider = slider;
         }
     }
 

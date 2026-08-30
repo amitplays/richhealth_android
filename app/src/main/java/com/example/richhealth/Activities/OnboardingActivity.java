@@ -53,11 +53,13 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
     // Conditional follow-up steps (see rebuildActiveSteps / isStepActive).
     private static final int SMOKING_DETAIL_FRAGMENT_INDEX = 13;
     private static final int ALCOHOL_DETAIL_FRAGMENT_INDEX = 14;
-    private static final int CONDITIONS_DETAIL_FRAGMENT_INDEX = 19;
+    private static final int FAMILY_RELATIVES_FRAGMENT_INDEX = 16;  // per-condition (2026-08)
+    private static final int CONDITIONS_DETAIL_FRAGMENT_INDEX = 20; // shifted by the inserted step
     // Steps after which the active-step list must be recomputed (an answer here
     // decides whether a following conditional step appears).
     private static final int HABITS_FRAGMENT_INDEX = 12;
-    private static final int CONDITIONS_FRAGMENT_INDEX = 18;
+    private static final int FAMILY_FRAGMENT_INDEX = 15;
+    private static final int CONDITIONS_FRAGMENT_INDEX = 19;        // shifted by the inserted step
 
     private final List<BaseOnboardingFragment> allFragments = new ArrayList<>();
     private final List<Integer> activeSteps = new ArrayList<>();
@@ -117,11 +119,12 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
         allFragments.add(CardStepFragment.newInstance(16));         // 13 – smoking detail (conditional)
         allFragments.add(CardStepFragment.newInstance(17));         // 14 – alcohol detail (conditional)
         allFragments.add(CardStepFragment.newInstance(12));         // 15 – family history
-        allFragments.add(CardStepFragment.newInstance(13));         // 16 – allergies
-        allFragments.add(CardStepFragment.newInstance(14));         // 17 – sun exposure
-        allFragments.add(CardStepFragment.newInstance(15));         // 18 – blood type + conditions
-        allFragments.add(CardStepFragment.newInstance(18));         // 19 – conditions detail (conditional)
-        allFragments.add(CardStepFragment.newInstance(19));         // 20 – ancestry
+        allFragments.add(CardStepFragment.newInstance(21));         // 16 – family relatives per condition (conditional)
+        allFragments.add(CardStepFragment.newInstance(13));         // 17 – allergies
+        allFragments.add(CardStepFragment.newInstance(14));         // 18 – sun exposure
+        allFragments.add(CardStepFragment.newInstance(15));         // 19 – blood type + conditions
+        allFragments.add(CardStepFragment.newInstance(18));         // 20 – conditions detail (conditional, per condition)
+        allFragments.add(CardStepFragment.newInstance(19));         // 21 – ancestry
 
         rebuildActiveSteps();
 
@@ -426,21 +429,22 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
         ));
 
         // ── Step 8: Sleep (split) ─────────────────────────────────────────────
+        // 2026-08 rework: slider — the 4 buckets had no honest option for a
+        // 6–7 h sleeper, exactly the range where sleep advice changes.
         cardStepConfigs.put(8, new StepConfig(
                 R.drawable.ic_signup_sleep_goal,
                 "How much do you sleep?",
                 "Sleep is where your body actually does the healing work",
                 Arrays.asList(
                         new StepConfig.SectionConfig(
-                                null,
-                                Arrays.asList(
-                                        new SelectableOption("Under 5 hrs", R.drawable.ic_signup_sleep_under5, 4),
-                                        new SelectableOption("5–6 hours",   R.drawable.ic_signup_sleep_5to6,   6),
-                                        new SelectableOption("7–8 hours",   R.drawable.ic_signup_sleep_7to8,   8),
-                                        new SelectableOption("9+ hours",    R.drawable.ic_signup_sleep_9plus,  9)
-                                ),
-                                false, true, 2,
-                                (data, value) -> data.sleepHours = (Integer) value
+                                "Typical night",
+                                "Half-hour steps are precise enough — estimates are fine.",
+                                new StepConfig.SliderSpec(4f, 10f, 0.5f, 7f, "hours"),
+                                (data, value) -> {
+                                    float v = (Float) value;
+                                    data.sleepHoursVal = v;
+                                    data.sleepHours = Math.round(v); // legacy int kept in sync
+                                }
                         )
                 )
         ));
@@ -496,50 +500,35 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
                         new StepConfig.SectionConfig(
                                 "Do you smoke?",
                                 "Smoking changes our cardiovascular, lung capacity, and recovery recommendations.",
+                                // 2026-08 rework: 3 clear statuses ("socially/sometimes/daily"
+                                // overlapped). Frequency now comes from the cigs/day slider on the
+                                // detail step; occasional/regular is DERIVED in buildPayload.
                                 Arrays.asList(
-                                        new SelectableOption("Never, not even once", R.drawable.ic_signup_smoke_never,     "never"),
-                                        new SelectableOption("I quit — proud of it", R.drawable.ic_signup_none,            "ex"),
-                                        new SelectableOption("Only socially",         R.drawable.ic_signup_smoke_social,     "social"),
-                                        new SelectableOption("Sometimes",             R.drawable.ic_signup_smoke_sometimes,  "occasional"),
-                                        new SelectableOption("Daily habit",           R.drawable.ic_signup_smoke_daily,      "regular", true)
+                                        new SelectableOption("Never, not even once", R.drawable.ic_signup_smoke_never, "never"),
+                                        new SelectableOption("I used to — I quit",   R.drawable.ic_signup_none,        "ex"),
+                                        new SelectableOption("I smoke",              R.drawable.ic_signup_smoke_daily, "current", true)
                                 ),
                                 false, true, 2,
                                 (data, value) -> {
                                     data.smokingStatus = (String) value;
-                                    switch ((String) value) {
-                                        case "never":
-                                        case "ex":
-                                            data.smoker = false;
-                                            data.smokingLevel = 0;
-                                            data.smokingFrequency = "Non-smoker";
-                                            break;
-                                        case "social":
-                                            data.smoker = false;
-                                            data.smokingLevel = 1;
-                                            data.smokingFrequency = "Social";
-                                            break;
-                                        case "occasional":
-                                            data.smoker = true;
-                                            data.smokingLevel = 2;
-                                            data.smokingFrequency = "Occasional";
-                                            break;
-                                        case "regular":
-                                            data.smoker = true;
-                                            data.smokingLevel = 3;
-                                            data.smokingFrequency = "Regular";
-                                            break;
-                                    }
+                                    // never/ex defaults; "current" is finalised in buildPayload
+                                    // once the cigs/day slider answer is known.
+                                    data.smoker = false;
+                                    data.smokingLevel = 0;
+                                    data.smokingFrequency = "Non-smoker";
                                 }
                         ),
                         new StepConfig.SectionConfig(
                                 "How often do you drink alcohol?",
                                 "Alcohol quietly wrecks sleep quality, liver function, and hydration — even in small amounts.",
+                                // 2026-08 rework: "Special occasions" vs "Socially/weekends" were
+                                // indistinguishable — 4 non-overlapping frequencies; quantity comes
+                                // from the drinks/week slider on the detail step.
                                 Arrays.asList(
-                                        new SelectableOption("I don't drink",       R.drawable.ic_signup_alcohol_none,       "None"),
-                                        new SelectableOption("Special occasions",    R.drawable.ic_signup_alcohol_special,    "Special Occasions"),
-                                        new SelectableOption("Socially / weekends", R.drawable.ic_signup_alcohol_weekends,   "Socially"),
-                                        new SelectableOption("Few times a week",    R.drawable.ic_signup_alcohol_regularly,  "Regularly"),
-                                        new SelectableOption("Almost daily",        R.drawable.ic_signup_alcohol_daily,      "Frequently", true)
+                                        new SelectableOption("I don't drink",      R.drawable.ic_signup_alcohol_none,      "None"),
+                                        new SelectableOption("A few times a year", R.drawable.ic_signup_alcohol_special,   "Special Occasions"),
+                                        new SelectableOption("Most weeks",         R.drawable.ic_signup_alcohol_regularly, "Regularly"),
+                                        new SelectableOption("Almost daily",       R.drawable.ic_signup_alcohol_daily,     "Frequently", true)
                                 ),
                                 false, true, 2,
                                 (data, value) -> {
@@ -560,11 +549,20 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
                                         new SelectableOption("No caffeine",   R.drawable.ic_signup_caffeine_none, "none"),
                                         new SelectableOption("Tea person",    R.drawable.ic_signup_tea,           "tea"),
                                         new SelectableOption("Coffee lover",  R.drawable.ic_signup_coffee,        "coffee"),
+                                        // "both" existed in the backend + Profile edit but was
+                                        // missing here — half the users drink both.
+                                        new SelectableOption("Tea & coffee",  R.drawable.ic_signup_coffee,        "both"),
                                         new SelectableOption("Energy drinks", R.drawable.ic_signup_energy_drink,  "energy_drinks"),
                                         SelectableOption.other("Other — you tell us", R.drawable.ic_edit, true)
                                 ),
                                 false, true, 2,
                                 (data, value) -> data.caffeineHabit = (String) value
+                        ),
+                        new StepConfig.SectionConfig(
+                                "How many cups a day?",
+                                "Quantity matters for sleep and blood-pressure advice. Skip mentally if you picked no caffeine — it's ignored.",
+                                new StepConfig.SliderSpec(0f, 8f, 1f, 2f, "cups"),
+                                (data, value) -> data.caffeineCupsPerDay = (Float) value
                         )
                 )
         ));
@@ -606,29 +604,10 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
                                     data.familyHistory = history;
                                 },
                                 familyOptions.size() - 1
-                        ),
-                        new StepConfig.SectionConfig(
-                                "Who in your family?",
-                                "Pick the relatives who had the condition(s) you selected above — closer relatives (parents, siblings) carry more weight than distant ones.",
-                                Arrays.asList(
-                                        new SelectableOption("Parent(s)",      R.drawable.ic_signup_family, "Parent"),
-                                        new SelectableOption("Grandparent(s)", R.drawable.ic_signup_family, "Grandparent"),
-                                        new SelectableOption("Sibling(s)",     R.drawable.ic_signup_family, "Sibling"),
-                                        new SelectableOption("Not sure",       R.drawable.ic_signup_none,   "__rel_none__", true)
-                                ),
-                                true, false, 2,
-                                (data, value) -> {
-                                    @SuppressWarnings("unchecked")
-                                    List<Object> selected = (List<Object>) value;
-                                    List<String> rels = new ArrayList<>();
-                                    for (Object o : selected) {
-                                        String s = (String) o;
-                                        if (!s.equals("__rel_none__")) rels.add(s);
-                                    }
-                                    data.familyHistoryRelatives = rels;
-                                },
-                                3
                         )
+                        // "Who in your family?" moved to its own PER-CONDITION step
+                        // (2026-08 rework, built dynamically in getCardStepConfig(21)) —
+                        // one shared answer couldn't say who had which condition.
                 )
         ));
 
@@ -644,7 +623,8 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
                 new SelectableOption("Dairy",          R.drawable.ic_signup_healthy_food,  "Dairy"),
                 new SelectableOption("Eggs",           R.drawable.ic_egg,                  "Eggs"),
                 new SelectableOption("Gluten / Wheat", R.drawable.ic_signup_gluten_free,   "Gluten"),
-                new SelectableOption("Seafood",        R.drawable.ic_signup_fastfood,      "Seafood"),
+                new SelectableOption("Fish",           R.drawable.ic_signup_fastfood,      "Fish"),
+                new SelectableOption("Shellfish",      R.drawable.ic_signup_fastfood,      "Shellfish"),
                 new SelectableOption("Soy",            R.drawable.ic_signup_seedling,      "Soy"),
                 new SelectableOption("Pollen",         R.drawable.ic_signup_seedling,      "Pollen"),
                 new SelectableOption("Dust",           R.drawable.ic_signup_block,         "Dust"),
@@ -786,52 +766,11 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
                 )
         ));
 
-        // ── Step 16: Smoking detail (conditional — smokers & ex-smokers) ──────
-        cardStepConfigs.put(16, new StepConfig(
-                R.drawable.ic_signup_smoke_daily,
-                "About your smoking",
-                "A few details so our lung, heart, and recovery advice is accurate",
-                Arrays.asList(
-                        new StepConfig.SectionConfig(
-                                "How long have you smoked?",
-                                "Duration matters as much as amount for long-term risk.",
-                                Arrays.asList(
-                                        new SelectableOption("Under a year", R.drawable.ic_signup_smoke_social,    "<1 year"),
-                                        new SelectableOption("1–5 years",    R.drawable.ic_signup_smoke_sometimes, "1-5 years"),
-                                        new SelectableOption("5–10 years",   R.drawable.ic_signup_smoke_daily,     "5-10 years"),
-                                        new SelectableOption("10+ years",    R.drawable.ic_signup_smoke_daily,     "10+ years")
-                                ),
-                                false, false, 2,
-                                (data, value) -> data.smokingDuration = (String) value
-                        ),
-                        new StepConfig.SectionConfig(
-                                "How many a day?",
-                                "Typical daily amount.",
-                                Arrays.asList(
-                                        new SelectableOption("Under 5", R.drawable.ic_signup_smoke_social,    "<5"),
-                                        new SelectableOption("5–10",    R.drawable.ic_signup_smoke_sometimes, "5-10"),
-                                        new SelectableOption("10–20",   R.drawable.ic_signup_smoke_daily,     "10-20"),
-                                        new SelectableOption("20+",     R.drawable.ic_signup_smoke_daily,     "20+")
-                                ),
-                                false, false, 2,
-                                (data, value) -> data.cigarettesPerDay = (String) value
-                        ),
-                        new StepConfig.SectionConfig(
-                                "When did you last smoke?",
-                                "So we account for ex-smokers too.",
-                                Arrays.asList(
-                                        new SelectableOption("This week",       R.drawable.ic_signup_smoke_daily,  "This week"),
-                                        new SelectableOption("This month",      R.drawable.ic_signup_smoke_social, "This month"),
-                                        new SelectableOption("This year",       R.drawable.ic_signup_none,         "This year"),
-                                        new SelectableOption("Over a year ago", R.drawable.ic_signup_none,         "Over a year ago")
-                                ),
-                                false, false, 2,
-                                (data, value) -> data.lastSmoked = (String) value
-                        )
-                )
-        ));
+        // Step 16 (smoking detail) is built DYNAMICALLY in getCardStepConfig()
+        // — its sliders depend on whether the user said "ex" or "current".
 
         // ── Step 17: Alcohol detail (conditional — drinkers) ─────────────────
+        // 2026-08 rework: slider gives a real number instead of overlapping buckets.
         cardStepConfigs.put(17, new StepConfig(
                 R.drawable.ic_signup_alcohol_regularly,
                 "About your drinking",
@@ -839,50 +778,16 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
                 Arrays.asList(
                         new StepConfig.SectionConfig(
                                 "Drinks per week?",
-                                "Roughly how many alcoholic drinks in a typical week.",
-                                Arrays.asList(
-                                        new SelectableOption("1–2",  R.drawable.ic_signup_alcohol_special,   "1-2"),
-                                        new SelectableOption("3–5",  R.drawable.ic_signup_alcohol_weekends,  "3-5"),
-                                        new SelectableOption("6–10", R.drawable.ic_signup_alcohol_regularly, "6-10"),
-                                        new SelectableOption("10+",  R.drawable.ic_signup_alcohol_daily,     "10+")
-                                ),
-                                false, false, 2,
-                                (data, value) -> data.drinksPerWeek = (String) value
+                                "Roughly how many alcoholic drinks in a typical week — estimates are fine.",
+                                new StepConfig.SliderSpec(1f, 30f, 1f, 4f, "drinks"),
+                                (data, value) -> data.alcoholDrinksPerWeek = (Float) value
                         )
                 )
         ));
 
-        // ── Step 18: Condition detail (conditional — if a condition was picked) ──
-        cardStepConfigs.put(18, new StepConfig(
-                R.drawable.ic_signup_medical_hero,
-                "About your condition(s)",
-                "Two quick details so our advice accounts for what you're managing",
-                Arrays.asList(
-                        new StepConfig.SectionConfig(
-                                "When were you first diagnosed?",
-                                "Roughly how long you've been managing it.",
-                                Arrays.asList(
-                                        new SelectableOption("Under a year", R.drawable.ic_signup_none,       "<1 year"),
-                                        new SelectableOption("1–5 years",    R.drawable.ic_signup_healthcare, "1-5 years"),
-                                        new SelectableOption("5–10 years",   R.drawable.ic_signup_healthcare, "5-10 years"),
-                                        new SelectableOption("10+ years",    R.drawable.ic_signup_heart,      "10+ years")
-                                ),
-                                false, false, 2,
-                                (data, value) -> data.conditionsDiagnosed = (String) value
-                        ),
-                        new StepConfig.SectionConfig(
-                                "On medication for it?",
-                                "Helps us avoid conflicting food and supplement advice.",
-                                Arrays.asList(
-                                        new SelectableOption("Yes",  R.drawable.ic_signup_healthcare, "Yes"),
-                                        new SelectableOption("Some", R.drawable.ic_signup_healthcare, "Some"),
-                                        new SelectableOption("No",   R.drawable.ic_signup_none,       "No")
-                                ),
-                                false, false, 3,
-                                (data, value) -> data.conditionsMedicated = (String) value
-                        )
-                )
-        ));
+        // Step 18 (condition detail) is built DYNAMICALLY in getCardStepConfig()
+        // — 2026-08 rework: the questions repeat PER selected condition, since one
+        // shared answer couldn't say which condition it referred to.
 
         // ── Step 19: Ancestry / ethnicity (predictive risk stratifier) ───────
         cardStepConfigs.put(19, new StepConfig(
@@ -912,7 +817,119 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
 
     /** Called by CardStepFragment to fetch its configuration. */
     public StepConfig getCardStepConfig(int stepIndex) {
-        return cardStepConfigs.get(stepIndex);
+        // Dynamic steps (2026-08 rework): their content depends on earlier answers,
+        // and each step's view is rebuilt on navigation (tx.replace → onCreateView),
+        // so building the config at fetch time always reflects the latest data.
+        switch (stepIndex) {
+            case 16: return buildSmokingDetailConfig();
+            case 18: return buildConditionDetailConfig();
+            case 21: return buildFamilyRelativesConfig();
+            default: return cardStepConfigs.get(stepIndex);
+        }
+    }
+
+    /** Smoking detail — sliders for real numbers (→ pack-years); quit slider for ex-smokers. */
+    private StepConfig buildSmokingDetailConfig() {
+        boolean ex = "ex".equals(onboardingData.smokingStatus);
+        List<StepConfig.SectionConfig> sections = new ArrayList<>();
+        sections.add(new StepConfig.SectionConfig(
+                ex ? "How many a day, back then?" : "How many a day?",
+                "Rough numbers are fine — this is what sharpens your risk predictions the most.",
+                new StepConfig.SliderSpec(1f, 40f, 1f, 10f, "cigarettes"),
+                (data, value) -> data.smokingCigsPerDay = (Float) value
+        ));
+        sections.add(new StepConfig.SectionConfig(
+                ex ? "For how many years did you smoke?" : "For how many years?",
+                "Duration matters as much as amount for long-term risk.",
+                new StepConfig.SliderSpec(0.5f, 40f, 0.5f, 5f, "years"),
+                (data, value) -> data.smokingYears = (Float) value
+        ));
+        if (ex) {
+            sections.add(new StepConfig.SectionConfig(
+                    "How long since you quit?",
+                    "Risk genuinely falls the longer it's been — this matters.",
+                    new StepConfig.SliderSpec(0.5f, 30f, 0.5f, 2f, "years"),
+                    (data, value) -> data.smokingQuitYearsAgo = (Float) value
+            ));
+        }
+        return new StepConfig(
+                R.drawable.ic_signup_smoke_daily,
+                "About your smoking",
+                "A few details so our lung, heart, and recovery advice is accurate",
+                sections);
+    }
+
+    /** Condition detail — the two questions repeat PER selected condition. */
+    private StepConfig buildConditionDetailConfig() {
+        List<StepConfig.SectionConfig> sections = new ArrayList<>();
+        List<String> conditions = onboardingData.medicalConditions != null
+                ? onboardingData.medicalConditions : new ArrayList<>();
+        for (final String cond : conditions) {
+            sections.add(new StepConfig.SectionConfig(
+                    cond + " — when were you first diagnosed?",
+                    null,
+                    Arrays.asList(
+                            new SelectableOption("Under a year", R.drawable.ic_signup_none,       "<1 year"),
+                            new SelectableOption("1–5 years",    R.drawable.ic_signup_healthcare, "1-5 years"),
+                            new SelectableOption("5–10 years",   R.drawable.ic_signup_healthcare, "5-10 years"),
+                            new SelectableOption("10+ years",    R.drawable.ic_signup_heart,      "10+ years")
+                    ),
+                    false, false, 2,
+                    (data, value) -> data.conditionDiagnosedMap.put(cond, (String) value)
+            ));
+            sections.add(new StepConfig.SectionConfig(
+                    cond + " — on medication for it?",
+                    null,
+                    Arrays.asList(
+                            new SelectableOption("Yes",  R.drawable.ic_signup_healthcare, "Yes"),
+                            new SelectableOption("Some", R.drawable.ic_signup_healthcare, "Some"),
+                            new SelectableOption("No",   R.drawable.ic_signup_none,       "No")
+                    ),
+                    false, false, 3,
+                    (data, value) -> data.conditionMedicatedMap.put(cond, (String) value)
+            ));
+        }
+        return new StepConfig(
+                R.drawable.ic_signup_medical_hero,
+                "About your condition(s)",
+                "Two quick details per condition so our advice accounts for what you're managing",
+                sections);
+    }
+
+    /** Family history — "who had it?" asked PER selected condition. */
+    private StepConfig buildFamilyRelativesConfig() {
+        List<StepConfig.SectionConfig> sections = new ArrayList<>();
+        List<String> conditions = onboardingData.familyHistory != null
+                ? onboardingData.familyHistory : new ArrayList<>();
+        for (final String cond : conditions) {
+            sections.add(new StepConfig.SectionConfig(
+                    "Who had " + cond.toLowerCase(Locale.US) + "?",
+                    null,
+                    Arrays.asList(
+                            new SelectableOption("Parent(s)",      R.drawable.ic_signup_family, "Parent"),
+                            new SelectableOption("Grandparent(s)", R.drawable.ic_signup_family, "Grandparent"),
+                            new SelectableOption("Sibling(s)",     R.drawable.ic_signup_family, "Sibling"),
+                            new SelectableOption("Not sure",       R.drawable.ic_signup_none,   "__rel_none__", true)
+                    ),
+                    true, false, 2,
+                    (data, value) -> {
+                        @SuppressWarnings("unchecked")
+                        List<Object> selected = (List<Object>) value;
+                        List<String> rels = new ArrayList<>();
+                        for (Object o : selected) {
+                            String s = (String) o;
+                            if (!s.equals("__rel_none__")) rels.add(s);
+                        }
+                        data.familyRelativesMap.put(cond, rels);
+                    },
+                    3
+            ));
+        }
+        return new StepConfig(
+                R.drawable.ic_signup_family,
+                "Who in your family?",
+                "Closer relatives (parents, siblings) carry more weight than distant ones",
+                sections);
     }
 
     // ── Dynamic step management ────────────────────────────────────────────
@@ -937,10 +954,13 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
                 return "Female".equals(g) || "Other".equals(g);
             }
             case SMOKING_DETAIL_FRAGMENT_INDEX:
-                // Anyone who smokes now or used to (not a lifelong non-smoker).
-                return onboardingData.smokingStatus != null
-                        && !onboardingData.smokingStatus.isEmpty()
-                        && !"never".equals(onboardingData.smokingStatus);
+                // Anyone who smokes now ("current") or used to ("ex").
+                return "ex".equals(onboardingData.smokingStatus)
+                        || "current".equals(onboardingData.smokingStatus);
+            case FAMILY_RELATIVES_FRAGMENT_INDEX:
+                // Per-condition "who had it?" — only when family conditions were picked.
+                return onboardingData.familyHistory != null
+                        && !onboardingData.familyHistory.isEmpty();
             case ALCOHOL_DETAIL_FRAGMENT_INDEX:
                 return onboardingData.alcoholConsumption != null
                         && !onboardingData.alcoholConsumption.isEmpty()
@@ -1010,6 +1030,7 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
         // and blood+conditions (conditions→condition detail).
         if (fragmentIndex == 1
                 || fragmentIndex == HABITS_FRAGMENT_INDEX
+                || fragmentIndex == FAMILY_FRAGMENT_INDEX
                 || fragmentIndex == CONDITIONS_FRAGMENT_INDEX) {
             rebuildActiveSteps();
         }
@@ -1405,27 +1426,119 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
         if (d.saltIntake != null && !d.saltIntake.isEmpty())  p.put("saltIntake",  d.saltIntake);
         if (d.sugarIntake != null && !d.sugarIntake.isEmpty()) p.put("sugarIntake", d.sugarIntake);
 
-        // Sleep + Stress
-        p.put("sleepHours",          d.sleepHours);
+        // Sleep + Stress (slider hours; legacy int stays synced in the writer)
+        p.put("sleepHours",          d.sleepHoursVal);
         p.put("stressLevel",         d.stressLevel);
         p.put("screenTimeBeforeBed", d.screenTimeBeforeBed);
 
-        // Habits
-        p.put("smoker",             d.smoker);
-        p.put("smokingLevel",       d.smokingLevel);
-        p.put("smokingFrequency",   d.smokingFrequency);
-        p.put("smokingStatus",      d.smokingStatus);
+        // Habits — 2026-08 rework: the UI asks never/ex/current("I smoke"); the old
+        // occasional/regular statuses are DERIVED from the cigs/day slider, and the
+        // legacy bucket strings are derived from the slider numbers (iOS mirror).
+        int cigsNum = Math.round(d.smokingCigsPerDay);
+        String finalSmoking;
+        if ("current".equals(d.smokingStatus)) {
+            finalSmoking = cigsNum > 0 && cigsNum <= 3 ? "occasional" : "regular";
+        } else if (d.smokingStatus == null || d.smokingStatus.isEmpty()) {
+            finalSmoking = "never";
+        } else {
+            finalSmoking = d.smokingStatus; // never | ex
+        }
+        boolean smokesNow = "occasional".equals(finalSmoking) || "regular".equals(finalSmoking);
+        boolean smokedEver = smokesNow || "ex".equals(finalSmoking);
+        boolean smokerFinal = smokesNow;
+        int smokingLevelFinal = "occasional".equals(finalSmoking) ? 2
+                : ("regular".equals(finalSmoking) ? 3 : 0);
+        String smokingFrequencyFinal = "occasional".equals(finalSmoking) ? "Occasional"
+                : ("regular".equals(finalSmoking) ? "Regular" : "Non-smoker");
+
+        String durationBucket = "";
+        String cigsBucket = "";
+        String lastSmokedStr = "";
+        if (smokedEver) {
+            float y = d.smokingYears;
+            durationBucket = y < 1f ? "<1 year" : y <= 5f ? "1-5 years" : y <= 10f ? "5-10 years" : "10+ years";
+            cigsBucket = cigsNum < 5 ? "<5" : cigsNum <= 10 ? "5-10" : cigsNum <= 20 ? "10-20" : "20+";
+            lastSmokedStr = smokesNow ? "This week"
+                    : (d.smokingQuitYearsAgo < 1f ? "This year" : "Over a year ago");
+        }
+
+        // Write the derived values back into OnboardingData too, so the legacy
+        // local-profile save (saveProfileToLocalDatabase — flagged for removal)
+        // stores the same finals the backend gets, not the "current" sentinel.
+        d.smoker = smokerFinal;
+        d.smokingLevel = smokingLevelFinal;
+        d.smokingFrequency = smokingFrequencyFinal;
+        d.smokingStatus = finalSmoking;
+        d.smokingDuration = durationBucket;
+        d.cigarettesPerDay = cigsBucket;
+        d.lastSmoked = lastSmokedStr;
+
+        p.put("smoker",             smokerFinal);
+        p.put("smokingLevel",       smokingLevelFinal);
+        p.put("smokingFrequency",   smokingFrequencyFinal);
+        p.put("smokingStatus",      finalSmoking);
         p.put("alcoholConsumption", d.alcoholConsumption);
         p.put("alcoholLevel",       d.alcoholLevel);
         p.put("caffeineHabit",      d.caffeineHabit);
 
-        // Habit / condition follow-ups (conditional)
-        p.put("smokingDuration",     d.smokingDuration);
-        p.put("cigarettesPerDay",    d.cigarettesPerDay);
-        p.put("lastSmoked",          d.lastSmoked);
-        p.put("drinksPerWeek",       d.drinksPerWeek);
-        p.put("conditionsDiagnosed", d.conditionsDiagnosed);
-        p.put("conditionsMedicated", d.conditionsMedicated);
+        // Habit / condition follow-ups (legacy buckets derived above + numbers below)
+        p.put("smokingDuration",     durationBucket);
+        p.put("cigarettesPerDay",    cigsBucket);
+        p.put("lastSmoked",          lastSmokedStr);
+        boolean drinks = d.alcoholConsumption != null && !"None".equals(d.alcoholConsumption);
+        int drinksNum = Math.round(d.alcoholDrinksPerWeek);
+        d.drinksPerWeek = drinks && drinksNum > 0
+                ? (drinksNum <= 2 ? "1-2" : drinksNum <= 5 ? "3-5" : drinksNum <= 10 ? "6-10" : "10+")
+                : "";
+        p.put("drinksPerWeek", d.drinksPerWeek);
+        // Legacy single-answer pair = FIRST condition's answers (back-compat).
+        String firstCond = d.medicalConditions != null && !d.medicalConditions.isEmpty()
+                ? d.medicalConditions.get(0) : null;
+        p.put("conditionsDiagnosed", firstCond != null
+                ? d.conditionDiagnosedMap.getOrDefault(firstCond, "") : "");
+        p.put("conditionsMedicated", firstCond != null
+                ? d.conditionMedicatedMap.getOrDefault(firstCond, "") : "");
+
+        // Numeric habit quantities (only when meaningful).
+        if (smokedEver && cigsNum > 0)        p.put("smokingCigsPerDay",    cigsNum);
+        if (smokedEver && d.smokingYears > 0) p.put("smokingYears",         d.smokingYears);
+        if ("ex".equals(finalSmoking) && d.smokingQuitYearsAgo > 0)
+                                              p.put("smokingQuitYearsAgo",  d.smokingQuitYearsAgo);
+        if (drinks && drinksNum > 0)          p.put("alcoholDrinksPerWeek", drinksNum);
+        if (d.caffeineHabit != null && !"none".equals(d.caffeineHabit) && d.caffeineCupsPerDay > 0)
+                                              p.put("caffeineCupsPerDay",   Math.round(d.caffeineCupsPerDay));
+
+        // Per-condition details (2026-08).
+        JSONArray condDetails = new JSONArray();
+        if (d.medicalConditions != null) {
+            for (String c : d.medicalConditions) {
+                JSONObject o = new JSONObject();
+                o.put("condition", c);
+                o.put("diagnosedWhen", d.conditionDiagnosedMap.getOrDefault(c, ""));
+                o.put("medicated",     d.conditionMedicatedMap.getOrDefault(c, ""));
+                condDetails.put(o);
+            }
+        }
+        if (condDetails.length() > 0) p.put("conditionDetails", condDetails);
+
+        JSONArray famDetails = new JSONArray();
+        java.util.LinkedHashSet<String> relUnion = new java.util.LinkedHashSet<>();
+        if (d.familyHistory != null) {
+            for (String c : d.familyHistory) {
+                JSONObject o = new JSONObject();
+                o.put("condition", c);
+                JSONArray rels = new JSONArray();
+                for (String r : d.familyRelativesMap.getOrDefault(c, new ArrayList<>())) {
+                    rels.put(r);
+                    relUnion.add(r);
+                }
+                o.put("relatives", rels);
+                famDetails.put(o);
+            }
+        }
+        if (famDetails.length() > 0) p.put("familyHistoryDetails", famDetails);
+        // Legacy flat relatives list = union across conditions.
+        d.familyHistoryRelatives = new ArrayList<>(relUnion);
 
         // Family history
         JSONArray familyArr = new JSONArray();
