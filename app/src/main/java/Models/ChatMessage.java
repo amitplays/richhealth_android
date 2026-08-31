@@ -60,10 +60,16 @@ public class ChatMessage {
      *  Populated from the message's agentSteps + sources arrays; empty for normal
      *  replies. Shown as a collapsible "what Richie checked" row + tappable sources. */
     private final java.util.List<String> agentToolLines = new java.util.ArrayList<>();
+    /** Tool name per line, index-aligned with agentToolLines. The line alone loses it, and
+     *  the adapter needs it to pick an icon — parity with iOS, which shows a per-tool
+     *  symbol instead of the same bullet on every row. Kept as the raw tool string so this
+     *  model stays free of any resource dependency. */
+    private final java.util.List<String> agentToolNames = new java.util.ArrayList<>();
     private final java.util.List<String[]> agentSources = new java.util.ArrayList<>(); // [displayTitle, url]
 
     public void setAgentTrace(org.json.JSONArray steps, org.json.JSONArray sources) {
         agentToolLines.clear();
+        agentToolNames.clear();
         agentSources.clear();
         if (steps != null) {
             for (int i = 0; i < steps.length(); i++) {
@@ -85,6 +91,7 @@ public class ChatMessage {
                     default:                     line = "Used " + (tool.isEmpty() ? "a tool" : tool);
                 }
                 agentToolLines.add(line);
+                agentToolNames.add(tool);
             }
         }
         if (sources != null) {
@@ -102,6 +109,7 @@ public class ChatMessage {
     }
     public boolean hasAgentTrace() { return !agentToolLines.isEmpty() || !agentSources.isEmpty(); }
     public java.util.List<String> getAgentToolLines() { return agentToolLines; }
+    public java.util.List<String> getAgentToolNames() { return agentToolNames; }
     public java.util.List<String[]> getAgentSources() { return agentSources; }
     public String getAgentTraceLabel() {
         int n = agentSources.size();

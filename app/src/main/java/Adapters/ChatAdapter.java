@@ -389,6 +389,24 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                     thinkingText.setVisibility(View.GONE);
                 }
             }
+    /**
+     * Drawable per agent tool, chosen to match the iOS symbols one-for-one: literature,
+     * the open web, a drug label, a trials registry, the user's own record, an
+     * about-to-write action, and a plain-language explainer. All already in the app.
+     */
+    private static int traceIconFor(String tool) {
+        switch (tool) {
+            case "search_publications":  return R.drawable.ic_lab_profile;      // iOS text.book.closed
+            case "web_search":           return R.drawable.ic_public;           // iOS globe
+            case "drug_info":            return R.drawable.ic_pill;             // iOS pills
+            case "clinical_trials":      return R.drawable.ic_medical_services; // iOS cross.case
+            case "fetch_health_records": return R.drawable.ic_heart_check;      // iOS heart.text.square
+            case "log_health_record":    return R.drawable.ic_edit;             // iOS square.and.pencil
+            case "lookup_health_topic":  return R.drawable.ic_doc;              // iOS character.book.closed
+            default:                     return R.drawable.ic_search;           // unknown tool
+        }
+    }
+
 
             // ─── Agentic trace ("what Richie checked") collapsible ───────
             // Tool steps + tappable citations. Mirrors iOS; collapsed by default.
@@ -400,12 +418,34 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                     if (traceChevron != null) traceChevron.setRotation(0f);
                     // Rebuild the expanded content each bind (recycle-safe).
                     traceContainer.removeAllViews();
-                    for (String line : message.getAgentToolLines()) {
+                    // Icon per tool instead of the same bullet on every row — the same
+                    // distinction iOS draws, using drawables this app already ships.
+                    java.util.List<String> toolLines = message.getAgentToolLines();
+                    java.util.List<String> toolNames = message.getAgentToolNames();
+                    final float d = context.getResources().getDisplayMetrics().density;
+                    final int iconPx = (int) (13 * d);
+                    final int gapPx  = (int) (6 * d);
+                    for (int t = 0; t < toolLines.size(); t++) {
+                        LinearLayout row = new LinearLayout(context);
+                        row.setOrientation(LinearLayout.HORIZONTAL);
+                        row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+                        row.setPadding(0, (int) (2 * d), 0, (int) (2 * d));
+
+                        ImageView icon = new ImageView(context);
+                        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(iconPx, iconPx);
+                        lp.setMarginEnd(gapPx);
+                        icon.setLayoutParams(lp);
+                        icon.setImageResource(traceIconFor(t < toolNames.size() ? toolNames.get(t) : ""));
+                        icon.setColorFilter(0xFF008B8B);   // brand teal, matching iOS
+                        row.addView(icon);
+
                         TextView tv = new TextView(context);
-                        tv.setText("• " + line);
+                        tv.setText(toolLines.get(t));
                         tv.setTextColor(0xFF8AA6A6);
                         tv.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 11f);
-                        traceContainer.addView(tv);
+                        row.addView(tv);
+
+                        traceContainer.addView(row);
                     }
                     for (String[] src : message.getAgentSources()) {
                         final String url = src[1];
