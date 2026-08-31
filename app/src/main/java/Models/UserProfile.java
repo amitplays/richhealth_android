@@ -105,12 +105,12 @@ public class UserProfile {
     // AI / Chat preferences — synced with the server's user.aiPreferences object.
     // Not stored in local SQLite; always refreshed from the server on load, so
     // defaults here match the backend schema defaults.
-    private String aiTone = "balanced";            // balanced | warm | direct
-    private String aiReplyLength = "balanced";     // concise | balanced | detailed
+    private String aiTone = "direct";              // balanced | warm | direct (models/User.js default)
+    private String aiReplyLength = "concise";      // concise | balanced | detailed (models/User.js default)
     private String aiCustomInstructions = "";      // standing instructions for Richie
     private boolean aiSaveMemories = true;          // allow Richie to remember chat facts
     private boolean aiImproveModel = true;          // consent to improve RichHealth
-    private boolean aiAutofillCards = false;        // let Richie offer prefilled "log this" cards
+    private boolean aiAutofillCards = true;         // let Richie offer prefilled "log this" cards (on by default)
     private boolean aiShowThinking = false;         // run chat on the thinking model + show its reasoning
 
     // Timestamps
@@ -554,6 +554,8 @@ public class UserProfile {
         private String userId;
         private boolean isPro;
         private String proSource; // "self", "family_member", "none"
+        /** Their actual tier from /api/users/relationships: ultra|family|family_member|plus|pro|free. */
+        private String plan;
         private boolean isCoveredByMyPlan;
 
         public RelationshipRequest() {
@@ -584,6 +586,9 @@ public class UserProfile {
         public void setPro(boolean pro) { isPro = pro; }
 
         public String getProSource() { return proSource; }
+
+        public String getPlan() { return plan; }
+        public void setPlan(String plan) { this.plan = plan; }
         public void setProSource(String proSource) { this.proSource = proSource; }
 
         public boolean isCoveredByMyPlan() { return isCoveredByMyPlan; }

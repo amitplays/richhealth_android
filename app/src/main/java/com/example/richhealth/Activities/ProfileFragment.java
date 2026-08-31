@@ -1493,12 +1493,13 @@ public class ProfileFragment extends Fragment {
         // AI / Chat preferences (nested object). Missing → keep model defaults.
         JSONObject aiPrefs = u.optJSONObject("aiPreferences");
         if (aiPrefs != null) {
-            if (aiPrefs.has("tone") && !aiPrefs.isNull("tone")) profile.setAiTone(aiPrefs.optString("tone", "balanced"));
-            if (aiPrefs.has("replyLength") && !aiPrefs.isNull("replyLength")) profile.setAiReplyLength(aiPrefs.optString("replyLength", "balanced"));
+            // Fallbacks mirror models/User.js aiPreferences defaults.
+            if (aiPrefs.has("tone") && !aiPrefs.isNull("tone")) profile.setAiTone(aiPrefs.optString("tone", "direct"));
+            if (aiPrefs.has("replyLength") && !aiPrefs.isNull("replyLength")) profile.setAiReplyLength(aiPrefs.optString("replyLength", "concise"));
             if (aiPrefs.has("customInstructions") && !aiPrefs.isNull("customInstructions")) profile.setAiCustomInstructions(aiPrefs.optString("customInstructions", ""));
             profile.setAiSaveMemories(aiPrefs.optBoolean("saveMemories", true));
             profile.setAiImproveModel(aiPrefs.optBoolean("improveModel", true));
-            profile.setAiAutofillCards(aiPrefs.optBoolean("autofillCards", false));
+            profile.setAiAutofillCards(aiPrefs.optBoolean("autofillCards", true));
             profile.setAiShowThinking(aiPrefs.optBoolean("showThinking", false));
         }
     }
@@ -1700,7 +1701,10 @@ public class ProfileFragment extends Fragment {
         if (membershipSubtitle == null || proStatusManager == null) return;
 
         boolean isPro     = proStatusManager.isProUser();
-        boolean isOwner   = proStatusManager.isFamilyPlanOwner();
+        // Entitlement, not occupancy — see ProStatusManager.canManageFamilyPro(). Using
+        // isFamilyPlanOwner() here hid the family section from an Ultra owner until they
+        // already had a member, and this section is the only place to add one.
+        boolean isOwner   = proStatusManager.canManageFamilyPro();
         boolean isGranted = proStatusManager.isGrantedPro();
         String tier       = proStatusManager.getUserTier();
 
@@ -1850,7 +1854,19 @@ public class ProfileFragment extends Fragment {
                     : (email.isEmpty() ? capitalize(relationship) : capitalize(relationship) + " · " + email);
             ((TextView) row.findViewById(R.id.fm_meta)).setText(meta);
 
-            row.findViewById(R.id.fm_pro_badge).setVisibility(isPro ? View.VISIBLE : View.GONE);
+            // The badge's text is hardcoded "PRO" in item_plan_family_member.xml, so an Ultra
+            // relative was labelled Pro. Same fix as the Health Hub list: use their real
+            // tier via PlanBadge, falling back to the old proSource guess if the server has
+            // not shipped `plan` yet.
+            TextView fmProBadge = row.findViewById(R.id.fm_pro_badge);
+            if (isPro) {
+                String fmTier = rel.optString("plan", "");
+                if (fmTier.isEmpty()) fmTier = "self".equals(rel.optString("proSource", "")) ? "pro" : "family_member";
+                Utils.PlanBadge.apply(fmProBadge, fmTier);
+                fmProBadge.setVisibility(View.VISIBLE);
+            } else {
+                fmProBadge.setVisibility(View.GONE);
+            }
             row.findViewById(R.id.fm_covered_badge).setVisibility(coveredByMe ? View.VISIBLE : View.GONE);
 
             com.google.android.material.button.MaterialButton action = row.findViewById(R.id.fm_action_button);
@@ -1864,7 +1880,7 @@ public class ProfileFragment extends Fragment {
                 action.setOnClickListener(v -> confirmRemoveFromPro(userId, name));
             } else {
                 boolean canAdd = !atLimit;
-                action.setText(canAdd ? "Add to Pro" : "Plan full");
+                action.setText(canAdd ? "Add to my plan" : "Plan full");
                 action.setTextColor(ContextCompat.getColor(requireContext(), R.color.rh_accent));
                 action.setStrokeColor(android.content.res.ColorStateList.valueOf(
                         ContextCompat.getColor(requireContext(), R.color.rh_divider)));
@@ -1884,7 +1900,7 @@ public class ProfileFragment extends Fragment {
 
     private void confirmAddToPro(String memberId, String name) {
         DialogUtils.showConfirmDialog(requireContext(),
-                "Add to Pro Plan",
+                "Add to my plan",
                 "Add " + name + " to your plan? They'll get all premium features included.",
                 "Add", "Cancel", false,
                 () -> {
@@ -1907,7 +1923,7 @@ public class ProfileFragment extends Fragment {
 
     private void confirmRemoveFromPro(String memberId, String name) {
         DialogUtils.showConfirmDialog(requireContext(),
-                "Remove from Pro",
+                "Remove from my plan",
                 "Remove " + name + " from your family plan?",
                 "Remove", "Cancel", true,
                 () -> {
@@ -2682,7 +2698,7 @@ public class ProfileFragment extends Fragment {
             } else if (id == R.id.menu_requests) {
                 Utils.FamilyRequestsSheet.show(requireActivity(), () -> {
                     refreshFamilyRequestsBadge();
-                    if (proStatusManager != null && proStatusManager.isFamilyPlanOwner()) {
+                    if (proStatusManager != null && proStatusManager.canManageFamilyPro()) {
                         loadFamilyMembers();
                     }
                 });
@@ -2903,8 +2919,8 @@ public class ProfileFragment extends Fragment {
     private void displayAiPreferences() {
         if (userProfile == null) return;
 
-        if (aiToneValue != null) aiToneValue.setText(capitalizeWord(orDefault(userProfile.getAiTone(), "balanced")));
-        if (aiLengthValue != null) aiLengthValue.setText(capitalizeWord(orDefault(userProfile.getAiReplyLength(), "balanced")));
+        if (aiToneValue != null) aiToneValue.setText(capitalizeWord(orDefault(userProfile.getAiTone(), "direct")));
+        if (aiLengthValue != null) aiLengthValue.setText(capitalizeWord(orDefault(userProfile.getAiReplyLength(), "concise")));
 
         if (aiCustomValue != null) {
             String custom = userProfile.getAiCustomInstructions();

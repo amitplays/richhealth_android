@@ -200,6 +200,25 @@ public class ProStatusManager {
     }
 
     /**
+     * Whether this account may MANAGE seats on its plan (add/remove relatives).
+     *
+     * NOT the same as isFamilyPlanOwner(), which comes from /api/payment/pro-access and is
+     * occupancy-based: for ultra it only turns true once a member already exists. The
+     * add/remove endpoints accept "Ultra or Family plan", so an Ultra owner with no members
+     * could add one — but the UI that adds them was hidden until they had one. Deadlock.
+     *
+     * This is the same rule ProUpgradeDialog already applies via planType == 3 (the backend
+     * maps BOTH ultra and family to 3), expressed against the tier so callers that only
+     * hold a ProStatusManager can use it too.
+     */
+    public boolean canManageFamilyPro() {
+        if (!isProUser()) return false;
+        if (isFamilyPlanOwner()) return true;
+        String tier = getUserTier();
+        return "ultra".equals(tier) || "family".equals(tier);
+    }
+
+    /**
      * Get the expiry date of the Pro subscription
      * @return Expiry date in milliseconds, or 0 if not Pro
      */

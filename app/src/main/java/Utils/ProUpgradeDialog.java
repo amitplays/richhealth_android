@@ -884,7 +884,7 @@ public class ProUpgradeDialog implements PaymentManager.PaymentCallback,
 
     /**
      * Adapter reusing item_family_relationship.xml — the same row card the
-     * Health Hub family panel uses. Add to Pro / Remove from Pro buttons
+     * Health Hub family panel uses. Add-to-my-plan / Remove-from-my-plan buttons
      * call paymentService.addFamilyMemberDirect / removeFamilyMember.
      */
     private class FamilyManagementAdapter extends RecyclerView.Adapter<FamilyManagementAdapter.VH> {
@@ -925,7 +925,14 @@ public class ProUpgradeDialog implements PaymentManager.PaymentCallback,
             TextView covBadge = h.itemView.findViewById(R.id.covered_badge);
             if (isPro) {
                 proBadge.setVisibility(View.VISIBLE);
-                String memberTier = "self".equals(proSource) ? "pro" : "family_member";
+                // The relative's REAL tier. This used to GUESS — anyone paying for their own
+                // plan was labelled "Pro" whatever they actually held, so an Ultra relative
+                // read as Pro. /api/users/relationships now sends `plan`; the old guess stays
+                // as the fallback for a server that has not shipped the field yet.
+                String memberTier = rel.optString("plan", "");
+                if (memberTier.isEmpty()) {
+                    memberTier = "self".equals(proSource) ? "pro" : "family_member";
+                }
                 PlanBadge.apply(proBadge, memberTier);
             } else {
                 proBadge.setVisibility(View.GONE);
@@ -955,7 +962,7 @@ public class ProUpgradeDialog implements PaymentManager.PaymentCallback,
                 removeBtn.setVisibility(View.GONE);
                 addBtn.setEnabled(!atLimit);
                 addBtn.setAlpha(atLimit ? 0.4f : 1f);
-                addBtn.setText(atLimit ? "Plan full" : "Add to Pro");
+                addBtn.setText(atLimit ? "Plan full" : "Add to my plan");
                 addBtn.setOnClickListener(v -> {
                     if (atLimit) {
                         Utilities.toast(context, "Plan full — remove someone first to add " + name);
@@ -981,7 +988,7 @@ public class ProUpgradeDialog implements PaymentManager.PaymentCallback,
 
     private void confirmAddToPro(String memberId, String name) {
         DialogUtils.showConfirmDialog(context,
-                "Add to Pro Plan",
+                "Add to my plan",
                 "Add " + name + " to your plan? They'll get all premium features included.",
                 "Add", "Cancel", false,
                 () -> {
@@ -1003,7 +1010,7 @@ public class ProUpgradeDialog implements PaymentManager.PaymentCallback,
 
     private void confirmRemoveFromPro(String memberId, String name) {
         DialogUtils.showConfirmDialog(context,
-                "Remove from Pro",
+                "Remove from my plan",
                 "Remove " + name + " from your family plan?",
                 "Remove", "Cancel", true,
                 () -> {

@@ -1415,6 +1415,7 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
                                 }
                                 relationship.setPro(relationshipObj.optBoolean("isPro", false));
                                 relationship.setProSource(relationshipObj.optString("proSource", "none"));
+                                relationship.setPlan(relationshipObj.optString("plan", ""));
                                 relationship.setCoveredByMyPlan(relationshipObj.optBoolean("isCoveredByMyPlan", false));
 
                                 Log.d(TAG, "Adding relationship: " + relationship.getEmail());
@@ -4652,6 +4653,7 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
                             }
                             relationship.setPro(relationshipObj.optBoolean("isPro", false));
                             relationship.setProSource(relationshipObj.optString("proSource", "none"));
+                            relationship.setPlan(relationshipObj.optString("plan", ""));
                             relationship.setCoveredByMyPlan(relationshipObj.optBoolean("isCoveredByMyPlan", false));
 
                             familyRelationships.add(relationship);
@@ -4684,7 +4686,7 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
 
     private void handleRemoveFamilyMember(String memberId, int position) {
         Utils.DialogUtils.showConfirmDialog(requireContext(),
-                "Remove from Pro",
+                "Remove from my plan",
                 "Remove this member from your family pro plan?",
                 "Remove", "Cancel", true,
                 () -> {
@@ -4707,7 +4709,7 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
 
     private void handleAddFamilyMemberToPro(String memberId, int position) {
         Utils.DialogUtils.showConfirmDialog(requireContext(),
-                "Add to Pro Plan",
+                "Add to my plan",
                 "Add this family member to your pro plan? Family members are included in your Ultra plan.",
                 "Add Member", "Cancel", false,
                 () -> {
@@ -5640,8 +5642,14 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
             if ("accepted".equals(status)) {
                 if (relationship.isPro()) {
                     holder.proBadge.setVisibility(View.VISIBLE);
-                    String source = relationship.getProSource();
-                    holder.proBadge.setText("self".equals(source) ? "PRO" : "FAMILY PRO");
+                    // Their REAL tier. This printed "PRO" for anyone on their own plan, so an
+                    // Ultra relative read as Pro. PlanBadge is the shared label + tint; the
+                    // old source-based guess remains the fallback.
+                    String memberTier = relationship.getPlan();
+                    if (memberTier == null || memberTier.isEmpty()) {
+                        memberTier = "self".equals(relationship.getProSource()) ? "pro" : "family_member";
+                    }
+                    Utils.PlanBadge.apply(holder.proBadge, memberTier);
                 }
                 if (isFamilyPlanOwner && relationship.isCoveredByMyPlan()) {
                     holder.coveredBadge.setVisibility(View.VISIBLE);
