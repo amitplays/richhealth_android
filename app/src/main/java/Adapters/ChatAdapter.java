@@ -309,6 +309,24 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         }
     }
 
+    /**
+     * Drawable per agent tool, chosen to match the iOS symbols one-for-one: literature,
+     * the open web, a drug label, a trials registry, the user's own record, an
+     * about-to-write action, and a plain-language explainer. All already in the app.
+     */
+    private static int traceIconFor(String tool) {
+        switch (tool) {
+            case "search_publications":  return R.drawable.ic_lab_profile;      // iOS text.book.closed
+            case "web_search":           return R.drawable.ic_public;           // iOS globe
+            case "drug_info":            return R.drawable.ic_pill;             // iOS pills
+            case "clinical_trials":      return R.drawable.ic_medical_services; // iOS cross.case
+            case "fetch_health_records": return R.drawable.ic_heart_check;      // iOS heart.text.square
+            case "log_health_record":    return R.drawable.ic_edit;             // iOS square.and.pencil
+            case "lookup_health_topic":  return R.drawable.ic_doc;              // iOS character.book.closed
+            default:                     return R.drawable.ic_search;           // unknown tool
+        }
+    }
+
     class AIMessageViewHolder extends RecyclerView.ViewHolder {
         private TextView messageTextView;
         private TextView timeTextView;
@@ -389,24 +407,6 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                     thinkingText.setVisibility(View.GONE);
                 }
             }
-    /**
-     * Drawable per agent tool, chosen to match the iOS symbols one-for-one: literature,
-     * the open web, a drug label, a trials registry, the user's own record, an
-     * about-to-write action, and a plain-language explainer. All already in the app.
-     */
-    private static int traceIconFor(String tool) {
-        switch (tool) {
-            case "search_publications":  return R.drawable.ic_lab_profile;      // iOS text.book.closed
-            case "web_search":           return R.drawable.ic_public;           // iOS globe
-            case "drug_info":            return R.drawable.ic_pill;             // iOS pills
-            case "clinical_trials":      return R.drawable.ic_medical_services; // iOS cross.case
-            case "fetch_health_records": return R.drawable.ic_heart_check;      // iOS heart.text.square
-            case "log_health_record":    return R.drawable.ic_edit;             // iOS square.and.pencil
-            case "lookup_health_topic":  return R.drawable.ic_doc;              // iOS character.book.closed
-            default:                     return R.drawable.ic_search;           // unknown tool
-        }
-    }
-
 
             // ─── Agentic trace ("what Richie checked") collapsible ───────
             // Tool steps + tappable citations. Mirrors iOS; collapsed by default.
