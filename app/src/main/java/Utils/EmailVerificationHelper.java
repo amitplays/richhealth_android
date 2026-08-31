@@ -163,19 +163,17 @@ public class EmailVerificationHelper {
         int gap = (int) (12 * activity.getResources().getDisplayMetrics().density);
         TextView info = new TextView(activity);
         info.setText("We emailed " + target + ". Tap \u201cVerify my email\u201d in that message and this screen continues by itself \u2014 "
-                + "on this phone or any other device. Prefer to type it? Enter the 6-digit code from the same email.");
+                + "on this phone or any other device.\n\nThe link is good for 24 hours. If it has expired, send a new one.");
         info.setTextColor(0xFFB0B0B0);
         info.setTextSize(14);
         info.setPadding(0, 0, 0, gap);
         fieldsContainer.addView(info);
 
-        View fieldLayout = inflater.inflate(R.layout.dialog_profile_field_item, fieldsContainer, false);
-        final TextInputLayout codeLayout = (TextInputLayout) fieldLayout;
-        codeLayout.setHint("Verification code");
-        final TextInputEditText codeInput = fieldLayout.findViewById(R.id.field_input);
-        codeInput.setInputType(InputType.TYPE_CLASS_NUMBER);
-        codeInput.setFilters(new InputFilter[]{ new InputFilter.LengthFilter(6) });
-        fieldsContainer.addView(fieldLayout);
+        // The code field was removed: the email now carries a link and nothing else, so
+        // there is nothing to type. watchForLinkVerification() below already finishes this
+        // by itself when the link is opened, on this phone or any other device. The
+        // sendOtp/verifyOtp helpers are kept intact — the endpoints still exist and the
+        // password-reset flow still uses codes.
 
         final Dialog dialog = new Dialog(activity, R.style.DialogTheme);
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
@@ -196,50 +194,28 @@ public class EmailVerificationHelper {
 
         Button verifyButton = dialogView.findViewById(R.id.save_button);
         Button resendButton = dialogView.findViewById(R.id.cancel_button);
-        verifyButton.setText("Verify");
-        resendButton.setText("Resend");
+        // One action. The primary button resends the email; there is nothing to confirm
+        // here because confirming happens in the mail app.
+        verifyButton.setText("Resend email");
+        resendButton.setVisibility(View.GONE);
 
         verifyButton.setOnClickListener(v -> {
-            String code = codeInput.getText() != null ? codeInput.getText().toString().trim() : "";
-            // Was `< 4` while the input filter caps at 6 and the copy says six digits.
-            if (code.length() != 6) {
-                codeLayout.setError("Enter the 6-digit code from your email");
-                return;
-            }
-            codeLayout.setError(null);
             verifyButton.setEnabled(false);
-            verifyOtp(activity, target, code,
-                    (OkData) json -> {
-                        Utilities.toast(activity, "Email verified");
-                        if (dialog.isShowing()) dialog.dismiss();
-                        if (onVerified != null) onVerified.run(json);
+            sendOtp(activity, target,
+                    () -> {
+                        verifyButton.setEnabled(true);
+                        Utilities.toast(activity, "New email sent to " + target);
                     },
                     msg -> {
                         verifyButton.setEnabled(true);
-                        codeInput.setText("");   // was left in place, so Verify stayed live on a dead code
-                        codeLayout.setError(msg);
-                    });
-        });
-
-        resendButton.setOnClickListener(v -> {
-            resendButton.setEnabled(false);
-            sendOtp(activity, target,
-                    () -> {
-                        resendButton.setEnabled(true);
-                        Utilities.toast(activity, "New code sent.");
-                    },
-                    msg -> {
-                        resendButton.setEnabled(true);
                         Utilities.toastLong(activity, msg);
                     });
         });
 
         dialog.show();
-        // Fire the first code as the dialog opens, so the box is never empty-handed.
-        // Success is now acknowledged too — it used to pass null, so a working send was
-        // silent and only failures said anything.
+        // Send the first email as the dialog opens, so the user is never waiting on a tap.
         sendOtp(activity, target,
-                () -> Utilities.toast(activity, "Code sent to " + target),
+                () -> Utilities.toast(activity, "Verification email sent to " + target),
                 msg -> Utilities.toastLong(activity, msg));
         return dialog;
     }

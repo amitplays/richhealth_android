@@ -55,6 +55,8 @@ public class CardStepFragment extends BaseOnboardingFragment {
     private final List<SelectableCardAdapter> adapters = new ArrayList<>();
     private final List<Slider> sliders = new ArrayList<>();
     private final List<View> animTargets = new ArrayList<>();
+    // Per-section views, for in-step conditional visibility (visibleWhen).
+    private final List<List<View>> sectionViews = new ArrayList<>();
 
     public static CardStepFragment newInstance(int stepIndex) {
         CardStepFragment f = new CardStepFragment();
@@ -73,6 +75,7 @@ public class CardStepFragment extends BaseOnboardingFragment {
         adapters.clear();
         sliders.clear();
         animTargets.clear();
+        sectionViews.clear();
 
         Context ctx = requireContext();
 
@@ -155,6 +158,8 @@ public class CardStepFragment extends BaseOnboardingFragment {
         //   • Why subtitle   — 13sp #888888 (explains why we're asking)
         //   • Card grid
         for (StepConfig.SectionConfig section : config.sections) {
+            List<View> ownViews = new ArrayList<>();
+            sectionViews.add(ownViews);
 
             // Section title — styled like a sub-question
             if (section.sectionTitle != null) {
@@ -169,6 +174,7 @@ public class CardStepFragment extends BaseOnboardingFragment {
                 tvHeader.setTypeface(null, Typeface.BOLD);
                 content.addView(tvHeader);
                 animTargets.add(tvHeader);
+                ownViews.add(tvHeader);
             }
 
             // Why-we-ask subtitle
@@ -184,12 +190,14 @@ public class CardStepFragment extends BaseOnboardingFragment {
                 tvWhy.setLineSpacing(dp(ctx, 2), 1f);
                 content.addView(tvWhy);
                 animTargets.add(tvWhy);
+                ownViews.add(tvWhy);
             } else if (section.sectionTitle != null) {
                 // pad below the header so the grid doesn't butt up against it
                 View spacer = new View(ctx);
                 spacer.setLayoutParams(new LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, 8)));
                 content.addView(spacer);
+                ownViews.add(spacer);
             }
 
             // ── Slider section (2026-08 rework): numeric answer, live readout ──
@@ -229,6 +237,8 @@ public class CardStepFragment extends BaseOnboardingFragment {
                 content.addView(slider);
                 animTargets.add(tvValue);
                 animTargets.add(slider);
+                ownViews.add(tvValue);
+                ownViews.add(slider);
 
                 adapters.add(null);
                 sliders.add(slider);
@@ -267,6 +277,21 @@ public class CardStepFragment extends BaseOnboardingFragment {
 
             content.addView(rv);
             animTargets.add(rv);
+            ownViews.add(rv);
+        }
+
+        // ── In-step conditional sections (2026-08): show/hide dependents when the
+        // answer they depend on changes, and re-apply once up front. ──
+        boolean hasDependents = false;
+        for (StepConfig.SectionConfig s : config.sections) {
+            if (s.dependsOnSection >= 0) { hasDependents = true; break; }
+        }
+        if (hasDependents) {
+            for (int i = 0; i < config.sections.size(); i++) {
+                SelectableCardAdapter a = adapters.get(i);
+                if (a != null) a.setOnSelectionChangedListener(this::applyDependencies);
+            }
+            applyDependencies();
         }
 
         scroll.addView(content);
@@ -296,10 +321,31 @@ public class CardStepFragment extends BaseOnboardingFragment {
         return scroll;
     }
 
+    /** Is section i currently shown (its gating answer, if any, matches)? */
+    private boolean isSectionVisible(int i) {
+        StepConfig.SectionConfig s = config.sections.get(i);
+        if (s.dependsOnSection < 0 || s.visibleForValues == null) return true;
+        SelectableCardAdapter dep = s.dependsOnSection < adapters.size()
+                ? adapters.get(s.dependsOnSection) : null;
+        if (dep == null || !dep.hasSelection()) return false;
+        Object v = dep.getSelectedValue();
+        return v != null && s.visibleForValues.contains(String.valueOf(v));
+    }
+
+    /** Re-evaluate every dependent section's visibility (called on any selection change). */
+    private void applyDependencies() {
+        for (int i = 0; i < config.sections.size(); i++) {
+            if (config.sections.get(i).dependsOnSection < 0) continue;
+            int vis = isSectionVisible(i) ? View.VISIBLE : View.GONE;
+            for (View v : sectionViews.get(i)) v.setVisibility(vis);
+        }
+    }
+
     @Override
     public boolean validate() {
         for (int i = 0; i < config.sections.size(); i++) {
             StepConfig.SectionConfig section = config.sections.get(i);
+            if (!isSectionVisible(i)) continue;   // hidden dependents don't gate Continue
             if (section.slider != null) continue; // sliders always have a value
             if (section.required && !adapters.get(i).hasSelection()) {
                 String label = section.sectionTitle != null ? section.sectionTitle : config.title;
@@ -314,6 +360,7 @@ public class CardStepFragment extends BaseOnboardingFragment {
     public void collectData(OnboardingData data) {
         for (int i = 0; i < config.sections.size(); i++) {
             StepConfig.SectionConfig section = config.sections.get(i);
+            if (!isSectionVisible(i)) continue; // hidden answers must not be recorded
             if (section.slider != null) {
                 Slider slider = sliders.get(i);
                 if (slider != null) section.dataWriter.write(data, slider.getValue());

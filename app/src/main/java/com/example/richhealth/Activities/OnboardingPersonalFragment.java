@@ -1,7 +1,18 @@
 package com.example.richhealth.Activities;
 import Utils.Utilities;
 
+import android.Manifest;
+import android.annotation.SuppressLint;
+import android.content.pm.PackageManager;
+import android.location.Address;
+import android.location.Geocoder;
+import android.location.Location;
+import android.location.LocationManager;
 import android.os.Bundle;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
+
+import androidx.core.content.ContextCompat;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -37,7 +48,11 @@ public class OnboardingPersonalFragment extends BaseOnboardingFragment {
     private TextView tvDobDisplay;
     private SelectableCardAdapter genderAdapter;
     private TextInputLayout layoutLocation;
-    private TextInputEditText inputLocation;
+    private TextInputEditText inputLocation;   // LEGACY (hidden) — structured fields below replaced it
+    private TextInputLayout layoutCountry;
+    private AutoCompleteTextView inputCountry;
+    private TextInputEditText inputCity;
+    private static final int REQ_LOCATION = 7301;
     private Date selectedDob = null;
     private static final SimpleDateFormat DISPLAY_FMT = new SimpleDateFormat("MMMM d, yyyy", Locale.getDefault());
 
@@ -52,9 +67,38 @@ public class OnboardingPersonalFragment extends BaseOnboardingFragment {
         layoutLocation = root.findViewById(R.id.layout_location);
         inputLocation = root.findViewById(R.id.input_location);
 
-        if (hostActivity != null && !hostActivity.getOnboardingData().location.isEmpty()) {
-            inputLocation.setText(hostActivity.getOnboardingData().location);
+        // ── Structured location (2026-08): country dropdown (pre-filled from the
+        // device region) + city field + GPS autofill. Stored as "City, Country". ──
+        layoutCountry = root.findViewById(R.id.layout_country);
+        inputCountry = root.findViewById(R.id.input_country);
+        inputCity = root.findViewById(R.id.input_city);
+
+        List<String> countries = new ArrayList<>();
+        for (String iso : Locale.getISOCountries()) {
+            String name = new Locale("", iso).getDisplayCountry();
+            if (!name.isEmpty() && !countries.contains(name)) countries.add(name);
         }
+        java.util.Collections.sort(countries);
+        inputCountry.setAdapter(new ArrayAdapter<>(requireContext(),
+                android.R.layout.simple_list_item_1, countries));
+        String deviceCountry = Locale.getDefault().getDisplayCountry();
+        if (deviceCountry != null && !deviceCountry.isEmpty()) {
+            inputCountry.setText(deviceCountry, false);
+        }
+
+        // Restore a previously entered "City, Country" split back into the fields.
+        if (hostActivity != null && !hostActivity.getOnboardingData().location.isEmpty()) {
+            String saved = hostActivity.getOnboardingData().location;
+            int comma = saved.lastIndexOf(',');
+            if (comma > 0) {
+                inputCity.setText(saved.substring(0, comma).trim());
+                inputCountry.setText(saved.substring(comma + 1).trim(), false);
+            } else {
+                inputCity.setText(saved);
+            }
+        }
+
+        root.findViewById(R.id.btn_use_location).setOnClickListener(v -> fillFromGps());
 
         // Restore DOB if returning
         if (hostActivity != null && hostActivity.getOnboardingData().dateOfBirth != null) {
@@ -124,19 +168,72 @@ public class OnboardingPersonalFragment extends BaseOnboardingFragment {
             Utilities.toast(getContext(), "Please select your gender");
             return false;
         }
-        String loc = inputLocation.getText() != null ? inputLocation.getText().toString().trim() : "";
-        if (loc.isEmpty()) {
-            layoutLocation.setError("Please enter your location");
+        String country = inputCountry.getText() != null ? inputCountry.getText().toString().trim() : "";
+        if (country.isEmpty()) {
+            layoutCountry.setError("Please select your country");
             return false;
         }
-        layoutLocation.setError(null);
+        layoutCountry.setError(null);
         return true;
+    }
+
+    /** GPS autofill: last known fix → Geocoder → fill city + country. Best-effort. */
+    @SuppressLint("MissingPermission")
+    private void fillFromGps() {
+        if (getContext() == null) return;
+        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_COARSE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{
+                    Manifest.permission.ACCESS_COARSE_LOCATION,
+                    Manifest.permission.ACCESS_FINE_LOCATION}, REQ_LOCATION);
+            return;
+        }
+        try {
+            LocationManager lm = (LocationManager) requireContext().getSystemService(android.content.Context.LOCATION_SERVICE);
+            Location loc = null;
+            for (String provider : lm.getProviders(true)) {
+                Location l = lm.getLastKnownLocation(provider);
+                if (l != null && (loc == null || l.getTime() > loc.getTime())) loc = l;
+            }
+            if (loc == null) {
+                Utilities.toast(getContext(), "Couldn't get a location fix — type your city instead.");
+                return;
+            }
+            List<Address> addrs = new Geocoder(requireContext(), Locale.getDefault())
+                    .getFromLocation(loc.getLatitude(), loc.getLongitude(), 1);
+            if (addrs != null && !addrs.isEmpty()) {
+                Address a = addrs.get(0);
+                if (a.getLocality() != null && !a.getLocality().isEmpty()) {
+                    inputCity.setText(a.getLocality());
+                }
+                if (a.getCountryName() != null && !a.getCountryName().isEmpty()) {
+                    inputCountry.setText(a.getCountryName(), false);
+                }
+            } else {
+                Utilities.toast(getContext(), "Couldn't resolve your city — type it instead.");
+            }
+        } catch (Exception e) {
+            Utilities.toast(getContext(), "Couldn't get your location — type it instead.");
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
+                                           @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQ_LOCATION && grantResults.length > 0
+                && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            fillFromGps();
+        }
     }
 
     @Override
     public void collectData(OnboardingData data) {
         data.dateOfBirth = selectedDob;
         data.gender = (String) genderAdapter.getSelectedValue();
-        data.location = inputLocation.getText() != null ? inputLocation.getText().toString().trim() : "";
+        // Compose "City, Country" from the structured fields (legacy field unused).
+        String city = inputCity.getText() != null ? inputCity.getText().toString().trim() : "";
+        String country = inputCountry.getText() != null ? inputCountry.getText().toString().trim() : "";
+        data.location = city.isEmpty() ? country : (country.isEmpty() ? city : city + ", " + country);
     }
 }

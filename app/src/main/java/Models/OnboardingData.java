@@ -91,7 +91,8 @@ public class OnboardingData {
     public double sleepHoursVal = 7.0;       // slider hours (sleepHours int kept for legacy)
 
     // Per-condition detail (2026-08): condition → answer maps.
-    public java.util.Map<String, String> conditionDiagnosedMap = new java.util.HashMap<>();
+    public java.util.Map<String, String> conditionDiagnosedMap = new java.util.HashMap<>(); // LEGACY buckets
+    public java.util.Map<String, Float> conditionYearsMap = new java.util.HashMap<>();       // years slider
     public java.util.Map<String, String> conditionMedicatedMap = new java.util.HashMap<>();
     // Family condition → relatives who had it.
     public java.util.Map<String, List<String>> familyRelativesMap = new java.util.HashMap<>();

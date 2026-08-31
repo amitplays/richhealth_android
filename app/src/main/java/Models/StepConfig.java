@@ -65,6 +65,20 @@ public class StepConfig {
         /** Non-null → this section renders a slider instead of a card grid. */
         public final SliderSpec slider;
 
+        // ── In-step conditional visibility (2026-08, iOS reveal parity) ──
+        // When dependsOnSection >= 0, this section is shown only while the card
+        // section at that index has a selected value inside visibleForValues.
+        // Hidden sections are skipped by validate() and collectData().
+        public int dependsOnSection = -1;
+        public java.util.Set<String> visibleForValues = null;
+
+        /** Chainable: show this section only for the given answers of an earlier section. */
+        public SectionConfig visibleWhen(int sectionIndex, String... values) {
+            this.dependsOnSection = sectionIndex;
+            this.visibleForValues = new java.util.HashSet<>(java.util.Arrays.asList(values));
+            return this;
+        }
+
         // Legacy ctor — no why subtitle, no clearOthers
         public SectionConfig(String sectionTitle, List<SelectableOption> options,
                              boolean multiSelect, boolean required, int spanCount,

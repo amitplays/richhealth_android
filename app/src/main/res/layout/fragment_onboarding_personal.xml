@@ -129,11 +129,14 @@
             android:textSize="15sp"
             android:textStyle="bold" />
 
+        <!-- LEGACY free-text location — kept (hidden) so old ids still resolve.
+             Replaced 2026-08 by the structured country + city fields below. -->
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/layout_location"
             style="@style/CustomTextInputLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:visibility="gone"
             android:hint="City, Country"
             app:startIconDrawable="@drawable/ic_location"
             app:startIconTint="#008b8b">
@@ -143,6 +146,59 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:inputType="textPostalAddress|textCapWords"
+                android:textColor="#FFFFFF" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Structured location (2026-08): GPS autofill + country dropdown + city. -->
+        <TextView
+            android:id="@+id/btn_use_location"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:text="📍 Use my location"
+            android:textColor="#008b8b"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:padding="6dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?android:attr/selectableItemBackground" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/layout_country"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:hint="Country"
+            app:boxStrokeColor="#008b8b"
+            android:textColorHint="#888888"
+            app:hintTextColor="#008b8b">
+
+            <AutoCompleteTextView
+                android:id="@+id/input_country"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="none"
+                android:textColor="#FFFFFF" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/layout_city"
+            style="@style/CustomTextInputLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="City"
+            app:startIconDrawable="@drawable/ic_location"
+            app:startIconTint="#008b8b">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/input_city"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textCapWords"
                 android:textColor="#FFFFFF" />
 
         </com.google.android.material.textfield.TextInputLayout>

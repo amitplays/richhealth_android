@@ -391,10 +391,10 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
                                 "How much water do you drink?",
                                 "Hydration is the most overlooked driver of energy, focus, and skin health.",
                                 Arrays.asList(
-                                        new SelectableOption("I forget to drink",      R.drawable.ic_signup_low_energy,    2),
-                                        new SelectableOption("4–6 glasses",            R.drawable.ic_signup_water_glass,   5),
-                                        new SelectableOption("7–9 glasses",            R.drawable.ic_signup_water_bottle,  8),
-                                        new SelectableOption("10+ (hydration champ!)", R.drawable.ic_signup_water_drops,   10)
+                                        new SelectableOption("1–3 glasses (under 1 L)",     R.drawable.ic_signup_low_energy,    2),
+                                        new SelectableOption("4–6 glasses (~1–1.5 L)",      R.drawable.ic_signup_water_glass,   5),
+                                        new SelectableOption("7–9 glasses (~2 L)",          R.drawable.ic_signup_water_bottle,  8),
+                                        new SelectableOption("10+ glasses (2.5 L or more)", R.drawable.ic_signup_water_drops,   10)
                                 ),
                                 false, true, 2,
                                 (data, value) -> data.waterIntake = (Integer) value
@@ -518,6 +518,26 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
                                     data.smokingFrequency = "Non-smoker";
                                 }
                         ),
+                        // Inline smoking sliders (2026-08, iOS parity): shown right below
+                        // the answer via visibleWhen — no separate detail step any more.
+                        new StepConfig.SectionConfig(
+                                "How many a day?",
+                                "Rough numbers are fine — this is what sharpens your risk predictions the most.",
+                                new StepConfig.SliderSpec(1f, 40f, 1f, 10f, "cigarettes"),
+                                (data, value) -> data.smokingCigsPerDay = (Float) value
+                        ).visibleWhen(0, "ex", "current"),
+                        new StepConfig.SectionConfig(
+                                "For how many years?",
+                                "Duration matters as much as amount for long-term risk.",
+                                new StepConfig.SliderSpec(0.5f, 40f, 0.5f, 5f, "years"),
+                                (data, value) -> data.smokingYears = (Float) value
+                        ).visibleWhen(0, "ex", "current"),
+                        new StepConfig.SectionConfig(
+                                "How long since you quit?",
+                                "Risk genuinely falls the longer it's been.",
+                                new StepConfig.SliderSpec(0.5f, 30f, 0.5f, 2f, "years"),
+                                (data, value) -> data.smokingQuitYearsAgo = (Float) value
+                        ).visibleWhen(0, "ex"),
                         new StepConfig.SectionConfig(
                                 "How often do you drink alcohol?",
                                 "Alcohol quietly wrecks sleep quality, liver function, and hydration — even in small amounts.",
@@ -542,6 +562,13 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
                                     }
                                 }
                         ),
+                        // Inline drinks/week slider (2026-08) — below the alcohol answer.
+                        new StepConfig.SectionConfig(
+                                "Drinks in a typical week?",
+                                "Roughly how many alcoholic drinks — estimates are fine.",
+                                new StepConfig.SliderSpec(1f, 30f, 1f, 4f, "drinks"),
+                                (data, value) -> data.alcoholDrinksPerWeek = (Float) value
+                        ).visibleWhen(4, "Special Occasions", "Regularly", "Frequently"),
                         new StepConfig.SectionConfig(
                                 "What's your daily fuel?",
                                 "Caffeine timing matters more than quantity — it's one of the biggest sleep disruptors we see.",
@@ -560,10 +587,10 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
                         ),
                         new StepConfig.SectionConfig(
                                 "How many cups a day?",
-                                "Quantity matters for sleep and blood-pressure advice. Skip mentally if you picked no caffeine — it's ignored.",
-                                new StepConfig.SliderSpec(0f, 8f, 1f, 2f, "cups"),
+                                "Quantity matters for sleep and blood-pressure advice.",
+                                new StepConfig.SliderSpec(1f, 8f, 1f, 2f, "cups"),
                                 (data, value) -> data.caffeineCupsPerDay = (Float) value
-                        )
+                        ).visibleWhen(6, "tea", "coffee", "both", "energy_drinks", "")
                 )
         ));
 
@@ -865,17 +892,13 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
         List<String> conditions = onboardingData.medicalConditions != null
                 ? onboardingData.medicalConditions : new ArrayList<>();
         for (final String cond : conditions) {
+            // Years-since-diagnosis slider (2026-08, iOS parity) — real number,
+            // bucketed in buildPayload for the stored diagnosedWhen string.
             sections.add(new StepConfig.SectionConfig(
-                    cond + " — when were you first diagnosed?",
+                    cond + " — how long since you were diagnosed?",
                     null,
-                    Arrays.asList(
-                            new SelectableOption("Under a year", R.drawable.ic_signup_none,       "<1 year"),
-                            new SelectableOption("1–5 years",    R.drawable.ic_signup_healthcare, "1-5 years"),
-                            new SelectableOption("5–10 years",   R.drawable.ic_signup_healthcare, "5-10 years"),
-                            new SelectableOption("10+ years",    R.drawable.ic_signup_heart,      "10+ years")
-                    ),
-                    false, false, 2,
-                    (data, value) -> data.conditionDiagnosedMap.put(cond, (String) value)
+                    new StepConfig.SliderSpec(0.5f, 30f, 0.5f, 3f, "years"),
+                    (data, value) -> data.conditionYearsMap.put(cond, (Float) value)
             ));
             sections.add(new StepConfig.SectionConfig(
                     cond + " — on medication for it?",
@@ -954,17 +977,15 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
                 return "Female".equals(g) || "Other".equals(g);
             }
             case SMOKING_DETAIL_FRAGMENT_INDEX:
-                // Anyone who smokes now ("current") or used to ("ex").
-                return "ex".equals(onboardingData.smokingStatus)
-                        || "current".equals(onboardingData.smokingStatus);
+            case ALCOHOL_DETAIL_FRAGMENT_INDEX:
+                // 2026-08: these details moved INLINE into the habits step
+                // (visibleWhen sections) — the standalone steps stay off. Code kept.
+                return false;
             case FAMILY_RELATIVES_FRAGMENT_INDEX:
                 // Per-condition "who had it?" — only when family conditions were picked.
                 return onboardingData.familyHistory != null
                         && !onboardingData.familyHistory.isEmpty();
-            case ALCOHOL_DETAIL_FRAGMENT_INDEX:
-                return onboardingData.alcoholConsumption != null
-                        && !onboardingData.alcoholConsumption.isEmpty()
-                        && !"None".equals(onboardingData.alcoholConsumption);
+
             case CONDITIONS_DETAIL_FRAGMENT_INDEX:
                 return onboardingData.medicalConditions != null
                         && !onboardingData.medicalConditions.isEmpty();
@@ -1384,6 +1405,15 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
         }
     }
 
+    /** diagnosedWhen bucket: years slider preferred, legacy card answer as fallback. */
+    private static String diagnosedBucketFor(OnboardingData d, String cond) {
+        Float y = d.conditionYearsMap.get(cond);
+        if (y != null) {
+            return y < 1f ? "<1 year" : y <= 5f ? "1-5 years" : y <= 10f ? "5-10 years" : "10+ years";
+        }
+        return d.conditionDiagnosedMap.getOrDefault(cond, "");
+    }
+
     private JSONObject buildPayload() throws JSONException {
         OnboardingData d = onboardingData;
         JSONObject p = new JSONObject();
@@ -1495,7 +1525,7 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
         String firstCond = d.medicalConditions != null && !d.medicalConditions.isEmpty()
                 ? d.medicalConditions.get(0) : null;
         p.put("conditionsDiagnosed", firstCond != null
-                ? d.conditionDiagnosedMap.getOrDefault(firstCond, "") : "");
+                ? diagnosedBucketFor(d, firstCond) : "");
         p.put("conditionsMedicated", firstCond != null
                 ? d.conditionMedicatedMap.getOrDefault(firstCond, "") : "");
 
@@ -1514,7 +1544,7 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
             for (String c : d.medicalConditions) {
                 JSONObject o = new JSONObject();
                 o.put("condition", c);
-                o.put("diagnosedWhen", d.conditionDiagnosedMap.getOrDefault(c, ""));
+                o.put("diagnosedWhen", diagnosedBucketFor(d, c));
                 o.put("medicated",     d.conditionMedicatedMap.getOrDefault(c, ""));
                 condDetails.put(o);
             }
