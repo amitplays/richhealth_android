@@ -259,6 +259,12 @@ public class AIFragment extends Fragment implements BackPressHandler {
     private android.view.View imageAttachChip;
     private android.widget.TextView imageAttachLabel;
     private String pendingImageFileId = null;
+    // The upload now READS the image server-side, so it takes seconds instead of
+    // being instant. A send fired during that window went out with no image and the
+    // picture attached itself to the NEXT message — so a send that is waiting on an
+    // image is held here and fired the moment the upload settles.
+    private boolean imageUploadInFlight = false;
+    private String deferredSendText = null;
     // The upload endpoint now READS the image server-side before it answers, so a
     // response can take tens of seconds. OkHttp defaults to 10s on every timeout,
     // which would have failed every single attach.
@@ -1161,6 +1167,7 @@ public class AIFragment extends Fragment implements BackPressHandler {
         if (imageAttachButton != null) imageAttachButton.setEnabled(false);
         if (imageAttachChip != null) imageAttachChip.setVisibility(android.view.View.VISIBLE);
         if (imageAttachLabel != null) imageAttachLabel.setText("Reading your image\u2026");
+        imageUploadInFlight = true;
         new Thread(() -> {
             byte[] scaled;
             try {
@@ -1181,15 +1188,30 @@ public class AIFragment extends Fragment implements BackPressHandler {
         }, "chat-image-decode").start();
     }
 
+    /**
+     * The upload has settled (succeeded or not). Re-enable the composer and fire a
+     * send that was waiting on this image.
+     */
+    private void onImageUploadSettled() {
+        imageUploadInFlight = false;
+        if (sendButton != null) sendButton.setEnabled(true);
+        if (deferredSendText != null) {
+            String text = deferredSendText;
+            deferredSendText = null;
+            sendMessage(text);
+        }
+    }
+
     /** Second half of uploadChatImage — runs on the UI thread with decoded bytes. */
     private void postChatImage(byte[] bytes) {
         Context ctx = (appContext != null) ? appContext : getContext();
-        if (ctx == null) return;
+        if (ctx == null) { imageUploadInFlight = false; deferredSendText = null; return; }
         final String mime = "image/jpeg";
         if (bytes == null || bytes.length == 0) {
             if (imageAttachButton != null) imageAttachButton.setEnabled(true);
             clearPendingImage();
             Utilities.toast(ctx, "Couldn't read image");
+            onImageUploadSettled();
             return;
         }
         // Should be unreachable after the downscale, but a pathological image
@@ -1199,6 +1221,7 @@ public class AIFragment extends Fragment implements BackPressHandler {
             if (imageAttachButton != null) imageAttachButton.setEnabled(true);
             clearPendingImage();
             Utilities.toast(ctx, "Image too large — try a closer photo");
+            onImageUploadSettled();
             return;
         }
 
@@ -1228,8 +1251,9 @@ public class AIFragment extends Fragment implements BackPressHandler {
                 if (!isAdded()) return;
                 requireActivity().runOnUiThread(() -> {
                     if (imageAttachButton != null) imageAttachButton.setEnabled(true);
-                    clearPendingImage();   // don't leave the chip stuck on "Uploading…"
+                    clearPendingImage();   // don't leave the chip stuck on "Reading…"
                     Utilities.toast(ctx, "Image upload failed");
+                    onImageUploadSettled();   // a send waiting on this still goes, text-only
                 });
             }
             @Override public void onResponse(okhttp3.Call call, okhttp3.Response response) throws java.io.IOException {
@@ -1252,6 +1276,7 @@ public class AIFragment extends Fragment implements BackPressHandler {
                         clearPendingImage();
                         Utilities.toast(ctx, "Image upload failed");
                     }
+                    onImageUploadSettled();   // fires a send that was waiting on this image
                 });
             }
         });
@@ -3949,6 +3974,16 @@ public class AIFragment extends Fragment implements BackPressHandler {
     }
 
     private void sendMessage(String messageText) {
+        // An image is still being uploaded and read. Hold the send rather than
+        // letting it go text-only — otherwise the picture arrives late and attaches
+        // itself to the NEXT message. The text stays in the composer so the wait is
+        // visible; onImageUploadSettled() fires this again the moment it lands.
+        if (imageUploadInFlight && pendingImageFileId == null) {
+            deferredSendText = messageText;
+            if (sendButton != null) sendButton.setEnabled(false);
+            Utilities.toast(getContext(), "Still reading your image — sending in a moment");
+            return;
+        }
         if (isMonthlySessionLimitReached) {
             showSessionLimitReachedDialog(0, 0);
             return;
