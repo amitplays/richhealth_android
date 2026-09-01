@@ -1158,9 +1158,9 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
     private interface OtpErr { void run(String message); }
 
     /**
-     * Account is already created — now confirm the email. We show the code box
-     * immediately (so it always appears, even if email delivery is down) and
-     * fire off the code in the background.
+     * Account is already created — now confirm the email. The box goes up immediately
+     * (so it always appears, even if email delivery is down) and the mail is sent in the
+     * background. Confirming happens by opening the emailed link, not by typing.
      */
     private void showEmailVerification(String email, String name) {
         awaitingOtpVerification = true;
@@ -1168,7 +1168,7 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
         otpName = name;
         showOtpDialog(email, name);
         sendOtp(email,
-                () -> Utilities.toast(this, "Verification code sent to " + email),
+                () -> Utilities.toast(this, "Verification email sent to " + email),
                 msg -> Utilities.toastLong(this, msg));
     }
 
@@ -1182,9 +1182,15 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
     }
 
     /**
-     * OTP entry using the app's standard edit-dialog component (dialog_edit_profile
-     * + DialogTheme) so it matches every other dialog. Non-dismissible — the user
-     * must verify (real code or resend) to continue.
+     * Verification box using the app's standard edit-dialog component (dialog_edit_profile
+     * + DialogTheme) so it matches every other dialog. Non-dismissible — signup issues no
+     * session until the address is confirmed, so there is nothing behind this to walk into.
+     *
+     * Link-only, matching the login gate and iOS: the verification mail carries a link and
+     * nothing else (utils/email.js prints the code only for password reset, which has no
+     * link), so a code box here would ask for something the reader never receives.
+     * watchForLinkVerification below finishes this by itself when the link is opened, on
+     * this phone or any other device.
      */
     private void showOtpDialog(String email, String name) {
         // Never stack two verification dialogs (e.g. onResume + savedState both fire).
@@ -1201,21 +1207,17 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
 
         int gap = (int) (12 * getResources().getDisplayMetrics().density);
         TextView info = new TextView(this);
-        info.setText("Enter the code we emailed to " + email + " to verify your account.");
+        info.setText("We emailed " + email + ". Tap \u201cVerify my email\u201d in that message and this screen "
+                + "continues by itself \u2014 on this phone or any other device.\n\n"
+                + "The link is good for 24 hours. If it has expired, send a new one.");
         info.setTextColor(0xFFB0B0B0);
         info.setTextSize(14);
         info.setPadding(0, 0, 0, gap);
         fieldsContainer.addView(info);
 
-        View fieldLayout = inflater.inflate(R.layout.dialog_profile_field_item, fieldsContainer, false);
-        final com.google.android.material.textfield.TextInputLayout codeLayout =
-                (com.google.android.material.textfield.TextInputLayout) fieldLayout;
-        codeLayout.setHint("Verification code");
-        final com.google.android.material.textfield.TextInputEditText codeInput =
-                fieldLayout.findViewById(R.id.field_input);
-        codeInput.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
-        codeInput.setFilters(new android.text.InputFilter[]{ new android.text.InputFilter.LengthFilter(6) });
-        fieldsContainer.addView(fieldLayout);
+        // The code field was removed: the email carries a link and nothing else, so there
+        // is nothing to type. sendOtp/verifyOtp are left intact — the endpoints still exist
+        // and password reset still uses codes.
 
         final android.app.Dialog dialog = new android.app.Dialog(this, R.style.DialogTheme);
         dialog.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE);
@@ -1234,49 +1236,25 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
 
         android.widget.Button verifyButton = dialogView.findViewById(R.id.save_button);
         android.widget.Button resendButton = dialogView.findViewById(R.id.cancel_button);
-        verifyButton.setText("Verify");
-        resendButton.setText("Resend");
+        // One action. The primary button resends the mail; there is nothing to confirm
+        // here because confirming happens in the mail app.
+        verifyButton.setText("Resend email");
+        resendButton.setVisibility(View.GONE);
 
         verifyButton.setOnClickListener(v -> {
-            String code = codeInput.getText() != null ? codeInput.getText().toString().trim() : "";
-            // Was `< 4`, while the filter caps at 6 and the copy says six digits.
-            if (code.length() != 6) {
-                codeLayout.setError("Enter the 6-digit code from your email");
-                return;
-            }
-            codeLayout.setError(null);
-            showLoading(true, "Verifying...");
             verifyButton.setEnabled(false);
-            resendButton.setEnabled(false);
-            verifyOtp(email, code,
-                    json -> {
+            showLoading(true, "Sending verification email...");
+            sendOtp(email,
+                    () -> {
                         showLoading(false);
-                        otpWatchStop[0] = true;
-                        if (!handleVerifiedSession(json)) {
-                            verifyButton.setEnabled(true);
-                            resendButton.setEnabled(true);
-                            codeLayout.setError("Verified, but the session didn't arrive. Please sign in.");
-                            return;
-                        }
-                        awaitingOtpVerification = false;
-                        otpDialog = null;
-                        dialog.dismiss();
-                        goToMainAfterVerification(name);
+                        verifyButton.setEnabled(true);
+                        Utilities.toast(this, "New email sent to " + email);
                     },
                     msg -> {
                         showLoading(false);
                         verifyButton.setEnabled(true);
-                        resendButton.setEnabled(true);
-                        codeInput.setText("");   // stale code kept Verify live on a dead value
-                        codeLayout.setError(msg);
+                        Utilities.toastLong(this, msg);
                     });
-        });
-
-        resendButton.setOnClickListener(v -> {
-            showLoading(true, "Sending verification code...");
-            sendOtp(email,
-                    () -> { showLoading(false); Utilities.toast(this, "New code sent."); },
-                    msg -> { showLoading(false); Utilities.toastLong(this, msg); });
         });
 
         otpDialog = dialog;

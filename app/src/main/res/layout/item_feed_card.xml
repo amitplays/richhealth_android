@@ -56,11 +56,56 @@
         app:cardElevation="0dp"
         app:cardBackgroundColor="@color/rh_surface_opaque">
 
+    <!-- Row: 72dp thumbnail + the text column. Matches iOS FeedItemRow, which leads with
+         a 72pt FeedThumbnailView; a card with no artwork falls back to the publisher's
+         mark on a teal ground rather than an empty box (Google News RSS carries no image
+         element at all, so those items can never have one). -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
+        android:orientation="horizontal"
         android:padding="11dp">
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/feed_thumb_card"
+            android:layout_width="72dp"
+            android:layout_height="72dp"
+            android:layout_marginEnd="10dp"
+            app:cardCornerRadius="10dp"
+            app:cardElevation="0dp"
+            app:cardBackgroundColor="@android:color/transparent">
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/bg_card_icon_teal">
+
+                <!-- Publisher mark (or a generic glyph) on the teal ground — what shows
+                     when there is no artwork, and while artwork is loading. -->
+                <ImageView
+                    android:id="@+id/feed_thumb_fallback"
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_feed"
+                    app:tint="@color/rh_text_secondary"
+                    android:contentDescription="@null" />
+
+                <ImageView
+                    android:id="@+id/feed_thumb_image"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="centerCrop"
+                    android:visibility="gone"
+                    android:contentDescription="@null" />
+            </FrameLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_weight="1"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
 
         <!-- ── Header: source · category · date · actions ── -->
         <LinearLayout
@@ -88,7 +133,7 @@
                 android:fontFamily="sans-serif-medium"
                 android:maxLines="1"
                 android:ellipsize="end"
-                android:maxWidth="150dp" />
+                android:maxWidth="90dp" />
 
             <TextView
                 android:id="@+id/feed_category"
@@ -199,6 +244,27 @@
             android:maxLines="3"
             android:ellipsize="end"
             android:layout_marginTop="4dp" />
+
+        <!-- An official recall or outbreak notice is not a news story and should not be
+             skimmed past as one. Yellow is the house level for "needs attention, not an
+             emergency" — same pill, level and position as iOS (under the text, not in
+             the header row, which has no width to spare). -->
+        <TextView
+            android:id="@+id/feed_advisory_pill"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:background="@drawable/pill_status_warning"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="2dp"
+            android:text="Advisory"
+            android:textColor="@color/white"
+            android:textSize="10sp"
+            android:textStyle="bold"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:visibility="gone" />
+    </LinearLayout>
     </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 </FrameLayout>

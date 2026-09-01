@@ -108,6 +108,11 @@ public class HealthFeedFragment extends Fragment {
     // Networking for the feed + source favicons (single queue, small in-memory cache).
     private RequestQueue requestQueue;
     private final Map<String, Bitmap> faviconCache = new HashMap<>();
+    /** Cover art for the 72dp thumbnail. Bounded (unlike the favicon map, which holds a
+     *  handful of publisher marks) because these are full-size photos. Same size and
+     *  approach as MediaRailAdapter.IMAGE_CACHE. */
+    private static final android.util.LruCache<String, Bitmap> FEED_IMAGE_CACHE =
+            new android.util.LruCache<>(24);
 
     // Richie logo that spins on the News pill while the feed is fetching.
     private ImageView newsSpinner;
@@ -192,6 +197,7 @@ public class HealthFeedFragment extends Fragment {
             item.category = p.getCategory();
             item.source = "RichHealth Audio";
             item.date = p.getAddedDate();
+            item.dateKnown = item.date != null;   // local podcasts carry a real added-date
             item.podcast = p;
             item.sourceLinks = p.getSourceLinks();
             item.isProOnly = (p.getId() == 2 || p.getId() == 3);
@@ -242,8 +248,12 @@ public class HealthFeedFragment extends Fragment {
                             item.url = o.optString("url", "");
                             item.reason = o.optString("reason", "");
                             item.isProOnly = o.optBoolean("isProOnly", false);
-                            item.date = parseFeedDate(o.optString("publishedAt",
-                                    o.optString("createdAt", "")));
+                            item.imageUrl = o.optString("imageUrl", "");
+                            item.publisherUrl = o.optString("publisherUrl", "");
+                            item.isAdvisory = o.optBoolean("isAdvisory", false);
+                            String rawDate = o.optString("publishedAt", o.optString("createdAt", ""));
+                            item.dateKnown = rawDate != null && !rawDate.isEmpty();
+                            item.date = parseFeedDate(rawDate);
                             // Articles use sourceLinks for the "read" action; fall back to url.
                             // The first sourceLink's label is the publisher name shown in the header.
                             JSONArray sl = o.optJSONArray("sourceLinks");
@@ -341,16 +351,58 @@ public class HealthFeedFragment extends Fragment {
     }
 
     /**
+     * Domain the favicon is looked up on, in the order iOS uses (FeedItem.sourceDomain):
+     * publisherUrl FIRST, because the article link for an aggregated item is a
+     * news.google.com redirect and a favicon from that is the Google News mark on every
+     * single card — which is what shipped. Then the first source link, then the article.
+     */
+    private String faviconDomainOf(FeedItem item) {
+        if (item == null) return "";
+        String[] candidates = {
+                item.publisherUrl,
+                (item.sourceLinks != null && !item.sourceLinks.isEmpty()) ? item.sourceLinks.get(0) : null,
+                item.url
+        };
+        for (String c : candidates) {
+            if (c == null || c.isEmpty()) continue;
+            String d = domainOf(c);
+            if (!d.isEmpty()) return d;
+        }
+        return "";
+    }
+
+    /**
+     * Short relative age for the card ("2h ago"), same shape and thresholds as iOS
+     * FeedItem.ageText so the app speaks about time in one voice. Undated items get an
+     * empty string rather than "just now" — parseFeedDate falls back to the current time.
+     */
+    private String ageTextOf(FeedItem item) {
+        if (item == null || item.date == null || !item.dateKnown) return "";
+        long diff = (System.currentTimeMillis() - item.date.getTime()) / 1000L;
+        if (diff < 0) diff = 0;
+        if (diff < 60) return "just now";
+        if (diff < 3600) return (diff / 60) + "m ago";
+        if (diff < 86400) return (diff / 3600) + "h ago";
+        if (diff < 7 * 86400L) return (diff / 86400) + "d ago";
+        return new SimpleDateFormat("d MMM", Locale.US).format(item.date);
+    }
+
+    /**
      * Loads the source's favicon into the header icon (Google's favicon service),
      * with a globe fallback. Recycle-safe via a tag on the ImageView; cached in
      * memory so scrolling doesn't refetch.
      */
     private void loadSourceIcon(ImageView iv, String pageUrl) {
-        iv.setImageResource(R.drawable.ic_public);
+        loadFavicon(iv, domainOf(pageUrl), R.drawable.ic_public);
+    }
+
+    /** Same lookup, letting the caller pick the placeholder glyph (the 72dp thumbnail
+     *  falls back to a feed glyph rather than a globe). */
+    private void loadFavicon(ImageView iv, String domain, int placeholderRes) {
+        iv.setImageResource(placeholderRes);
         iv.setImageTintList(ColorStateList.valueOf(
                 ContextCompat.getColor(requireContext(), R.color.rh_text_tertiary)));
-        String domain = domainOf(pageUrl);
-        if (domain.isEmpty()) return;
+        if (domain == null || domain.isEmpty()) { iv.setTag(null); return; }
         final String favUrl = "https://www.google.com/s2/favicons?sz=64&domain=" + domain;
         iv.setTag(favUrl);
         Bitmap cached = faviconCache.get(favUrl);
@@ -784,6 +836,15 @@ public class HealthFeedFragment extends Fragment {
         boolean isProOnly;
         Podcast podcast;
         List<String> sourceLinks;
+        String imageUrl;      // cover art, when the source carried one
+        /** Publisher HOME page. For an aggregated story `url` is the aggregator's redirect,
+         *  so a favicon taken from it is the aggregator's mark on every card. */
+        String publisherUrl;
+        /** Official safety notice (recall, outbreak, device alert), not a news story. */
+        boolean isAdvisory;
+        /** False when the payload carried no date at all — parseFeedDate falls back to
+         *  "now", and a relative age would then read "just now" on an undated item. */
+        boolean dateKnown;
     }
 
     // ── Adapter ──
@@ -826,8 +887,46 @@ public class HealthFeedFragment extends Fragment {
                 holder.sourceIcon.setImageTintList(ColorStateList.valueOf(
                         ContextCompat.getColor(requireContext(), R.color.rh_accent)));
             } else {
-                loadSourceIcon(holder.sourceIcon, item.url);
+                // publisherUrl first — item.url is the aggregator's redirect for a Google
+                // News story, which put the same Google mark on every card.
+                loadFavicon(holder.sourceIcon, faviconDomainOf(item), R.drawable.ic_public);
             }
+
+            // 72dp thumbnail: cover art when the source sent one, otherwise the
+            // publisher's mark on the teal ground (iOS FeedThumbnailView). Google News
+            // RSS carries no image element at all, so those cards never have artwork.
+            holder.thumbImage.setVisibility(View.GONE);
+            holder.thumbImage.setTag(item.imageUrl);
+            if (FeedItem.TYPE_PODCAST.equals(item.type)) {
+                holder.thumbFallback.setImageResource(R.drawable.ic_podcast);
+                holder.thumbFallback.setImageTintList(ColorStateList.valueOf(
+                        ContextCompat.getColor(requireContext(), R.color.rh_accent)));
+            } else {
+                loadFavicon(holder.thumbFallback, faviconDomainOf(item), R.drawable.ic_feed);
+            }
+            if (item.imageUrl != null && !item.imageUrl.isEmpty()) {
+                final String imgUrl = item.imageUrl;
+                Bitmap cachedArt = FEED_IMAGE_CACHE.get(imgUrl);
+                if (cachedArt != null) {
+                    holder.thumbImage.setImageBitmap(cachedArt);
+                    holder.thumbImage.setVisibility(View.VISIBLE);
+                } else {
+                    ImageRequest artReq = new ImageRequest(imgUrl,
+                            bmp -> {
+                                FEED_IMAGE_CACHE.put(imgUrl, bmp);
+                                if (imgUrl.equals(holder.thumbImage.getTag())) {
+                                    holder.thumbImage.setImageBitmap(bmp);
+                                    holder.thumbImage.setVisibility(View.VISIBLE);
+                                }
+                            },
+                            400, 400, ImageView.ScaleType.CENTER_CROP, Bitmap.Config.RGB_565,
+                            err -> { /* the publisher mark stays */ });
+                    queue().add(artReq);
+                }
+            }
+
+            // Official recall / outbreak notice — badged, not skimmed past as news.
+            holder.advisoryPill.setVisibility(item.isAdvisory ? View.VISIBLE : View.GONE);
 
             if (item.category != null && !item.category.isEmpty()) {
                 holder.category.setVisibility(View.VISIBLE);
@@ -836,8 +935,9 @@ public class HealthFeedFragment extends Fragment {
                 holder.category.setVisibility(View.GONE);
             }
 
-            SimpleDateFormat sdf = new SimpleDateFormat("MMM dd", Locale.US);
-            holder.date.setText(item.date != null ? sdf.format(item.date) : "");
+            // Relative age, matching iOS. "Is this today's recall or last year's?" is the
+            // first thing anyone asks of an advisory, and "Aug 30" does not answer it.
+            holder.date.setText(ageTextOf(item));
 
             // Why-we-suggested: an icon that opens the app-standard reason dialog.
             if (item.reason != null && !item.reason.isEmpty()) {
@@ -908,8 +1008,8 @@ public class HealthFeedFragment extends Fragment {
         }
 
         class ViewHolder extends RecyclerView.ViewHolder {
-            TextView sourceName, title, description, category, date;
-            ImageView sourceIcon;
+            TextView sourceName, title, description, category, date, advisoryPill;
+            ImageView sourceIcon, thumbImage, thumbFallback;
             ImageButton playButton, sourceButton, readButton, whyButton;
             View foreground; // the card layer that slides on swipe (hint sits behind it)
             View swipeHint;  // "Slide to remove" panel; shown only during swipe/teach
@@ -924,6 +1024,9 @@ public class HealthFeedFragment extends Fragment {
                 description = v.findViewById(R.id.feed_description);
                 category = v.findViewById(R.id.feed_category);
                 date = v.findViewById(R.id.feed_date);
+                advisoryPill = v.findViewById(R.id.feed_advisory_pill);
+                thumbImage = v.findViewById(R.id.feed_thumb_image);
+                thumbFallback = v.findViewById(R.id.feed_thumb_fallback);
                 // [PLAN-PILL-REVIEW] removed (hardcoded/dead plan pill; will review later)
                 whyButton = v.findViewById(R.id.feed_why_button);
                 playButton = v.findViewById(R.id.feed_play_button);

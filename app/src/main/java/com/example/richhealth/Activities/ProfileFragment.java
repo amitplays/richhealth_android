@@ -2629,16 +2629,38 @@ public class ProfileFragment extends Fragment {
         // intentionally empty
     }
 
-    /** "Verified" pill (mirrors iOS) — shown only when the account's email is verified. */
+    /**
+     * Email-status pill (mirrors iOS). It used to appear only when the address WAS
+     * verified, so an unverified account looked identical to one that had never been
+     * checked — and there was no way in to fix it. Unverified now shows as a warning
+     * pill (yellow, per the status levels) that opens the verification box on tap.
+     */
     private void updateVerifiedPill() {
         if (profileVerifiedPill == null) return;
         boolean verified = userProfile != null && userProfile.isEmailVerified();
         if (verified) {
             Utils.StatusPill.apply(profileVerifiedPill, Utils.StatusPill.Intent.SUCCESS, "Verified");
-            profileVerifiedPill.setVisibility(View.VISIBLE);
+            profileVerifiedPill.setOnClickListener(null);
+            profileVerifiedPill.setClickable(false);
         } else {
-            profileVerifiedPill.setVisibility(View.GONE);
+            Utils.StatusPill.apply(profileVerifiedPill, Utils.StatusPill.Intent.WARNING, "Unverified");
+            profileVerifiedPill.setOnClickListener(v -> openEmailVerification());
         }
+        profileVerifiedPill.setVisibility(View.VISIBLE);
+    }
+
+    /**
+     * Opens the shared verification box for the signed-in address. The box sends the mail
+     * and offers a resend; confirming happens by opening the link, which flips
+     * emailVerified server-side — so the profile is re-read when the box closes and the
+     * pill flips with it.
+     */
+    private void openEmailVerification() {
+        if (!isAdded() || userProfile == null) return;
+        String email = userProfile.getEmail();
+        if (email == null || email.trim().isEmpty()) return;
+        android.app.Dialog d = Utils.EmailVerificationHelper.show(requireActivity(), email, json -> {});
+        if (d != null) d.setOnDismissListener(x -> { if (isAdded()) refreshProfileFromServer(); });
     }
 
     /** Up to two initials from the user's name for the avatar (mirrors iOS). */
@@ -3120,9 +3142,12 @@ public class ProfileFragment extends Fragment {
     }
 
     /**
-     * Lightweight, silent PUT of just the aiPreferences object. Reuses the same
-     * /api/user/profile endpoint (its whitelist accepts partial updates) so no
-     * new backend surface is needed.
+     * PUT of just the aiPreferences object. Reuses the same /api/user/profile endpoint
+     * (its whitelist accepts partial updates) so no new backend surface is needed.
+     *
+     * Not silent: the app-wide loader covers the round trip, and a failure puts the
+     * controls back to what the server actually holds instead of leaving a toggle showing
+     * a value that was never stored (parity with iOS).
      */
     private void persistAiPreferences() {
         Context context = getContext();
@@ -3164,6 +3189,11 @@ public class ProfileFragment extends Fragment {
                 error -> {
                     progress.hide();
                     Log.e(TAG, "Failed to save AI preferences", error);
+                    // Put the controls back to what the server actually holds. The local
+                    // write above and the listener that fired have both already moved them
+                    // to a value Mongo never stored; re-reading /profile is the one source
+                    // of truth, and displayProfile() re-renders every AI control from it.
+                    refreshProfileFromServer();
                     Utilities.toast(getContext(), "Couldn't update your AI settings. Please try again.");
                 }
         ) {
