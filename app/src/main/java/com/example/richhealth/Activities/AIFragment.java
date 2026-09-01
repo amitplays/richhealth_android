@@ -259,7 +259,14 @@ public class AIFragment extends Fragment implements BackPressHandler {
     private android.view.View imageAttachChip;
     private android.widget.TextView imageAttachLabel;
     private String pendingImageFileId = null;
-    private final okhttp3.OkHttpClient imageHttpClient = new okhttp3.OkHttpClient();
+    // The upload endpoint now READS the image server-side before it answers, so a
+    // response can take tens of seconds. OkHttp defaults to 10s on every timeout,
+    // which would have failed every single attach.
+    private final okhttp3.OkHttpClient imageHttpClient = new okhttp3.OkHttpClient.Builder()
+            .connectTimeout(20, java.util.concurrent.TimeUnit.SECONDS)
+            .writeTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(90, java.util.concurrent.TimeUnit.SECONDS)
+            .build();
     // Vision-capable model ids — mirrors iOS RichieViewModel.visionModels.
     // Only DeepSeek's multimodal model can read a picture. The old list
     // (gemini/gpt5.3/claude4.5) offered the image button on models that all route to
@@ -1149,42 +1156,73 @@ public class AIFragment extends Fragment implements BackPressHandler {
     private void uploadChatImage(Uri uri) {
         Context ctx = (appContext != null) ? appContext : getContext();
         if (ctx == null) return;
-        final byte[] bytes;
-        final String mime;
-        try {
-            java.io.InputStream in = requireContext().getContentResolver().openInputStream(uri);
-            if (in == null) { Utilities.toast(ctx, "Couldn't read image"); return; }
-            java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
-            byte[] buf = new byte[8192];
-            int n;
-            while ((n = in.read(buf)) != -1) bos.write(buf, 0, n);
-            in.close();
-            bytes = bos.toByteArray();
-            String t = requireContext().getContentResolver().getType(uri);
-            mime = (t != null && t.startsWith("image/")) ? t : "image/jpeg";
-        } catch (Exception e) {
-            Log.e(TAG, "read image failed", e);
+        // Decoding a 12MP photo is tens to hundreds of ms — off the main thread, or
+        // the composer freezes the moment the camera closes.
+        if (imageAttachButton != null) imageAttachButton.setEnabled(false);
+        if (imageAttachChip != null) imageAttachChip.setVisibility(android.view.View.VISIBLE);
+        if (imageAttachLabel != null) imageAttachLabel.setText("Reading your image\u2026");
+        new Thread(() -> {
+            byte[] scaled;
+            try {
+                // Downscale BEFORE upload. A phone camera photo is 4-12MB and the API
+                // runs on a serverless platform that rejects request bodies over
+                // ~4.5MB, so the raw file never even reached the server. 1600px on the
+                // long edge is more than a vision model uses and still resolves the
+                // detail that matters in a skin photo (border, texture, colour).
+                // Matches iOS ChatImagePrep (1600px / JPEG 0.85).
+                scaled = decodeScaledJpeg(uri, MAX_UPLOAD_EDGE_PX, UPLOAD_JPEG_QUALITY);
+            } catch (Throwable e) {
+                Log.e(TAG, "read image failed", e);
+                scaled = null;
+            }
+            final byte[] out = scaled;
+            if (!isAdded()) return;
+            requireActivity().runOnUiThread(() -> postChatImage(out));
+        }, "chat-image-decode").start();
+    }
+
+    /** Second half of uploadChatImage — runs on the UI thread with decoded bytes. */
+    private void postChatImage(byte[] bytes) {
+        Context ctx = (appContext != null) ? appContext : getContext();
+        if (ctx == null) return;
+        final String mime = "image/jpeg";
+        if (bytes == null || bytes.length == 0) {
+            if (imageAttachButton != null) imageAttachButton.setEnabled(true);
+            clearPendingImage();
             Utilities.toast(ctx, "Couldn't read image");
             return;
         }
-        if (bytes.length == 0) { Utilities.toast(ctx, "Couldn't read image"); return; }
-        if (bytes.length > 16 * 1024 * 1024) { Utilities.toast(ctx, "Image too large (max 16MB)"); return; }
+        // Should be unreachable after the downscale, but a pathological image
+        // (huge canvas, very noisy) can still come out big — fail loudly here
+        // rather than as an opaque upload error.
+        if (bytes.length > 4 * 1024 * 1024) {
+            if (imageAttachButton != null) imageAttachButton.setEnabled(true);
+            clearPendingImage();
+            Utilities.toast(ctx, "Image too large — try a closer photo");
+            return;
+        }
 
-        String fileName = mime.contains("png") ? "image.png" : "image.jpg";
+        String fileName = "image.jpg";
         okhttp3.RequestBody fileBody = okhttp3.RequestBody.create(okhttp3.MediaType.parse(mime), bytes);
-        okhttp3.RequestBody body = new okhttp3.MultipartBody.Builder()
-                .setType(okhttp3.MultipartBody.FORM)
-                .addFormDataPart("image", fileName, fileBody)
-                .build();
+        okhttp3.MultipartBody.Builder mb = new okhttp3.MultipartBody.Builder()
+                .setType(okhttp3.MultipartBody.FORM);
+        // The server reads the image during THIS request, so give it the context to
+        // read it with: whose chat this is (earlier photos to compare against) and
+        // whose body it is (a dependent's profile, not the account holder's).
+        // Text parts go BEFORE the file — multer only guarantees req.body for fields
+        // that precede it in the stream. Same order iOS sends.
+        if (sessionId != null && !sessionId.isEmpty()) mb.addFormDataPart("sessionId", sessionId);
+        if (selectedDependentId != null && !selectedDependentId.isEmpty()) {
+            mb.addFormDataPart("dependentId", selectedDependentId);
+        }
+        okhttp3.RequestBody body = mb.addFormDataPart("image", fileName, fileBody).build();
         String token = TokenManager.getInstance(ctx).getToken();
         okhttp3.Request req = new okhttp3.Request.Builder()
                 .url(ApiConfig.getBaseUrl() + "/api/chat/image")
                 .header("Authorization", "Bearer " + token)
                 .post(body)
                 .build();
-        if (imageAttachButton != null) imageAttachButton.setEnabled(false);
-        if (imageAttachChip != null) imageAttachChip.setVisibility(android.view.View.VISIBLE);
-        if (imageAttachLabel != null) imageAttachLabel.setText("Uploading image\u2026");
+        // Button/chip state was already set before the decode started.
         imageHttpClient.newCall(req).enqueue(new okhttp3.Callback() {
             @Override public void onFailure(okhttp3.Call call, java.io.IOException e) {
                 if (!isAdded()) return;
@@ -2910,6 +2948,88 @@ public class AIFragment extends Fragment implements BackPressHandler {
         Context ctx = (appContext != null) ? appContext : getContext();
         if (ctx == null || sid == null) return;
         ctx.getSharedPreferences(DRAFTS_PREFS, Context.MODE_PRIVATE).edit().remove(sid).apply();
+    }
+
+    // Upload sizing. The long edge a vision model actually benefits from, and the
+    // JPEG quality that keeps skin colour and lesion borders readable. Kept in
+    // step with iOS CameraPicker.
+    private static final int MAX_UPLOAD_EDGE_PX = 1600;
+    private static final int UPLOAD_JPEG_QUALITY = 85;
+
+    /**
+     * Read a picked/captured image, scale its long edge to at most maxEdge, apply
+     * the EXIF rotation the camera recorded, and return JPEG bytes.
+     *
+     * Two-pass decode (bounds first, then inSampleSize) so a 12MP photo is never
+     * fully materialised in memory — the naive path OOMs on low-RAM devices.
+     * EXIF matters here: a camera writes the photo in sensor orientation with a
+     * rotation tag, and stripping that tag by re-encoding without applying it
+     * hands the model a sideways body part.
+     */
+    private byte[] decodeScaledJpeg(Uri uri, int maxEdge, int quality) throws Exception {
+        android.content.ContentResolver cr = requireContext().getContentResolver();
+
+        android.graphics.BitmapFactory.Options bounds = new android.graphics.BitmapFactory.Options();
+        bounds.inJustDecodeBounds = true;
+        try (java.io.InputStream in = cr.openInputStream(uri)) {
+            if (in == null) throw new java.io.IOException("no stream");
+            android.graphics.BitmapFactory.decodeStream(in, null, bounds);
+        }
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) throw new java.io.IOException("not an image");
+
+        int sample = 1;
+        int longEdge = Math.max(bounds.outWidth, bounds.outHeight);
+        while (longEdge / (sample * 2) >= maxEdge) sample *= 2;
+
+        android.graphics.BitmapFactory.Options opts = new android.graphics.BitmapFactory.Options();
+        opts.inSampleSize = sample;
+        android.graphics.Bitmap bmp;
+        try (java.io.InputStream in = cr.openInputStream(uri)) {
+            if (in == null) throw new java.io.IOException("no stream");
+            bmp = android.graphics.BitmapFactory.decodeStream(in, null, opts);
+        }
+        if (bmp == null) throw new java.io.IOException("decode failed");
+
+        // Exact fit after the power-of-two sample.
+        int w = bmp.getWidth(), h = bmp.getHeight();
+        int longNow = Math.max(w, h);
+        if (longNow > maxEdge) {
+            float f = (float) maxEdge / (float) longNow;
+            android.graphics.Bitmap scaled = android.graphics.Bitmap.createScaledBitmap(
+                    bmp, Math.max(1, Math.round(w * f)), Math.max(1, Math.round(h * f)), true);
+            if (scaled != bmp) { bmp.recycle(); bmp = scaled; }
+        }
+
+        int rotation = 0;
+        boolean flip = false;
+        try (java.io.InputStream in = cr.openInputStream(uri)) {
+            if (in != null) {
+                androidx.exifinterface.media.ExifInterface exif =
+                        new androidx.exifinterface.media.ExifInterface(in);
+                switch (exif.getAttributeInt(androidx.exifinterface.media.ExifInterface.TAG_ORIENTATION,
+                        androidx.exifinterface.media.ExifInterface.ORIENTATION_NORMAL)) {
+                    case androidx.exifinterface.media.ExifInterface.ORIENTATION_ROTATE_90:  rotation = 90;  break;
+                    case androidx.exifinterface.media.ExifInterface.ORIENTATION_ROTATE_180: rotation = 180; break;
+                    case androidx.exifinterface.media.ExifInterface.ORIENTATION_ROTATE_270: rotation = 270; break;
+                    case androidx.exifinterface.media.ExifInterface.ORIENTATION_FLIP_HORIZONTAL: flip = true; break;
+                    default: break;
+                }
+            }
+        } catch (Exception ignored) { /* no EXIF — treat as upright */ }
+
+        if (rotation != 0 || flip) {
+            android.graphics.Matrix m = new android.graphics.Matrix();
+            if (rotation != 0) m.postRotate(rotation);
+            if (flip) m.postScale(-1f, 1f);
+            android.graphics.Bitmap rotated = android.graphics.Bitmap.createBitmap(
+                    bmp, 0, 0, bmp.getWidth(), bmp.getHeight(), m, true);
+            if (rotated != bmp) { bmp.recycle(); bmp = rotated; }
+        }
+
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, quality, out);
+        bmp.recycle();
+        return out.toByteArray();
     }
 
     /** Camera or gallery for a chat attachment — camera first (the common case). */
