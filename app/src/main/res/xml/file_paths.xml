@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Paths the app may share through FileProvider.
+
+  Only the camera-capture folder is exposed: a photo taken in the Richie composer
+  is written to cache/camera/ and handed to the camera app as a content:// URI
+  (a raw file:// URI throws FileUriExposedException on API 24+).
+-->
+<paths>
+    <cache-path name="camera" path="camera/" />
+</paths>

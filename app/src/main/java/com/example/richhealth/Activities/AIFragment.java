@@ -235,10 +235,17 @@ public class AIFragment extends Fragment implements BackPressHandler {
             {"Gemini", "gemini", "false"},
             {"Mistral", "mistral", "false"},
             {"DeepSeek R1", "deepseek", "false"},
+            // DeepSeek's multimodal model — the ONLY entry here that can actually look
+            // at an attached image (every other id routes to the text chat model
+            // server-side). Selecting it is what enables the image button.
+            {"DeepSeek Vision", "deepseek-vision", "false"},
             {"Llama 3.3", "llama", "false"},
             {"GPT 5.3", "gpt5.3", "true"},
             {"Claude 4.5", "claude4.5", "true"}
     };
+    /** Rows shown indented under the DeepSeek R1 row (its own model family). */
+    private static final java.util.Set<String> DEEPSEEK_SUB_MODELS =
+            new java.util.HashSet<>(java.util.Collections.singletonList("deepseek-vision"));
 
     // Usage tracking
     private ProgressBar usageProgressBar;
@@ -254,12 +261,29 @@ public class AIFragment extends Fragment implements BackPressHandler {
     private String pendingImageFileId = null;
     private final okhttp3.OkHttpClient imageHttpClient = new okhttp3.OkHttpClient();
     // Vision-capable model ids — mirrors iOS RichieViewModel.visionModels.
+    // Only DeepSeek's multimodal model can read a picture. The old list
+    // (gemini/gpt5.3/claude4.5) offered the image button on models that all route to
+    // the text-only chat model server-side and never saw the image.
     private static final java.util.Set<String> VISION_MODELS =
-            new java.util.HashSet<>(java.util.Arrays.asList("gemini", "gpt5.3", "claude4.5"));
+            new java.util.HashSet<>(java.util.Collections.singletonList("deepseek-vision"));
     // Registered at construction (required before STARTED); GetContent returns an image Uri.
     private final ActivityResultLauncher<String> imagePickerLauncher =
             registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
                 if (uri != null) uploadChatImage(uri);
+            });
+    // ── Camera capture (2026-08) ─────────────────────────────────────────────
+    // A health chat is mostly "point it at the thing" — a rash, a pill strip, a
+    // report — so the composer offers the camera, not just the gallery. The photo
+    // is written to cache/camera/ and shared through FileProvider (a file:// URI
+    // throws FileUriExposedException on API 24+), then goes through the SAME
+    // uploadChatImage() path as a picked image.
+    private Uri pendingCameraUri;
+    private final ActivityResultLauncher<Uri> cameraLauncher =
+            registerForActivityResult(new ActivityResultContracts.TakePicture(), success -> {
+                if (Boolean.TRUE.equals(success) && pendingCameraUri != null) {
+                    uploadChatImage(pendingCameraUri);
+                }
+                pendingCameraUri = null;
             });
     private boolean isNewChatMode = true;
     private int messageLimit = 5;
@@ -389,9 +413,10 @@ public class AIFragment extends Fragment implements BackPressHandler {
         if (imageAttachButton != null) {
             imageAttachButton.setOnClickListener(v -> {
                 if (canAttachImage()) {
-                    imagePickerLauncher.launch("image/*");
+                    showImageSourceChooser();
                 } else {
-                    Utilities.toast(requireContext(), "choose the model which can upload image");
+                    Utilities.toast(requireContext(),
+                            "Pick DeepSeek Vision to attach an image \u2014 it's the only model that can read one");
                 }
             });
         }
@@ -498,7 +523,8 @@ public class AIFragment extends Fragment implements BackPressHandler {
     private int modelIconRes(String id) {
         switch (id) {
             case "gemini":    return R.drawable.ic_brand_gemini;
-            case "deepseek":  return R.drawable.ic_brand_deepseek;
+            case "deepseek":
+            case "deepseek-vision": return R.drawable.ic_brand_deepseek;
             case "gpt5.3":    return R.drawable.ic_brand_openai;
             case "claude4.5": return R.drawable.ic_brand_claude;
             case "mistral":   return R.drawable.ic_model_mistral;
@@ -513,7 +539,8 @@ public class AIFragment extends Fragment implements BackPressHandler {
         switch (id) {
             case "gemini":    return Color.parseColor("#4285F4");
             case "mistral":   return Color.parseColor("#FA520F");
-            case "deepseek":  return Color.parseColor("#4D6BFE");
+            case "deepseek":
+            case "deepseek-vision": return Color.parseColor("#4D6BFE");
             case "llama":     return Color.parseColor("#0866FF");
             case "gpt5.3":    return Color.parseColor("#10A37F");
             case "claude4.5": return Color.parseColor("#D97757");
@@ -751,8 +778,15 @@ public class AIFragment extends Fragment implements BackPressHandler {
             final boolean requiresPro = model[2].equals("true");
             boolean isSelected = id.equals(currentModel);
             final boolean proUser = isPro;
-            container.addView(buildPickerRow(modelIconRes(id), modelIconColor(id), name, isSelected,
-                    requiresPro, dp, v -> onModelRowPicked(id, name, requiresPro, proUser, dialog)));
+            View row = buildPickerRow(modelIconRes(id), modelIconColor(id), name, isSelected,
+                    requiresPro, dp, v -> onModelRowPicked(id, name, requiresPro, proUser, dialog));
+            // A DeepSeek sub-model sits indented under the DeepSeek row so the picker
+            // reads as "DeepSeek → its models" rather than another flat brand.
+            if (DEEPSEEK_SUB_MODELS.contains(id)) {
+                row.setPadding(row.getPaddingLeft() + (int) (22 * dp), row.getPaddingTop(),
+                        row.getPaddingRight(), row.getPaddingBottom());
+            }
+            container.addView(row);
             if (i < AI_MODELS.length - 1) addSheetDivider(container, dp);
         }
 
@@ -1149,11 +1183,14 @@ public class AIFragment extends Fragment implements BackPressHandler {
                 .post(body)
                 .build();
         if (imageAttachButton != null) imageAttachButton.setEnabled(false);
+        if (imageAttachChip != null) imageAttachChip.setVisibility(android.view.View.VISIBLE);
+        if (imageAttachLabel != null) imageAttachLabel.setText("Uploading image\u2026");
         imageHttpClient.newCall(req).enqueue(new okhttp3.Callback() {
             @Override public void onFailure(okhttp3.Call call, java.io.IOException e) {
                 if (!isAdded()) return;
                 requireActivity().runOnUiThread(() -> {
                     if (imageAttachButton != null) imageAttachButton.setEnabled(true);
+                    clearPendingImage();   // don't leave the chip stuck on "Uploading…"
                     Utilities.toast(ctx, "Image upload failed");
                 });
             }
@@ -1172,8 +1209,9 @@ public class AIFragment extends Fragment implements BackPressHandler {
                 requireActivity().runOnUiThread(() -> {
                     if (imageAttachButton != null) imageAttachButton.setEnabled(true);
                     if (ok && fileId != null && !fileId.isEmpty()) {
-                        setPendingImage(fileId);
+                        setPendingImage(fileId);   // flips the chip to "Image attached"
                     } else {
+                        clearPendingImage();
                         Utilities.toast(ctx, "Image upload failed");
                     }
                 });
@@ -2703,6 +2741,7 @@ public class AIFragment extends Fragment implements BackPressHandler {
             case "clinical_trials":      return "Checking clinical trials" + suffix;
             case "fetch_health_records": return "Checking your " + ((q == null || q.isEmpty()) ? "records" : q);
             case "log_health_record":    return "Preparing to log " + ((q == null || q.isEmpty()) ? "health data" : q);
+            case "read_image":           return "Looking at your image";
             default:                     return "Working\u2026";
         }
     }
@@ -2871,6 +2910,40 @@ public class AIFragment extends Fragment implements BackPressHandler {
         Context ctx = (appContext != null) ? appContext : getContext();
         if (ctx == null || sid == null) return;
         ctx.getSharedPreferences(DRAFTS_PREFS, Context.MODE_PRIVATE).edit().remove(sid).apply();
+    }
+
+    /** Camera or gallery for a chat attachment — camera first (the common case). */
+    private void showImageSourceChooser() {
+        if (!isAdded()) return;
+        new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setTitle("Attach an image")
+                .setItems(new CharSequence[]{"Take Photo", "Photo Library"}, (d, which) -> {
+                    if (which == 0) launchCamera();
+                    else imagePickerLauncher.launch("image/*");
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    /** Create the target file, hand the camera a content:// URI, and launch it. */
+    private void launchCamera() {
+        if (!isAdded()) return;
+        try {
+            java.io.File dir = new java.io.File(requireContext().getCacheDir(), "camera");
+            if (!dir.exists() && !dir.mkdirs()) throw new java.io.IOException("cache dir");
+            java.io.File photo = new java.io.File(dir, "chat_" + System.currentTimeMillis() + ".jpg");
+            pendingCameraUri = androidx.core.content.FileProvider.getUriForFile(
+                    requireContext(),
+                    requireContext().getPackageName() + ".fileprovider",
+                    photo);
+            cameraLauncher.launch(pendingCameraUri);
+        } catch (Exception e) {
+            pendingCameraUri = null;
+            Log.e(TAG, "camera launch failed: " + e.getMessage());
+            // No camera app / storage problem — the gallery still works.
+            Utilities.toast(getContext(), "Couldn't open the camera. Pick a photo instead.");
+            imagePickerLauncher.launch("image/*");
+        }
     }
 
     /** Fire the message sitting in the composer through the normal send path. */
