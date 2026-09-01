@@ -219,6 +219,87 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
      * we capture the row's top, apply the change, then re-pin the same row to the
      * same offset so it stays visually put.
      */
+    // ── Collapsible sections (Thought process / what Richie checked) ─────────
+    // The block used to snap between VISIBLE and GONE while only the chevron
+    // animated, which read as the row breaking rather than opening. It now grows
+    // and fades to its measured height. Animators are tracked per view so a fast
+    // second tap, or the row being recycled mid-animation, cancels the old one
+    // instead of leaving a half-open block behind.
+    private static final int EXPAND_MS = 200;
+    private static final java.util.WeakHashMap<View, android.animation.ValueAnimator> EXPAND_ANIMS =
+            new java.util.WeakHashMap<>();
+
+    /** Cancel any running expand/collapse and put the view back to a clean state. */
+    private static void resetExpandable(View v, boolean visible) {
+        if (v == null) return;
+        android.animation.ValueAnimator running = EXPAND_ANIMS.remove(v);
+        if (running != null) running.cancel();
+        v.animate().cancel();
+        v.setAlpha(1f);
+        ViewGroup.LayoutParams lp = v.getLayoutParams();
+        if (lp != null && lp.height != ViewGroup.LayoutParams.WRAP_CONTENT) {
+            lp.height = ViewGroup.LayoutParams.WRAP_CONTENT;
+            v.setLayoutParams(lp);
+        }
+        v.setVisibility(visible ? View.VISIBLE : View.GONE);
+    }
+
+    /** Grow or shrink a block instead of hard-cutting its visibility. */
+    private static void expandCollapse(final View v, final boolean show) {
+        if (v == null) return;
+        android.animation.ValueAnimator running = EXPAND_ANIMS.remove(v);
+        if (running != null) running.cancel();
+        v.animate().cancel();
+
+        final ViewGroup.LayoutParams lp = v.getLayoutParams();
+        if (lp == null) { v.setVisibility(show ? View.VISIBLE : View.GONE); return; }
+
+        final int from, to;
+        if (show) {
+            // Measure against the width it will actually get, or the text wraps
+            // differently during the animation than it does at rest.
+            int parentWidth = 0;
+            if (v.getParent() instanceof ViewGroup) {
+                ViewGroup pg = (ViewGroup) v.getParent();
+                parentWidth = pg.getWidth() - pg.getPaddingLeft() - pg.getPaddingRight();
+            }
+            int wSpec = parentWidth > 0
+                    ? View.MeasureSpec.makeMeasureSpec(parentWidth, View.MeasureSpec.AT_MOST)
+                    : View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED);
+            v.measure(wSpec, View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
+            to = v.getMeasuredHeight();
+            from = 0;
+            v.setAlpha(0f);
+            v.setVisibility(View.VISIBLE);
+            if (to <= 0) { resetExpandable(v, true); return; }   // nothing to show
+        } else {
+            from = v.getHeight();
+            to = 0;
+            if (from <= 0) { resetExpandable(v, false); return; }
+        }
+
+        android.animation.ValueAnimator anim = android.animation.ValueAnimator.ofInt(from, to);
+        anim.setDuration(EXPAND_MS);
+        anim.setInterpolator(new android.view.animation.DecelerateInterpolator());
+        anim.addUpdateListener(a -> {
+            lp.height = (int) a.getAnimatedValue();
+            v.setLayoutParams(lp);
+        });
+        anim.addListener(new android.animation.AnimatorListenerAdapter() {
+            @Override public void onAnimationEnd(android.animation.Animator a) {
+                EXPAND_ANIMS.remove(v);
+                // Back to WRAP_CONTENT so later text changes size the block normally.
+                lp.height = ViewGroup.LayoutParams.WRAP_CONTENT;
+                v.setLayoutParams(lp);
+                v.setAlpha(1f);
+                if (!show) v.setVisibility(View.GONE);
+            }
+        });
+        EXPAND_ANIMS.put(v, anim);
+        v.animate().alpha(show ? 1f : 0f).setDuration(EXPAND_MS).start();
+        anim.start();
+    }
+
     private void toggleKeepingScroll(RecyclerView.ViewHolder holder, Runnable change) {
         View item = holder.itemView;
         android.view.ViewParent parent = item.getParent();
@@ -323,6 +404,7 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             case "fetch_health_records": return R.drawable.ic_heart_check;      // iOS heart.text.square
             case "log_health_record":    return R.drawable.ic_edit;             // iOS square.and.pencil
             case "lookup_health_topic":  return R.drawable.ic_doc;              // iOS character.book.closed
+            case "read_image":           return R.drawable.ic_visibility;    // iOS eye
             default:                     return R.drawable.ic_search;           // unknown tool
         }
     }
@@ -391,7 +473,7 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 if (message.hasReasoning() && !message.isThinking()) {
                     thinkingText.setText(message.getReasoning().trim());
                     thinkingHeader.setVisibility(View.VISIBLE);
-                    thinkingText.setVisibility(View.GONE);
+                    resetExpandable(thinkingText, false);   // cancels a mid-flight animation on a recycled row
                     if (thinkingChevron != null) thinkingChevron.setRotation(0f);
                     thinkingHeader.setOnClickListener(v -> {
                         final boolean show = thinkingText.getVisibility() != View.VISIBLE;
@@ -400,11 +482,11 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                         }
                         // Keep the row pinned so the chat doesn't jump on expand/collapse.
                         toggleKeepingScroll(AIMessageViewHolder.this,
-                                () -> thinkingText.setVisibility(show ? View.VISIBLE : View.GONE));
+                                () -> expandCollapse(thinkingText, show));
                     });
                 } else {
                     thinkingHeader.setVisibility(View.GONE);
-                    thinkingText.setVisibility(View.GONE);
+                    resetExpandable(thinkingText, false);
                 }
             }
 
@@ -469,11 +551,11 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                             traceChevron.animate().rotation(show ? 180f : 0f).setDuration(180).start();
                         }
                         toggleKeepingScroll(AIMessageViewHolder.this,
-                                () -> traceContainer.setVisibility(show ? View.VISIBLE : View.GONE));
+                                () -> expandCollapse(traceContainer, show));
                     });
                 } else {
                     traceHeader.setVisibility(View.GONE);
-                    traceContainer.setVisibility(View.GONE);
+                    resetExpandable(traceContainer, false);
                 }
             }
 
