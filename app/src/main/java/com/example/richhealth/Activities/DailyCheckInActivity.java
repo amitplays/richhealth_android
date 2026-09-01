@@ -68,6 +68,8 @@ public class DailyCheckInActivity extends AppCompatActivity {
     private TextView emptySubtitle;
     private RecyclerView checkinRecycler;
     private LinearLayout startBanner;
+    private TextView startBannerTitle;
+    private TextView startBannerSubtitle;
     private MaterialButton btnStartCheckin;
     private android.widget.ImageView listLoadingLogo;
     private android.animation.ObjectAnimator listLoadingSpinner;
@@ -174,6 +176,8 @@ public class DailyCheckInActivity extends AppCompatActivity {
         emptySubtitle    = findViewById(R.id.empty_subtitle);
         checkinRecycler  = findViewById(R.id.checkin_recycler);
         startBanner      = findViewById(R.id.start_banner);
+        startBannerTitle    = findViewById(R.id.start_banner_title);
+        startBannerSubtitle = findViewById(R.id.start_banner_subtitle);
         btnStartCheckin  = findViewById(R.id.btn_start_checkin);
         listLoadingLogo  = findViewById(R.id.list_loading_logo);
 
@@ -574,6 +578,41 @@ public class DailyCheckInActivity extends AppCompatActivity {
 
     // ─── State helpers ────────────────────────────────────────────────────────
 
+    /**
+     * A check-in that was started and abandoned can be picked up again.
+     *
+     * The server clears isDue as soon as a session is open, so gating the start banner on
+     * isDue alone hid the ONE control that could continue it — abandon a check-in and it
+     * was unreachable until the next cycle. `pending` counts too: POST /api/checkin/start
+     * resumes in_progress OR pending. Same rule as iOS (CheckInSheetViewModel.canResume).
+     */
+    private boolean canResume() {
+        for (SessionItem s : sessionItems) {
+            if (s == null || s.status == null) continue;
+            if ("in_progress".equals(s.status) || "pending".equals(s.status)) return true;
+        }
+        return false;
+    }
+
+    /** Start banner: visible when a check-in is due OR one is waiting to be finished. */
+    private void bindStartBanner() {
+        boolean resume = canResume();
+        boolean show = isDue || resume;
+        startBanner.setVisibility(show ? View.VISIBLE : View.GONE);
+        if (!show) return;
+        if (startBannerTitle != null) {
+            startBannerTitle.setText(resume ? "Pick up where you left off" : "Your check-in is ready");
+        }
+        if (startBannerSubtitle != null) {
+            startBannerSubtitle.setText(resume
+                    ? "You started a check-in and didn't finish it."
+                    : "Your AI-powered questions are generated just for you based on your health profile.");
+        }
+        if (btnStartCheckin != null) {
+            btnStartCheckin.setText(resume ? "Continue Health Check-In" : "Start Health Check-In");
+        }
+    }
+
     private void showLoadingList() {
         listLoadingSpinner.start();
         listLoadingState.setVisibility(View.VISIBLE);
@@ -609,10 +648,11 @@ public class DailyCheckInActivity extends AppCompatActivity {
         listLoadingSpinner.cancel();
         listLoadingState.setVisibility(View.GONE);
         noAccessState.setVisibility(View.GONE);
-        // (0) Action zone: start banner when due; otherwise a quiet "no reads yet".
-        startBanner.setVisibility(isDue ? View.VISIBLE : View.GONE);
-        emptyState.setVisibility(isDue ? View.GONE : View.VISIBLE);
-        if (!isDue && emptySubtitle != null) {
+        // (0) Action zone: start banner when due or resumable; otherwise "no reads yet".
+        bindStartBanner();
+        boolean actionable = isDue || canResume();
+        emptyState.setVisibility(actionable ? View.GONE : View.VISIBLE);
+        if (!actionable && emptySubtitle != null) {
             emptySubtitle.setText(nextDueDate != null
                     ? "Your next check-in will be ready on " + formatDate(nextDueDate, "")
                     : "Your first check-in will appear here when it's ready.");
@@ -628,8 +668,8 @@ public class DailyCheckInActivity extends AppCompatActivity {
         listLoadingState.setVisibility(View.GONE);
         noAccessState.setVisibility(View.GONE);
         emptyState.setVisibility(View.GONE);
-        // (0) Action zone: start banner at top when due, even alongside history.
-        startBanner.setVisibility(isDue ? View.VISIBLE : View.GONE);
+        // (0) Action zone: start banner at top when due or resumable, even alongside history.
+        bindStartBanner();
         // (7) Past reads — newest-first timeline.
         pastReadsSection.setVisibility(View.VISIBLE);
         sortSessionsDescending();

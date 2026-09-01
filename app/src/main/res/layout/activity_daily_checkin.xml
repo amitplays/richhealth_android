@@ -142,7 +142,10 @@
                 android:layout_marginBottom="4dp"
                 android:visibility="gone">
 
+                <!-- Copy is swapped at bind time when there is a half-finished session to
+                     pick up, so the ids are needed. -->
                 <TextView
+                    android:id="@+id/start_banner_title"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Your check-in is ready"
@@ -152,6 +155,7 @@
                     android:layout_marginBottom="6dp" />
 
                 <TextView
+                    android:id="@+id/start_banner_subtitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Your AI-powered questions are generated just for you based on your health profile."
