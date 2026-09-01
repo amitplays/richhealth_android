@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Section header for the measurements list: "Manually Added" and "Apple Watch".
+     Android twin of MeasurementsSheetView's two Section headers. The Apple group is
+     collapsible, so the count and chevron are shown for it and hidden for the manual
+     group (which is never collapsed). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/section_header_root"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:background="?attr/selectableItemBackground"
+    android:paddingStart="12dp"
+    android:paddingEnd="12dp"
+    android:paddingTop="14dp"
+    android:paddingBottom="8dp">
+
+    <ImageView
+        android:id="@+id/section_icon"
+        android:layout_width="16dp"
+        android:layout_height="16dp"
+        android:layout_marginEnd="8dp"
+        app:tint="#008b8b"
+        android:contentDescription="@null" />
+
+    <TextView
+        android:id="@+id/section_label"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:textColor="@color/white"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        android:maxLines="1"
+        android:ellipsize="end" />
+
+    <TextView
+        android:id="@+id/section_count"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="6dp"
+        android:textColor="#008b8b"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        android:visibility="gone" />
+
+    <ImageView
+        android:id="@+id/section_chevron"
+        android:layout_width="16dp"
+        android:layout_height="16dp"
+        android:src="@drawable/ic_chevron_down"
+        app:tint="#9E9E9E"
+        android:visibility="gone"
+        android:contentDescription="@null" />
+</LinearLayout>

@@ -603,6 +603,11 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         // Setup RecyclerView
         RecyclerView measurementsRecycler = measurementsPanel.findViewById(R.id.measurements_recycler);
         measurementsAdapter = new MedicalDataAdapter(requireContext());
+        // Measurements only: split hand-entered readings from Apple Health imports, the way
+        // iOS MeasurementsSheetView does. Without this the imports sit mixed into the list
+        // with no indication of where they came from. Symptoms / period / reports keep the
+        // flat list.
+        measurementsAdapter.setGrouped(true);
 
         measurementsAdapter.setActionListener(new MedicalDataAdapter.OnMedicalDataActionListener() {
             @Override
