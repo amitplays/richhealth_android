@@ -2540,6 +2540,7 @@ public class AIFragment extends Fragment implements BackPressHandler {
                                     userProfile != null ? userProfile.getId() : 0
                             );
                             session.setModelType(sessionObj.optString("modelType", "auto"));
+                            session.setDataChangesSince(sessionObj.optString("dataChangesSince", ""));
                             String depId = sessionObj.optString("dependentId", null);
                             if (depId != null && !depId.equals("null") && !depId.isEmpty()) {
                                 session.setDependentId(depId);
@@ -4937,6 +4938,7 @@ public class AIFragment extends Fragment implements BackPressHandler {
             private final TextView sessionTitle;
             private final TextView sessionTime;
             private final TextView sessionInfo;
+            private final TextView sessionChanges;
             private final MaterialButton openButton;
             private final MaterialButton deleteButton;
 
@@ -4945,6 +4947,7 @@ public class AIFragment extends Fragment implements BackPressHandler {
                 sessionTitle = itemView.findViewById(R.id.session_title);
                 sessionTime = itemView.findViewById(R.id.session_time);
                 sessionInfo = itemView.findViewById(R.id.session_info);
+                sessionChanges = itemView.findViewById(R.id.session_changes);
                 openButton = itemView.findViewById(R.id.open_button);
                 deleteButton = itemView.findViewById(R.id.delete_button);
             }
@@ -4956,6 +4959,18 @@ public class AIFragment extends Fragment implements BackPressHandler {
                 String messageInfo = formatPreview(session.getLastMessage()) +
                         " • " + session.getMessageCount() + " messages";
                 sessionInfo.setText(messageInfo);
+
+                // What the user has logged since this chat was last active. Reset every
+                // bind — a recycled row must not inherit another session's line.
+                String changes = session.getDataChangesSince();
+                if (sessionChanges != null) {
+                    if (changes != null && !changes.isEmpty()) {
+                        sessionChanges.setText(changes);
+                        sessionChanges.setVisibility(View.VISIBLE);
+                    } else {
+                        sessionChanges.setVisibility(View.GONE);
+                    }
+                }
 
                 // Set click listeners
                 openButton.setOnClickListener(v -> {

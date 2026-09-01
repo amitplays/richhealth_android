@@ -9,6 +9,10 @@ public class ChatSession {
     private long userId;
     private String modelType;
     private String dependentId;
+    // "6 symptoms, 1 medication, 138 measurements added since this chat" — health data
+    // logged after this conversation was last active. Empty when nothing changed.
+    // Same line, same wording as NutriCheck history.
+    private String dataChangesSince;
 
     public ChatSession(String sessionId, String title, String lastMessage, int messageCount, long timestamp, long userId) {
         this.sessionId = sessionId;
@@ -27,6 +31,9 @@ public class ChatSession {
 
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
+
+    public String getDataChangesSince() { return dataChangesSince; }
+    public void setDataChangesSince(String v) { this.dataChangesSince = v; }
 
     public String getLastMessage() { return lastMessage; }
     public void setLastMessage(String lastMessage) { this.lastMessage = lastMessage; }
