@@ -4113,7 +4113,9 @@ public class AIFragment extends Fragment implements BackPressHandler {
                             }
                             org.json.JSONArray memArr = responseObj.optJSONArray("memoriesAdded");
                             boolean memorySaved = memArr != null && memArr.length() > 0;
-                            appendAiResponse(aiResponseText, aiMessageObj.getString("_id"), responseObj.optJSONArray("dataCards"), responseObj.optString("thinking", ""), memorySaved, aiMessageObj.optJSONArray("agentSteps"), aiMessageObj.optJSONArray("sources"));
+                            String ctxRefresh = responseObj.isNull("contextRefresh")
+                                    ? null : responseObj.optString("contextRefresh", null);
+                            appendAiResponse(aiResponseText, aiMessageObj.getString("_id"), responseObj.optJSONArray("dataCards"), responseObj.optString("thinking", ""), memorySaved, aiMessageObj.optJSONArray("agentSteps"), aiMessageObj.optJSONArray("sources"), ctxRefresh);
                         }
 
                         // Sync plan label with backend's authoritative tier
@@ -4415,6 +4417,12 @@ public class AIFragment extends Fragment implements BackPressHandler {
     /** Adds an AI reply bubble, then any prefilled "log this" cards parsed from
      *  its healthlog block, as separate card bubbles beneath it. */
     private void appendAiResponse(String aiResponseText, String messageId, org.json.JSONArray dataCards, String reasoning, boolean memorySaved, org.json.JSONArray agentSteps, org.json.JSONArray agentSources) {
+        appendAiResponse(aiResponseText, messageId, dataCards, reasoning, memorySaved, agentSteps, agentSources, null);
+    }
+
+    /** contextRefresh: health data the user changed since the last turn and that this
+     *  reply was built with — drives the one-line "Picked up your latest …" note. */
+    private void appendAiResponse(String aiResponseText, String messageId, org.json.JSONArray dataCards, String reasoning, boolean memorySaved, org.json.JSONArray agentSteps, org.json.JSONArray agentSources, String contextRefresh) {
         // The reply lands in place; we never auto-scroll on it. Only the user's own
         // scrolling moves the chat, so the view never jumps when a reply arrives.
         ChatMessage aiMessage = new ChatMessage(aiResponseText, true);
@@ -4436,6 +4444,7 @@ public class AIFragment extends Fragment implements BackPressHandler {
             aiMessage.setReasoning(reasoning);
         }
         aiMessage.setAgentTrace(agentSteps, agentSources);
+        aiMessage.setContextRefresh(contextRefresh);
         chatAdapter.addMessage(aiMessage);
 
         // Prefilled quick-log cards from the backend extraction pass, rendered as

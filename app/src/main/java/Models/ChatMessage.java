@@ -125,6 +125,14 @@ public class ChatMessage {
 
     /** Image attached to a USER message (FileStore id from the backend). null for text-only.
      *  Rendered as a placeholder for now; the id is mapped end-to-end. */
+    // Kind of health data that changed since the last turn and was rebuilt into the
+    // context for THIS reply ("profile" | "symptom" | "measurement" | "medication" |
+    // "period" | "report" | "relationship"). Ephemeral — never persisted, so the note
+    // shows once on the fresh reply and not again on reload.
+    private String contextRefresh;
+    public String getContextRefresh() { return contextRefresh; }
+    public void setContextRefresh(String t) { this.contextRefresh = t; }
+
     private String imageFileId;
     public String getImageFileId() { return imageFileId; }
     public void setImageFileId(String id) { this.imageFileId = id; }

@@ -38,6 +38,25 @@
                 android:paddingTop="10dp"
                 android:paddingBottom="4dp">
 
+                <!-- Health data the user changed since the last turn was rebuilt into
+                     the context for THIS reply. Shown once, on the fresh message only,
+                     so an edit is visibly acknowledged. -->
+                <TextView
+                    android:id="@+id/context_refresh_note"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="12sp"
+                    android:textColor="@color/rh_accent"
+                    android:drawablePadding="6dp"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp"
+                    android:paddingStart="2dp"
+                    android:paddingEnd="4dp"
+                    app:drawableStartCompat="@drawable/ic_autorenew"
+                    app:drawableTint="@color/rh_accent"
+                    android:visibility="gone"
+                    tools:text="Picked up your profile changes" />
+
                 <!-- Collapsible reasoning ("Thinking") — visible only for
                      thinking-capable models. Collapsed by default; tap to expand. -->
                 <LinearLayout

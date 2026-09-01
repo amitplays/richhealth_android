@@ -395,6 +395,19 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
      * the open web, a drug label, a trials registry, the user's own record, an
      * about-to-write action, and a plain-language explainer. All already in the app.
      */
+    /** Plain-language name for the kind of health data that changed. Mirrors iOS. */
+    private static String contextRefreshLabel(String trigger) {
+        switch (trigger) {
+            case "symptom":      return "Picked up the symptoms you logged";
+            case "measurement":  return "Picked up your latest measurements";
+            case "medication":   return "Picked up your medication changes";
+            case "period":       return "Picked up your latest period log";
+            case "report":       return "Picked up your new report";
+            case "relationship": return "Picked up your family history update";
+            default:             return "Picked up your profile changes";
+        }
+    }
+
     private static int traceIconFor(String tool) {
         switch (tool) {
             case "search_publications":  return R.drawable.ic_lab_profile;      // iOS text.book.closed
@@ -427,6 +440,7 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         private android.widget.LinearLayout traceContainer;
         private ImageView traceChevron;
         private TextView traceLabel;
+        private TextView contextRefreshNote;
 
         public AIMessageViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -445,6 +459,7 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             traceContainer = itemView.findViewById(R.id.trace_container);
             traceChevron = itemView.findViewById(R.id.trace_chevron);
             traceLabel = itemView.findViewById(R.id.trace_label);
+            contextRefreshNote = itemView.findViewById(R.id.context_refresh_note);
         }
 
         public void bind(ChatMessage message, int position) {
@@ -464,6 +479,19 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 startTypewriter(formattedText);
             } else {
                 messageTextView.setText(formattedText);
+            }
+
+            // ─── "Picked up your latest …" note ─────────────────────────
+            // The reply was built with health data the user had just changed. Reset every
+            // bind (recycle-safe) — it is ephemeral and must not stick to a reused row.
+            if (contextRefreshNote != null) {
+                String refresh = message.getContextRefresh();
+                if (refresh != null && !refresh.isEmpty()) {
+                    contextRefreshNote.setText(contextRefreshLabel(refresh));
+                    contextRefreshNote.setVisibility(View.VISIBLE);
+                } else {
+                    contextRefreshNote.setVisibility(View.GONE);
+                }
             }
 
             // ─── Reasoning ("Thinking") collapsible ──────────────────────
