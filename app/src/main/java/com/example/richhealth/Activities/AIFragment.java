@@ -2626,6 +2626,11 @@ public class AIFragment extends Fragment implements BackPressHandler {
     // as it runs (reuses the thinking bubble; the generic cycle pauses via liveLabelActive).
     private void startLiveProgressPoll(final String pollSessionId) {
         stopLiveProgressPoll();
+        // A brand-new chat has no session id until POST /api/chat/sessions returns, and the
+        // id was being interpolated straight into the URL — so the poller hammered
+        // /api/chat/sessions/null/live every two seconds until it did. Harmless to the
+        // server, pure waste on the wire, and it masked the real session in the logs.
+        if (pollSessionId == null || pollSessionId.isEmpty() || "null".equals(pollSessionId)) return;
         liveLabelActive = false;
         liveProgressHandler = new Handler();
         scheduleLiveProgressPoll(pollSessionId);
@@ -3956,7 +3961,7 @@ public class AIFragment extends Fragment implements BackPressHandler {
                             }
                             restoreComposerText(messageText);
                             saveFailedDraft(sessionId, messageText);
-                            showErrorMessage(parsed.message);
+                            showRetryableError(parsed.message, messageText);
                             return;
 
                         case SERVER_ERROR:
@@ -3976,7 +3981,7 @@ public class AIFragment extends Fragment implements BackPressHandler {
                                 // Offline: nothing reached the server — hand the message back.
                                 restoreComposerText(messageText);
                                 saveFailedDraft(sessionId, messageText);
-                                showErrorMessage("No internet connection. Please check your network.");
+                                showRetryableError("No internet connection. Please check your network.", messageText);
                             }
                             return;
 
@@ -3984,7 +3989,7 @@ public class AIFragment extends Fragment implements BackPressHandler {
                             Log.e(TAG, "Error sending message: " + error.toString());
                             restoreComposerText(messageText);
                             saveFailedDraft(sessionId, messageText);
-                            showErrorMessage("Failed to send message. Please try again.");
+                            showRetryableError("Failed to send message. Please try again.", messageText);
                     }
                 }
         ) {
@@ -4491,6 +4496,31 @@ public class AIFragment extends Fragment implements BackPressHandler {
         ChatMessage errorMsg = new ChatMessage("Sorry, I encountered an error: " + errorMessage, true);
         chatAdapter.addMessage(errorMsg);
         scrollToBottom();
+    }
+
+    /**
+     * A failed send used to leave the user with an error bubble and nothing to press. The
+     * text was quietly put back in the composer, so the only way forward was to notice that
+     * and hit send again — which nobody does. This shows the same error row plus an explicit
+     * Retry that resends the exact message.
+     */
+    private void showRetryableError(String errorMessage, final String messageText) {
+        showErrorMessage(errorMessage);
+        if (!isAdded() || messageInput == null) return;
+        View root = getView();
+        if (root == null) return;
+        com.google.android.material.snackbar.Snackbar bar =
+                com.google.android.material.snackbar.Snackbar.make(
+                        root, errorMessage, com.google.android.material.snackbar.Snackbar.LENGTH_INDEFINITE);
+        bar.setActionTextColor(0xFF3FC9C9);
+        bar.setAction("Retry", v -> {
+            if (!isAdded()) return;
+            // The composer was refilled on failure; clear it so the resend does not leave a
+            // duplicate sitting in the box.
+            messageInput.setText("");
+            sendMessageToBackend(messageText);
+        });
+        bar.show();
     }
 
     // Toggle saved status of a message
