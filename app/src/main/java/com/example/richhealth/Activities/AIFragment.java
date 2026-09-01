@@ -2740,6 +2740,8 @@ public class AIFragment extends Fragment implements BackPressHandler {
                     ApiConfig.logRestCall(url, true, "Chat session deleted");
                     progress.hide();
 
+                    clearFailedDraft(sessionId);   // no orphan draft for a deleted chat
+
                     // Remove from adapter
                     chatSessionsAdapter.removeSession(position);
 
@@ -2837,7 +2839,57 @@ public class AIFragment extends Fragment implements BackPressHandler {
         queue.add(request);
     }
 
+    // ── Failed-send drafts (parity with iOS) ─────────────────────────────────
+    // A send rejected by a quota limit never reaches the server: no message row is
+    // saved and the session title is truncated to 40 chars, so the text is gone.
+    // Keep it locally per sessionId so it returns to the composer immediately AND
+    // when the chat is reopened from history. Cleared once a send succeeds.
+    private static final String DRAFTS_PREFS = "richie_failed_drafts";
+    /** Set when opening a chat that never sent: fire it once its (empty) list has loaded. */
+    private boolean resendAfterLoad = false;
+
+    private void saveFailedDraft(String sid, String text) {
+        Context ctx = (appContext != null) ? appContext : getContext();
+        if (ctx == null || sid == null || text == null || text.trim().isEmpty()) return;
+        ctx.getSharedPreferences(DRAFTS_PREFS, Context.MODE_PRIVATE)
+                .edit().putString(sid, text).apply();
+    }
+
+    private String getFailedDraft(String sid) {
+        Context ctx = (appContext != null) ? appContext : getContext();
+        if (ctx == null || sid == null) return null;
+        String v = ctx.getSharedPreferences(DRAFTS_PREFS, Context.MODE_PRIVATE).getString(sid, null);
+        return (v != null && !v.isEmpty()) ? v : null;
+    }
+
+    private void clearFailedDraft(String sid) {
+        Context ctx = (appContext != null) ? appContext : getContext();
+        if (ctx == null || sid == null) return;
+        ctx.getSharedPreferences(DRAFTS_PREFS, Context.MODE_PRIVATE).edit().remove(sid).apply();
+    }
+
+    /** Fire the message sitting in the composer through the normal send path. */
+    private void resendPendingMessage() {
+        if (!isAdded() || messageInput == null || sessionId == null) return;
+        String text = messageInput.getText().toString().trim();
+        if (text.isEmpty() || isSessionLimitReached || isMonthlySessionLimitReached) return;
+        ChatMessage userMessage = new ChatMessage(text, false);
+        userMessage.setSessionId(sessionId);
+        chatAdapter.addMessage(userMessage);
+        messageInput.setText("");
+        scrollToBottom();
+        sendMessageToBackend(text);
+    }
+
+    /** Put a rejected message back in the composer, caret at the end, ready to resend. */
+    private void restoreComposerText(String text) {
+        if (!isAdded() || messageInput == null || text == null || text.isEmpty()) return;
+        messageInput.setText(text);
+        messageInput.setSelection(messageInput.getText().length());
+    }
+
     private void loadSession(ChatSession session) {
+        resendAfterLoad = false;   // each open starts clean (a failed fetch must not arm the next one)
         sessionId = session.getSessionId();
         setActiveSession(session); // remember it so tab switches reopen this chat
         isNewChatMode = false;
@@ -2847,6 +2899,28 @@ public class AIFragment extends Fragment implements BackPressHandler {
         sendButton.setEnabled(true);
         messageInput.setHint("Ask anything about your health...");
         messageInput.setBackground(null);
+
+        // A chat that never got a single message through: resume it instead of showing
+        // an empty chat. Exact draft → fire it; otherwise fall back to the title (it IS
+        // the first message, truncated to 40 chars + "..." when longer, so a truncated
+        // one is only prefilled for the user to finish). Never clobbers typed text.
+        if (session.getMessageCount() == 0 && messageInput.getText().toString().trim().isEmpty()) {
+            String pendingDraft = getFailedDraft(sessionId);
+            if (pendingDraft != null) {
+                restoreComposerText(pendingDraft);
+                resendAfterLoad = true;
+            } else {
+                String t = session.getTitle() == null ? "" : session.getTitle().trim();
+                if (!t.isEmpty() && !"New Chat Session".equals(t)) {
+                    if (t.endsWith("...")) {
+                        restoreComposerText(t.substring(0, t.length() - 3));
+                    } else {
+                        restoreComposerText(t);
+                        resendAfterLoad = true;
+                    }
+                }
+            }
+        }
 
         // Hide welcome state immediately before loading messages (also hides its
         // ScrollView wrapper so it can't overlay + block the chat list).
@@ -2908,6 +2982,12 @@ public class AIFragment extends Fragment implements BackPressHandler {
                         JSONArray messagesArray = new JSONArray(response);
                         renderSessionMessages(messagesArray, sessionId);
                         scrollToBottom();
+                        // Chat opened with nothing ever sent → resume that message now
+                        // that the list is rendered (earlier would be wiped by render).
+                        if (resendAfterLoad) {
+                            resendAfterLoad = false;
+                            if (messagesArray.length() == 0) resendPendingMessage();
+                        }
                         // If the newest message is still the user's (no reply yet), the
                         // reply may be finishing on the server after we left and came back.
                         // Poll briefly to pull it in once it's saved.
@@ -3755,6 +3835,9 @@ public class AIFragment extends Fragment implements BackPressHandler {
                     hideThinkingAnimation();
                     Log.d(TAG, "Sending message : " + messageText);
 
+                    // The send landed — this session no longer has an unsent message.
+                    clearFailedDraft(sessionId);
+
                     try {
                         JSONObject responseObj = new JSONObject(response);
 
@@ -3827,11 +3910,16 @@ public class AIFragment extends Fragment implements BackPressHandler {
 
                     switch (parsed.type) {
                         case AUTH_EXPIRED:
+                            // Keep the message so it is waiting after re-login.
+                            saveFailedDraft(sessionId, messageText);
                             if (isAdded()) ErrorHandler.handleAuthExpired(requireContext());
                             return;
 
                         case RATE_LIMIT:
-                            // 429 — usage limit: go straight to ProUpgradeDialog
+                            // 429 — usage limit: go straight to ProUpgradeDialog.
+                            // The message never reached the server, so hand it back.
+                            restoreComposerText(messageText);
+                            saveFailedDraft(sessionId, messageText);
                             if (isAdded()) {
                                 Utils.ProUpgradeDialog rateLimitDlg = new Utils.ProUpgradeDialog(requireActivity());
                                 rateLimitDlg.setLimitContext("You've reached your monthly chat limit.");
@@ -3849,6 +3937,8 @@ public class AIFragment extends Fragment implements BackPressHandler {
                                     JSONObject errorObj = new JSONObject(body);
                                     if (errorObj.optBoolean("sessionLimitReached", false)) {
                                         isMonthlySessionLimitReached = true;
+                                        restoreComposerText(messageText);
+                                        saveFailedDraft(sessionId, messageText);
                                         showSessionLimitReachedDialog(
                                                 errorObj.optInt("sessionsUsed", 0),
                                                 errorObj.optInt("sessionLimit", 0)
@@ -3857,11 +3947,15 @@ public class AIFragment extends Fragment implements BackPressHandler {
                                     }
                                     if (errorObj.optBoolean("isLimitReached", false)) {
                                         isSessionLimitReached = true;
+                                        restoreComposerText(messageText);
+                                        saveFailedDraft(sessionId, messageText);
                                         showLimitReachedDialog();
                                         return;
                                     }
                                 } catch (Exception ignored) {}
                             }
+                            restoreComposerText(messageText);
+                            saveFailedDraft(sessionId, messageText);
                             showErrorMessage(parsed.message);
                             return;
 
@@ -3879,12 +3973,17 @@ public class AIFragment extends Fragment implements BackPressHandler {
                             if (error instanceof com.android.volley.TimeoutError) {
                                 recoverReplyAfterTimeout(sessionId, "No internet connection. Please check your network.");
                             } else {
+                                // Offline: nothing reached the server — hand the message back.
+                                restoreComposerText(messageText);
+                                saveFailedDraft(sessionId, messageText);
                                 showErrorMessage("No internet connection. Please check your network.");
                             }
                             return;
 
                         default:
                             Log.e(TAG, "Error sending message: " + error.toString());
+                            restoreComposerText(messageText);
+                            saveFailedDraft(sessionId, messageText);
                             showErrorMessage("Failed to send message. Please try again.");
                     }
                 }
