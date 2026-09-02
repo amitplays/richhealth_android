@@ -905,6 +905,9 @@ public class DialogUtils {
      * Plot a single test's values across a patient's uploaded reports.
      * Groups keyFindings by canonicalKey; only numeric findings are charted.
      */
+    // UNUSED since report trends moved server-side (Utils.ReportTrendsSheet →
+    // GET /api/health/reports/trends). Kept rather than deleted; it grouped
+    // keyFindings on the device, so it plotted mixed units on one axis.
     public static void showReportTrendChartDialog(Context context, List<UploadedFile> reports) {
         if (reports == null || reports.isEmpty()) {
             Utilities.toast(context, "No reports to chart yet");

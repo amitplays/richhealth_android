@@ -803,8 +803,12 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         com.google.android.material.button.MaterialButton viewTrendsButton =
                 medicalReportsPanel.findViewById(R.id.view_trends_button);
         if (viewTrendsButton != null) {
+            // Server-built series (one chart per TEST across every report), not the
+            // old device-side grouping in DialogUtils.showReportTrendChartDialog —
+            // that plotted mixed units on one axis and hid a test until it had two
+            // values.
             viewTrendsButton.setOnClickListener(v ->
-                    Utils.DialogUtils.showReportTrendChartDialog(requireContext(), reportUploadedFiles));
+                    Utils.ReportTrendsSheet.show(requireActivity()));
         }
 
         // Initialize API service if it doesn't exist
