@@ -3116,6 +3116,14 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         return System.currentTimeMillis();
     }
 
+    /** A JSON number that may be absent or explicitly null. optDouble would collapse
+     *  both to NaN or to a default, losing "the lab printed no range". */
+    private static Double optNullableDouble(JSONObject o, String key) {
+        if (o == null || !o.has(key) || o.isNull(key)) return null;
+        double d = o.optDouble(key, Double.NaN);
+        return Double.isNaN(d) ? null : Double.valueOf(d);
+    }
+
     /** Parse common Mongoose/ISO date strings; returns 0 when unparseable. */
     private long parseIsoMillis(String s) {
         if (s == null || s.isEmpty() || "null".equals(s)) return 0L;
@@ -3168,7 +3176,7 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
                     double valueNumeric = finding.has("valueNumeric") && !finding.isNull("valueNumeric")
                             ? finding.optDouble("valueNumeric", Double.NaN)
                             : Double.NaN;
-                    file.addKeyFinding(new UploadedFile.KeyFinding(
+                    UploadedFile.KeyFinding kf = new UploadedFile.KeyFinding(
                             finding.optString("parameter", ""),
                             finding.optString("value", ""),
                             finding.optString("unit", ""),
@@ -3176,7 +3184,16 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
                             finding.optString("status", "normal"),
                             finding.optString("canonicalKey", ""),
                             valueNumeric
-                    ));
+                    );
+                    // The parsed reference band, in the canonical unit, so a result
+                    // sitting just inside its range can be shown as borderline.
+                    // Absent on reports processed before services/labNormalize.js —
+                    // nulls, not zeros, so "no band" stays distinct from "band of 0".
+                    kf.setReferenceBand(
+                            optNullableDouble(finding, "valueCanonical"),
+                            optNullableDouble(finding, "refLow"),
+                            optNullableDouble(finding, "refHigh"));
+                    file.addKeyFinding(kf);
                 }
             }
 
@@ -3217,21 +3234,44 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         View view = LayoutInflater.from(requireContext())
                 .inflate(R.layout.dialog_report_analysis, null);
 
-        // Header
-        TextView title = view.findViewById(R.id.report_dialog_title);
-        TextView subtitle = view.findViewById(R.id.report_dialog_subtitle);
+        // Header is static ("Richie's Analysis"); the report's own identity lives in
+        // the hero card below.
+        TextView heroType = view.findViewById(R.id.report_hero_type);
+        TextView heroMeta = view.findViewById(R.id.report_hero_meta);
+
         String detected = file.getReportTypeDetected();
+        String type;
         if (detected != null && !detected.isEmpty()) {
-            title.setText(detected);
-            if (file.getReportType() != null && !file.getReportType().isEmpty()
-                    && !file.getReportType().equalsIgnoreCase(detected)) {
-                subtitle.setText(file.getReportType());
-                subtitle.setVisibility(View.VISIBLE);
-            }
+            type = detected;
         } else if (file.getReportType() != null && !file.getReportType().isEmpty()) {
-            title.setText(file.getReportType());
+            type = file.getReportType();
         } else {
-            title.setText("Report Analysis");
+            type = "Report";
+        }
+        heroType.setText(type);
+
+        // File name · date. The date is when the test was TAKEN where the lab printed
+        // it (metadata.reportDate), not when the file was uploaded — you can upload a
+        // January blood test today, and January is where the trend chart plots it.
+        StringBuilder meta = new StringBuilder();
+        if (file.getName() != null && !file.getName().isEmpty()) meta.append(file.getName());
+        // When the AI's label disagrees with the type the user picked at upload,
+        // show theirs too — that disagreement is the tell that the classifier got
+        // the report wrong, and the old header surfaced it as a subtitle.
+        String chosen = file.getReportType();
+        if (chosen != null && !chosen.isEmpty() && !chosen.equalsIgnoreCase(type)) {
+            if (meta.length() > 0) meta.append(" · ");
+            meta.append("filed as ").append(chosen);
+        }
+        String when = file.getReportDateText();
+        if (when != null) {
+            if (meta.length() > 0) meta.append(" · ");
+            meta.append(when);
+        }
+        if (meta.length() > 0) {
+            heroMeta.setText(meta.toString());
+        } else {
+            heroMeta.setVisibility(View.GONE);
         }
 
         // Status banner — show whenever analysis is not trustworthy or there's a status message
@@ -3341,13 +3381,25 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
                 trustworthy ? file.getLifestyleAdvice() : null);
 
         // Empty state — only when trustworthy AND nothing to show AND no banner
+        // The chips live inside the hero now, so they have to count: a report with
+        // a risk level and nothing else would otherwise have them computed, set
+        // visible, and then hidden along with their parent.
         boolean anyContent = summaryCard.getVisibility() == View.VISIBLE
                 || keyFindingsCard.getVisibility() == View.VISIBLE
                 || opinionCard.getVisibility() == View.VISIBLE
                 || detailedCard.getVisibility() == View.VISIBLE
                 || conditionsCard.getVisibility() == View.VISIBLE
-                || statusBanner.getVisibility() == View.VISIBLE;
+                || statusBanner.getVisibility() == View.VISIBLE
+                || chipsRow.getVisibility() == View.VISIBLE;
         if (!anyContent) {
+            // Flatten the hero rather than hide it. Hiding took the report's type,
+            // file name and date with it, leaving a dialog that said only "No
+            // analysis available yet" about a report it never named. Stripping the
+            // wash and border keeps the identity and drops the dressing.
+            com.google.android.material.card.MaterialCardView hero =
+                    view.findViewById(R.id.report_hero_card);
+            hero.setCardBackgroundColor(android.graphics.Color.TRANSPARENT);
+            hero.setStrokeWidth(0);
             view.findViewById(R.id.report_empty_text).setVisibility(View.VISIBLE);
         }
 
@@ -3376,64 +3428,71 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         dialog.show();
     }
 
+    /**
+     * Test name and its reference range on the left, the result on the right,
+     * coloured by status.
+     *
+     * The row used to state the status three times over: a coloured dot, the value
+     * folded into "Parameter: 450 pg/mL", and a chip that read "Normal" on every
+     * healthy line. One signal is enough, and the value is the thing being judged,
+     * so the value is what carries the colour.
+     */
     private View buildKeyFindingRow(UploadedFile.KeyFinding f) {
         LinearLayout row = new LinearLayout(requireContext());
         row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setPadding(0, dp(6), 0, dp(6));
-
-        View dot = new View(requireContext());
-        LinearLayout.LayoutParams dotLp = new LinearLayout.LayoutParams(dp(8), dp(8));
-        dotLp.topMargin = dp(6);
-        dotLp.rightMargin = dp(10);
-        dotLp.gravity = android.view.Gravity.TOP;
-        dot.setLayoutParams(dotLp);
-        android.graphics.drawable.GradientDrawable dotBg = new android.graphics.drawable.GradientDrawable();
-        dotBg.setShape(android.graphics.drawable.GradientDrawable.OVAL);
-        dotBg.setColor(f.getStatusColor());
-        dot.setBackground(dotBg);
-        row.addView(dot);
+        row.setPadding(0, dp(7), 0, dp(7));
+        row.setGravity(android.view.Gravity.CENTER_VERTICAL);
 
         LinearLayout textCol = new LinearLayout(requireContext());
         textCol.setOrientation(LinearLayout.VERTICAL);
-        LinearLayout.LayoutParams textLp = new LinearLayout.LayoutParams(0,
-                LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        textCol.setLayoutParams(textLp);
+        textCol.setLayoutParams(new LinearLayout.LayoutParams(0,
+                LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
 
         TextView paramLine = new TextView(requireContext());
-        StringBuilder s = new StringBuilder();
-        s.append(f.getParameter() != null ? f.getParameter() : "");
-        s.append(": ").append(f.getValue() != null ? f.getValue() : "");
-        if (f.getUnit() != null && !f.getUnit().isEmpty()) s.append(" ").append(f.getUnit());
-        paramLine.setText(s.toString());
+        paramLine.setText(f.getParameter() != null ? f.getParameter() : "");
         paramLine.setTextColor(0xFFE0E0E0);
         paramLine.setTextSize(13);
         textCol.addView(paramLine);
 
         if (f.getNormalRange() != null && !f.getNormalRange().isEmpty()) {
-            TextView rangeLine = new TextView(requireContext());
-            rangeLine.setText("Normal: " + f.getNormalRange());
-            rangeLine.setTextColor(0xFF888888);
-            rangeLine.setTextSize(11);
+            // "Normal:" is the quiet label; the numbers are what you compare the
+            // result against, so they get full-strength text.
+            LinearLayout rangeLine = new LinearLayout(requireContext());
+            rangeLine.setOrientation(LinearLayout.HORIZONTAL);
+
+            TextView rangeLabel = new TextView(requireContext());
+            rangeLabel.setText("Normal: ");
+            rangeLabel.setTextColor(0xFF888888);
+            rangeLabel.setTextSize(11);
+            rangeLine.addView(rangeLabel);
+
+            TextView rangeValue = new TextView(requireContext());
+            rangeValue.setText(f.getNormalRange());
+            rangeValue.setTextColor(0xFFFFFFFF);
+            rangeValue.setTextSize(11);
+            rangeLine.addView(rangeValue);
+
             textCol.addView(rangeLine);
         }
         row.addView(textCol);
 
-        TextView statusChip = new TextView(requireContext());
-        statusChip.setText(capitalize(f.getStatus()));
-        statusChip.setTextColor(0xFFFFFFFF);
-        statusChip.setTextSize(10);
-        statusChip.setTypeface(statusChip.getTypeface(), android.graphics.Typeface.BOLD);
-        statusChip.setPadding(dp(8), dp(3), dp(8), dp(3));
-        android.graphics.drawable.GradientDrawable chipBg = new android.graphics.drawable.GradientDrawable();
-        chipBg.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
-        chipBg.setCornerRadius(dp(10));
-        chipBg.setColor(f.getStatusColor());
-        statusChip.setBackground(chipBg);
-        LinearLayout.LayoutParams chipLp = new LinearLayout.LayoutParams(
+        TextView valueView = new TextView(requireContext());
+        StringBuilder v = new StringBuilder();
+        v.append(f.getValue() != null ? f.getValue() : "");
+        if (f.getUnit() != null && !f.getUnit().isEmpty()) v.append(" ").append(f.getUnit());
+        valueView.setText(v.toString());
+        valueView.setTextColor(f.getStatusColor());
+        valueView.setTextSize(14);
+        valueView.setTypeface(valueView.getTypeface(), android.graphics.Typeface.BOLD);
+        valueView.setGravity(android.view.Gravity.END);
+        valueView.setMaxLines(1);
+        valueView.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        LinearLayout.LayoutParams valueLp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        chipLp.gravity = android.view.Gravity.CENTER_VERTICAL;
-        statusChip.setLayoutParams(chipLp);
-        row.addView(statusChip);
+        valueLp.leftMargin = dp(10);
+        valueLp.gravity = android.view.Gravity.CENTER_VERTICAL;
+        valueView.setLayoutParams(valueLp);
+        row.addView(valueView);
 
         return row;
     }

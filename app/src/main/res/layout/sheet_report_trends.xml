@@ -1,12 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Report trends bottom sheet: a swipeable carousel of one chart per test.
-     Data comes finished from GET /api/health/reports/trends — the app groups
-     nothing and converts nothing. -->
+<!-- Report trends bottom sheet: a vertical list, one chart per test, at full
+     height. A carousel is right when items are peers you browse; these are a
+     checklist you scan — you want to know whether ANY result moved, and a
+     horizontal strip showed one at a time and gave no sense of how many there
+     were. Data comes finished from GET /api/health/reports/trends — the app
+     groups nothing and converts nothing. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
+    android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="@drawable/bg_sheet_surface"
     android:paddingTop="10dp"
@@ -60,17 +63,22 @@
         android:visibility="gone"
         tools:text="Upload a report with test results and its values appear here." />
 
-    <!-- Carousel. RecyclerView + PagerSnapHelper rather than ViewPager2 — the
-         same idiom ProUpgradeDialog already uses, and no extra dependency. -->
+    <!-- wrap_content WITH a weight, deliberately, not 0dp. Under an EXACTLY spec
+         (what the sheet gets once expandToFullHeight has run) the weight makes this
+         absorb the remaining height and scroll internally. Under AT_MOST — which is
+         what design_bottom_sheet gives while it is still wrap_content — a 0dp
+         weighted child measures to ZERO and the sheet renders blank. -->
     <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/trends_carousel"
+        android:id="@+id/trends_list"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="14dp"
+        android:layout_weight="1"
+        android:layout_marginTop="12dp"
         android:clipToPadding="false"
         android:paddingStart="16dp"
         android:paddingEnd="16dp"
-        android:orientation="horizontal"
+        android:paddingBottom="12dp"
+        android:orientation="vertical"
         android:visibility="gone"
         app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
 

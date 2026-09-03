@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
 
@@ -24,7 +25,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:layout_marginBottom="16dp">
+                android:layout_marginBottom="14dp">
 
                 <ImageView
                     android:layout_width="@dimen/icon_md"
@@ -39,11 +40,14 @@
                     android:layout_height="wrap_content"
                     android:orientation="vertical">
 
+                    <!-- Static now. The analysis on this screen is entirely Richie's,
+                         so his name heads it; the report's own type moved into the
+                         hero card below, where it belongs to the report. -->
                     <TextView
                         android:id="@+id/report_dialog_title"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Report Analysis"
+                        android:text="Richie's Analysis"
                         android:textColor="#008b8b"
                         android:textSize="18sp"
                         android:textStyle="bold" />
@@ -59,114 +63,155 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- ═══════ STATUS BANNER (visible when analysis not trustworthy) ═══════ -->
-            <LinearLayout
-                android:id="@+id/report_status_banner"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/rounded_bg_warning"
-                android:padding="14dp"
-                android:layout_marginBottom="14dp"
-                android:visibility="gone"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
-
-                <ImageView
-                    android:id="@+id/report_status_icon"
-                    android:layout_width="@dimen/icon_sm"
-                    android:layout_height="@dimen/icon_sm"
-                    android:src="@android:drawable/ic_dialog_alert"
-                    app:tint="#FF9800"
-                    android:layout_marginEnd="10dp" />
-
-                <TextView
-                    android:id="@+id/report_status_message"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_height="wrap_content"
-                    android:text=""
-                    android:textColor="#FF9800"
-                    android:textSize="12sp"
-                    android:lineSpacingMultiplier="1.3" />
-            </LinearLayout>
-
-            <!-- ═══════ RISK + URGENCY CHIPS ═══════ -->
-            <LinearLayout
-                android:id="@+id/report_chips_row"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginBottom="16dp"
-                android:visibility="gone">
-
-                <TextView
-                    android:id="@+id/report_chip_risk"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Risk: Low"
-                    android:textColor="#FFFFFF"
-                    android:textSize="12sp"
-                    android:textStyle="bold"
-                    android:background="@drawable/profile_pill_bg"
-                    android:backgroundTint="#4CAF50"
-                    android:paddingHorizontal="12dp"
-                    android:paddingVertical="6dp"
-                    android:layout_marginEnd="8dp"
-                    android:visibility="gone" />
-
-                <TextView
-                    android:id="@+id/report_chip_urgency"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Routine"
-                    android:textColor="#FFFFFF"
-                    android:textSize="12sp"
-                    android:textStyle="bold"
-                    android:background="@drawable/profile_pill_bg"
-                    android:backgroundTint="#2196F3"
-                    android:paddingHorizontal="12dp"
-                    android:paddingVertical="6dp"
-                    android:visibility="gone" />
-            </LinearLayout>
-
-            <!-- ═══════ PLAIN SUMMARY (gradient bordered AI insight card) ═══════ -->
+            <!-- ═══════ HERO ═══════
+                 What the report IS and what it SAYS, as one object. These were five
+                 loose blocks stacked down the dialog (title, banner, a bare chip row,
+                 a summary card, an opinion card far below the findings), so the sheet
+                 opened on fragments with no single thing to read first. -->
             <com.google.android.material.card.MaterialCardView
-                android:id="@+id/report_summary_card"
+                android:id="@+id/report_hero_card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="0dp"
-                app:cardBackgroundColor="@android:color/transparent"
-                android:visibility="gone">
+                app:cardBackgroundColor="#14008B8B"
+                app:strokeColor="#59008B8B"
+                app:strokeWidth="1dp">
 
-                <View
+                <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:background="@drawable/gradient_border_bg" />
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
 
-                <com.google.android.material.card.MaterialCardView
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:layout_margin="1dp"
-                    app:cardCornerRadius="15dp"
-                    app:cardElevation="0dp"
-                    app:cardBackgroundColor="#262626">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="REPORT"
+                        android:textColor="#008b8b"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.12" />
 
+                    <TextView
+                        android:id="@+id/report_hero_type"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textColor="@android:color/white"
+                        android:textSize="20sp"
+                        android:textStyle="bold"
+                        android:layout_marginTop="3dp"
+                        tools:text="Nutritional Assessment Panel" />
+
+                    <!-- File name and the date the test was TAKEN (metadata.reportDate,
+                         falling back to upload) — the same date the trend charts plot,
+                         so the two never disagree. -->
+                    <TextView
+                        android:id="@+id/report_hero_meta"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textColor="#9A9A9A"
+                        android:textSize="11sp"
+                        android:layout_marginTop="3dp"
+                        android:maxLines="1"
+                        android:ellipsize="middle"
+                        tools:text="TestReport.PNG · 12 Aug 2026" />
+
+                    <!-- ─── RISK + URGENCY CHIPS ─── -->
                     <LinearLayout
+                        android:id="@+id/report_chips_row"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="12dp"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:id="@+id/report_chip_risk"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Risk: Low"
+                            android:textColor="#FFFFFF"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:background="@drawable/profile_pill_bg"
+                            android:backgroundTint="#4CAF50"
+                            android:paddingHorizontal="12dp"
+                            android:paddingVertical="6dp"
+                            android:layout_marginEnd="8dp"
+                            android:visibility="gone" />
+
+                        <TextView
+                            android:id="@+id/report_chip_urgency"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Routine"
+                            android:textColor="#FFFFFF"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:background="@drawable/profile_pill_bg"
+                            android:backgroundTint="#2196F3"
+                            android:paddingHorizontal="12dp"
+                            android:paddingVertical="6dp"
+                            android:visibility="gone" />
+                    </LinearLayout>
+
+                    <!-- ─── STATUS BANNER (analysis not trustworthy) ─── -->
+                    <LinearLayout
+                        android:id="@+id/report_status_banner"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/rounded_bg_warning"
+                        android:padding="12dp"
+                        android:layout_marginTop="12dp"
+                        android:visibility="gone"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <ImageView
+                            android:id="@+id/report_status_icon"
+                            android:layout_width="@dimen/icon_sm"
+                            android:layout_height="@dimen/icon_sm"
+                            android:src="@android:drawable/ic_dialog_alert"
+                            app:tint="#FF9800"
+                            android:layout_marginEnd="10dp" />
+
+                        <TextView
+                            android:id="@+id/report_status_message"
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="wrap_content"
+                            android:text=""
+                            android:textColor="#FF9800"
+                            android:textSize="12sp"
+                            android:lineSpacingMultiplier="1.3" />
+                    </LinearLayout>
+
+                    <!-- ─── SUMMARY ─── -->
+                    <LinearLayout
+                        android:id="@+id/report_summary_card"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
-                        android:padding="16dp">
+                        android:visibility="gone">
+
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="0.5dp"
+                            android:layout_marginTop="14dp"
+                            android:background="#2E4A4A" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="● Summary"
-                            android:textColor="#008b8b"
-                            android:textSize="12sp"
+                            android:text="SUMMARY"
+                            android:textColor="#8A8A8A"
+                            android:textSize="11sp"
                             android:textStyle="bold"
-                            android:layout_marginBottom="8dp" />
+                            android:letterSpacing="0.12"
+                            android:layout_marginTop="12dp"
+                            android:layout_marginBottom="6dp" />
 
                         <TextView
                             android:id="@+id/report_summary_text"
@@ -177,7 +222,42 @@
                             android:textSize="14sp"
                             android:lineSpacingMultiplier="1.4" />
                     </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
+
+                    <!-- ─── RICHIE'S READ (aiOpinion) ─── -->
+                    <LinearLayout
+                        android:id="@+id/report_opinion_card"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:visibility="gone">
+
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="0.5dp"
+                            android:layout_marginTop="14dp"
+                            android:background="#2E4A4A" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="RICHIE'S READ"
+                            android:textColor="#8A8A8A"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.12"
+                            android:layout_marginTop="12dp"
+                            android:layout_marginBottom="6dp" />
+
+                        <TextView
+                            android:id="@+id/report_opinion_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text=""
+                            android:textColor="#E0E0E0"
+                            android:textSize="13sp"
+                            android:lineSpacingMultiplier="1.4" />
+                    </LinearLayout>
+                </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
             <!-- ═══════ KEY FINDINGS ═══════ -->
@@ -211,43 +291,6 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- ═══════ AI OPINION ═══════ -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/report_opinion_card"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="14dp"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="0dp"
-                app:cardBackgroundColor="#262626"
-                android:visibility="gone">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="AI Opinion"
-                        android:textColor="#008b8b"
-                        android:textSize="14sp"
-                        android:textStyle="bold"
-                        android:layout_marginBottom="8dp" />
-
-                    <TextView
-                        android:id="@+id/report_opinion_text"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text=""
-                        android:textColor="#E0E0E0"
-                        android:textSize="13sp"
-                        android:lineSpacingMultiplier="1.4" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 

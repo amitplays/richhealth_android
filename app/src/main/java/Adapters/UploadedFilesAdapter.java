@@ -68,6 +68,7 @@ public class UploadedFilesAdapter extends RecyclerView.Adapter<UploadedFilesAdap
     class ViewHolder extends RecyclerView.ViewHolder {
         private TextView fileNameText;
         private TextView reportTypeText;
+        private TextView reportDateText;
         private TextView statusText;
         private MaterialButton deleteButton;
         private MaterialButton viewButton;
@@ -78,6 +79,7 @@ public class UploadedFilesAdapter extends RecyclerView.Adapter<UploadedFilesAdap
             super(itemView);
             fileNameText = itemView.findViewById(R.id.file_name);
             reportTypeText = itemView.findViewById(R.id.report_type);
+            reportDateText = itemView.findViewById(R.id.report_date);
             statusText = itemView.findViewById(R.id.report_status);
             deleteButton = itemView.findViewById(R.id.delete_button);
             viewButton = itemView.findViewById(R.id.view_button);
@@ -88,6 +90,16 @@ public class UploadedFilesAdapter extends RecyclerView.Adapter<UploadedFilesAdap
         public void bind(UploadedFile file, int position) {
             fileNameText.setText(file.getName());
             reportTypeText.setText(file.getReportType());
+
+            // Test date where the lab printed one, upload date otherwise — the same
+            // value the analysis dialog and the trend charts use.
+            String when = file.getReportDateText();
+            if (when != null) {
+                reportDateText.setText(when);
+                reportDateText.setVisibility(View.VISIBLE);
+            } else {
+                reportDateText.setVisibility(View.GONE);
+            }
 
             // Status text
             if (file.getStatus() != null) {

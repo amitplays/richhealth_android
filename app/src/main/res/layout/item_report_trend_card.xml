@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- One test's card in the trends carousel. Tapping it opens the same chart
-     larger (dialog_report_trend_detail). -->
+<!-- One test's card in the trends list. Full width, sized so roughly three sit
+     on screen at the sheet's full height. Tapping it opens the same chart larger
+     (dialog_report_trend_detail). -->
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="300dp"
+    android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginEnd="12dp"
+    android:layout_marginBottom="12dp"
     android:clickable="true"
     android:focusable="true"
     android:foreground="?attr/selectableItemBackground"

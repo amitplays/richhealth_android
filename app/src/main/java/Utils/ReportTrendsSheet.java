@@ -12,7 +12,6 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.PagerSnapHelper;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.android.volley.AuthFailureError;
@@ -29,6 +28,7 @@ import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
 import com.github.mikephil.charting.formatter.ValueFormatter;
+import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButton;
 
@@ -74,14 +74,15 @@ public final class ReportTrendsSheet {
         final ProgressBar progress = sheet.findViewById(R.id.trends_progress);
         final TextView empty = sheet.findViewById(R.id.trends_empty);
         final TextView subtitle = sheet.findViewById(R.id.trends_subtitle);
-        final RecyclerView carousel = sheet.findViewById(R.id.trends_carousel);
+        final RecyclerView list = sheet.findViewById(R.id.trends_list);
 
-        carousel.setLayoutManager(new LinearLayoutManager(activity, LinearLayoutManager.HORIZONTAL, false));
-        // Snap one card at a time — the carousel idiom ProUpgradeDialog already uses.
-        new PagerSnapHelper().attachToRecyclerView(carousel);
+        list.setLayoutManager(new LinearLayoutManager(activity, LinearLayoutManager.VERTICAL, false));
+
 
         fetch(activity, (series, reportCount, failed) -> {
-            if (activity.isFinishing()) return;
+            // Swiping the sheet away mid-request used to leave the callback driving
+            // a dismissed dialog's behavior.
+            if (activity.isFinishing() || !dialog.isShowing()) return;
             progress.setVisibility(View.GONE);
             if (series == null || series.isEmpty()) {
                 empty.setText(failed
@@ -93,11 +94,40 @@ public final class ReportTrendsSheet {
             }
             subtitle.setText(series.size() + (series.size() == 1 ? " test from " : " tests from ")
                     + reportCount + (reportCount == 1 ? " report" : " reports"));
-            carousel.setAdapter(new TrendAdapter(activity, series));
-            carousel.setVisibility(View.VISIBLE);
+            list.setAdapter(new TrendAdapter(activity, series));
+            list.setVisibility(View.VISIBLE);
+            expandToFullHeight(dialog);
         });
 
         dialog.show();
+    }
+
+    /**
+     * Raise the sheet to full height, once there is a list worth the room.
+     *
+     * Deliberately NOT called for the spinner, the error or the empty state — those
+     * are a few words, and a full-screen sheet holding them reads as a broken
+     * screen. Deliberately NOT called before show() either: BottomSheetDialog.onStart
+     * sets STATE_COLLAPSED as the dialog is shown, so anything set earlier is
+     * overwritten. The container's own height has to be raised too, or the expanded
+     * state still stops at wrap_content.
+     *
+     * The existing LayoutParams object is MUTATED rather than replaced: it is a
+     * CoordinatorLayout.LayoutParams carrying the bottom-sheet behavior, and handing
+     * the view a plain ViewGroup.LayoutParams would make BottomSheetBehavior.from()
+     * throw.
+     */
+    private static void expandToFullHeight(BottomSheetDialog dialog) {
+        View c = dialog.findViewById(com.google.android.material.R.id.design_bottom_sheet);
+        if (c == null) return;
+        ViewGroup.LayoutParams lp = c.getLayoutParams();
+        if (lp != null) {
+            lp.height = ViewGroup.LayoutParams.MATCH_PARENT;
+            c.setLayoutParams(lp);
+        }
+        BottomSheetBehavior<View> behavior = BottomSheetBehavior.from(c);
+        behavior.setSkipCollapsed(true);
+        behavior.setState(BottomSheetBehavior.STATE_EXPANDED);
     }
 
     // ── Network ──────────────────────────────────────────────────────────────
@@ -136,7 +166,7 @@ public final class ReportTrendsSheet {
         Volley.newRequestQueue(activity).add(request);
     }
 
-    // ── Carousel ─────────────────────────────────────────────────────────────
+    // ── List ─────────────────────────────────────────────────────────────────
 
     private static class TrendAdapter extends RecyclerView.Adapter<TrendAdapter.Holder> {
         private final Activity activity;
@@ -180,7 +210,14 @@ public final class ReportTrendsSheet {
 
             void bind(final Activity activity, final ReportTrendSeries s) {
                 label.setText(s.label);
-                category.setText(s.category);
+                // The server's catch-all bucket says nothing the label doesn't; it
+                // printed a literal "Other" under most tests.
+                if (isNoiseCategory(s.category)) {
+                    category.setVisibility(View.GONE);
+                } else {
+                    category.setText(s.category);
+                    category.setVisibility(View.VISIBLE);
+                }
 
                 String unitSuffix = s.unit.isEmpty() || s.isCategorical() ? "" : " " + s.unit;
                 latest.setText(s.latestText() + unitSuffix);
@@ -213,7 +250,7 @@ public final class ReportTrendsSheet {
                 } else {
                     textResults.setVisibility(View.GONE);
                     chart.setVisibility(View.VISIBLE);
-                    renderChart(chart, s, false);
+                    renderChart(chart, s, true, false);
                 }
 
                 itemView.setOnClickListener(v -> showDetail(activity, s));
@@ -221,14 +258,28 @@ public final class ReportTrendsSheet {
         }
     }
 
+    /** Blank, or the server's catch-all bucket, which says nothing the label doesn't. */
+    private static boolean isNoiseCategory(String category) {
+        if (category == null) return true;
+        String c = category.trim();
+        return c.isEmpty() || "other".equalsIgnoreCase(c);
+    }
+
     // ── Chart ────────────────────────────────────────────────────────────────
 
     /**
      * Draws one series. The card and the enlarged dialog call this with the same
      * data, so tapping magnifies the same picture rather than showing a different
-     * one. `large` only turns the axes and labels on.
+     * one.
+     *
+     * @param axes   draw the date and value axes. On now for cards too: an
+     *               unlabelled chart is a decoration, and dates along the bottom
+     *               are what let someone read a result off the card.
+     * @param detail the enlarged dialog. Enables touch and names the reference
+     *               lines — `axes` used to stand in for this, which stopped being
+     *               true once cards gained axes.
      */
-    private static void renderChart(LineChart chart, ReportTrendSeries s, boolean large) {
+    private static void renderChart(LineChart chart, ReportTrendSeries s, boolean axes, boolean detail) {
         List<com.github.mikephil.charting.interfaces.datasets.ILineDataSet> sets = new ArrayList<>();
         // A single result is a dot, not a line — but still worth drawing: one value
         // against its reference band already answers "is this normal?".
@@ -259,7 +310,7 @@ public final class ReportTrendsSheet {
 
         chart.getDescription().setEnabled(false);
         chart.setNoDataText("");
-        chart.setTouchEnabled(large);
+        chart.setTouchEnabled(detail);
         chart.setScaleEnabled(false);
         chart.setDrawGridBackground(false);
         // Only blood pressure has two lines; a legend on a single-line chart is noise.
@@ -270,7 +321,7 @@ public final class ReportTrendsSheet {
         x.setPosition(XAxis.XAxisPosition.BOTTOM);
         x.setDrawGridLines(false);
         x.setTextColor(MUTED);
-        x.setEnabled(large);
+        x.setEnabled(axes);
         x.setLabelCount(3, false);
         x.setValueFormatter(new ValueFormatter() {
             private final java.text.SimpleDateFormat fmt =
@@ -283,12 +334,12 @@ public final class ReportTrendsSheet {
         YAxis left = chart.getAxisLeft();
         left.setDrawGridLines(false);
         left.setTextColor(MUTED);
-        left.setEnabled(large);
+        left.setEnabled(axes);
         left.removeAllLimitLines();
         // The reference band as two lines. MPAndroidChart has no shaded band, and
         // two limit lines read more clearly on a small card than a filled area.
-        if (s.refLow != null) left.addLimitLine(band(s.refLow.floatValue(), large ? "Low" : ""));
-        if (s.refHigh != null) left.addLimitLine(band(s.refHigh.floatValue(), large ? "High" : ""));
+        if (s.refLow != null) left.addLimitLine(band(s.refLow.floatValue(), detail ? "Low" : ""));
+        if (s.refHigh != null) left.addLimitLine(band(s.refHigh.floatValue(), detail ? "High" : ""));
         chart.getAxisRight().setEnabled(false);
 
         chart.invalidate();
@@ -362,8 +413,12 @@ public final class ReportTrendsSheet {
 
         ((TextView) v.findViewById(R.id.detail_label)).setText(s.label);
 
-        StringBuilder sub = new StringBuilder(s.category);
-        sub.append(" · ").append(s.pointCount()).append(s.pointCount() == 1 ? " result" : " results");
+        // bind() treats a null category as real, so new StringBuilder(s.category)
+        // would NPE here the moment a category-less test was tapped. Same
+        // "Other is noise" rule as the card, or the two views disagree.
+        StringBuilder sub = new StringBuilder();
+        if (!isNoiseCategory(s.category)) sub.append(s.category).append(" · ");
+        sub.append(s.pointCount()).append(s.pointCount() == 1 ? " result" : " results");
         if (s.refLow != null && s.refHigh != null) {
             sub.append(" · normal ").append(ReportTrendSeries.format(s.refLow))
                     .append("–").append(ReportTrendSeries.format(s.refHigh));
@@ -381,7 +436,7 @@ public final class ReportTrendsSheet {
         if (s.isCategorical()) {
             chart.setVisibility(View.GONE);
         } else {
-            renderChart(chart, s, true);
+            renderChart(chart, s, true, true);
         }
 
         // Every value, exactly as the lab printed it. `raw` is the record — the
