@@ -1039,6 +1039,19 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
 
                 applyReportFilter();
 
+                // Resume watching one unfinished report, if any. Reopening the
+                // panel is now a way back to something stranded mid-analysis;
+                // before this, nothing here restarted a poll. Only the first —
+                // several chains at 4s each would hammer the endpoint for no gain,
+                // and the server processes one file per kick anyway.
+                for (UploadedFile f : allReports) {
+                    String st = f.getStatus();
+                    if ("queued".equals(st) || "processing".equals(st)) {
+                        pollAnalysisInBackground(f);
+                        break;
+                    }
+                }
+
                 // Hide progress and show panel only after data is loaded
                 progress.hide();
                 medicalReportsPanel.show();
@@ -2826,7 +2839,22 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         String status = file.getStatus();
 
         if ("processing".equals(status) || "queued".equals(status)) {
-            Utilities.toast(requireContext(), "Analysis is already in progress");
+            // Used to toast and stop, which was a dead end: a report stranded at
+            // "queued" offered no Retry either (that is only shown for "uploaded"
+            // and "failed"), so there was no way back to it from inside the app.
+            // Re-attach the foreground poll instead — each GET also nudges the
+            // server-side queue, so tapping it genuinely restarts the work.
+            // Unless one is already running: a chain started on upload or on panel
+            // open is watching this id, and a second chain would GET every 4s
+            // alongside the first and race it writing onto the same row.
+            if (activePolls.contains(file.getReportId())) {
+                Utilities.toastLong(requireContext(), "Still analyzing — this list updates when it's ready.");
+                return;
+            }
+            SimpleProgress progress = medicalReportsPanel != null && medicalReportsPanel.isShowing()
+                    ? SimpleProgress.show(medicalReportsPanel, "Analyzing your report with AI...")
+                    : SimpleProgress.show(requireActivity(), "Analyzing your report with AI...");
+            pollAnalysisStatus(file, progress, 0);
             return;
         }
 
@@ -2919,46 +2947,116 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
     }
 
     // Polls the report endpoint until status becomes processed/failed, or until
-    // the attempt budget is exhausted. Backend processor runs at most every
-    // 30s, but the analyze endpoint also fires an immediate batch — so most
-    // reports finish within 5-20s. Budget: ~25 attempts × 4s = ~100s.
-    private static final int ANALYSIS_POLL_MAX_ATTEMPTS = 25;
+    // the attempt budget is exhausted.
+    //
+    // 60 x 4s = 4 minutes, raised from 25 (100s). Each GET also nudges the
+    // server-side queue, so giving up early stopped the WORK, not just the
+    // watching — and nothing else would have picked the report back up.
+    private static final int ANALYSIS_POLL_MAX_ATTEMPTS = 60;
     private static final long ANALYSIS_POLL_INTERVAL_MS = 4000L;
 
+    // Report ids with a poll chain already running — foreground OR background.
+    // Every chain registers itself on its first tick and clears itself on every
+    // terminal path, so neither reopening the panel nor tapping a row repeatedly
+    // can stack several chains onto one report (each would GET every 4s and race
+    // the others on the same UploadedFile).
+    private final java.util.Set<String> activePolls = new java.util.HashSet<>();
+
+    // The modal is only tolerable for so long. A foreground poll drops its
+    // progress dialog after this many attempts and keeps watching silently
+    // rather than stopping — the user gets their screen back without the report
+    // being abandoned.
+    private static final int ANALYSIS_POLL_MODAL_ATTEMPTS = 25;
+
+    /**
+     * Watch a report without taking over the screen.
+     *
+     * The foreground poll below owns a blocking SimpleProgress and opens the
+     * analysis dialog when it finishes — right for a user who just tapped
+     * Analyze, wrong for a report we picked up on our own: it would cover the UI
+     * for minutes and then throw a dialog at someone who never asked for one.
+     * This variant passes no progress and shows no dialog; the row's status chip
+     * updating from Queued to Processed is the whole visible result.
+     */
+    private void pollAnalysisInBackground(UploadedFile file) {
+        if (file == null || file.getReportId() == null) return;
+        if (activePolls.contains(file.getReportId())) return;   // already watching
+        pollAnalysisStatus(file, null, 0, false);
+    }
+
+    /** Existing behaviour: user-initiated, owns the progress modal and the dialog. */
     private void pollAnalysisStatus(UploadedFile file, SimpleProgress progress, int attempt) {
-        if (!isAdded() || file.getReportId() == null) {
-            progress.hide();
+        pollAnalysisStatus(file, progress, attempt, true);
+    }
+
+    /**
+     * @param progress   may be null (background polls own no UI)
+     * @param foreground true = the user is waiting: keep the modal up and open the
+     *                   analysis dialog when it lands. false = we picked this up
+     *                   ourselves: update the row silently and say nothing.
+     */
+    private void pollAnalysisStatus(UploadedFile file, SimpleProgress progress, int attempt, boolean foreground) {
+        // Captured once: every terminal path releases the registry by THIS id, so
+        // a file whose reportId somehow reads null later cannot strand its entry
+        // and lock that report out of polling for the rest of the fragment's life.
+        final String reportId = file == null ? null : file.getReportId();
+        if (attempt == 0 && reportId != null) activePolls.add(reportId);
+
+        if (!isAdded() || reportId == null) {
+            if (progress != null) progress.hide();
+            stopPoll(reportId);
             return;
         }
         if (attempt >= ANALYSIS_POLL_MAX_ATTEMPTS) {
+            if (progress != null) progress.hide();
+            stopPoll(reportId);
+            if (foreground) {
+                Utilities.toastLong(requireContext(), "Analysis is taking longer than expected. We'll notify you when it's ready.");
+            }
+            return;
+        }
+        // Hand the screen back but keep watching. Without this the budget raise
+        // from 25 to 60 attempts would have left a blocking modal up for four
+        // minutes on a single tap.
+        if (foreground && progress != null && attempt >= ANALYSIS_POLL_MODAL_ATTEMPTS) {
             progress.hide();
-            Utilities.toastLong(requireContext(), "Analysis is taking longer than expected. We'll notify you when it's ready.");
+            Utilities.toastLong(requireContext(), "Still analyzing — this list updates when it's ready.");
+            pollAnalysisStatus(file, null, attempt, false);
             return;
         }
 
         View root = getView();
-        Runnable poll = () -> apiService.getReportById(file.getReportId(),
+        Runnable poll = () -> apiService.getReportById(reportId,
                 new MedicalReportApiService.OnAnalysisListener() {
                     @Override
                     public void onSuccess(JSONObject report) {
                         if (!isAdded()) {
-                            progress.hide();
+                            if (progress != null) progress.hide();
+                            stopPoll(reportId);
                             return;
                         }
+                        // Reopening the panel clears allReports and rebuilds it from
+                        // the server, so the UploadedFile this chain captured can end
+                        // up an orphan that no row is bound to. Write the result onto
+                        // whichever instance the list holds now; fall back to the
+                        // captured one when the panel is closed.
+                        UploadedFile target = resolveReportFile(reportId, file);
                         String status = report.optString("status", "queued");
-                        remoteReports.put(file.getReportId(), report);
-                        file.setStatus(status);
-                        applyAnalysisToFile(file, report);
-                        reportFilesAdapter.notifyDataSetChanged();
+                        remoteReports.put(reportId, report);
+                        target.setStatus(status);
+                        applyAnalysisToFile(target, report);
+                        if (reportFilesAdapter != null) reportFilesAdapter.notifyDataSetChanged();
 
                         if ("processed".equals(status)) {
-                            progress.hide();
-                            showAnalysisDialog(file, false);
+                            if (progress != null) progress.hide();
+                            stopPoll(reportId);
+                            if (foreground) showAnalysisDialog(target, false);
                         } else if ("failed".equals(status)) {
-                            progress.hide();
-                            Utilities.toast(requireContext(), "Analysis failed. Please try again.");
+                            if (progress != null) progress.hide();
+                            stopPoll(reportId);
+                            if (foreground) Utilities.toast(requireContext(), "Analysis failed. Please try again.");
                         } else {
-                            pollAnalysisStatus(file, progress, attempt + 1);
+                            pollAnalysisStatus(file, progress, attempt + 1, foreground);
                         }
                     }
 
@@ -2967,7 +3065,7 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
                         // Transient errors during polling shouldn't kill the loop —
                         // the backend job may still complete. Keep polling.
                         Log.w(TAG, "Poll error (attempt " + attempt + "): " + error);
-                        pollAnalysisStatus(file, progress, attempt + 1);
+                        pollAnalysisStatus(file, progress, attempt + 1, foreground);
                     }
                 });
 
@@ -2977,6 +3075,25 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
             new android.os.Handler(android.os.Looper.getMainLooper())
                     .postDelayed(poll, ANALYSIS_POLL_INTERVAL_MS);
         }
+    }
+
+    /**
+     * Release the registry entry so this report can be watched again later.
+     * Called from every terminal path of a poll chain, foreground or not — a
+     * foreground chain that ends without clearing its id would lock the report
+     * out of background polling for the rest of the fragment's life.
+     */
+    private void stopPoll(String reportId) {
+        if (reportId != null) activePolls.remove(reportId);
+    }
+
+    /** The live UploadedFile for this id if the panel still lists it, else the captured one. */
+    private UploadedFile resolveReportFile(String reportId, UploadedFile fallback) {
+        if (reportId == null) return fallback;
+        for (UploadedFile f : allReports) {
+            if (f != null && reportId.equals(f.getReportId())) return f;
+        }
+        return fallback;
     }
 
     /**
@@ -3579,6 +3696,16 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
                                 applyReportFilter();
 
                                 Utilities.toast(requireContext(), "Report uploaded successfully");
+
+                                // Nothing watched an uploaded report before this: polling
+                                // only ever started from requestAnalysis(), so an
+                                // auto-analyzed upload sat at "queued" with no client
+                                // asking after it. Background poll — no modal, no dialog,
+                                // the row's status chip is the visible result.
+                                if (file.getReportId() != null && !"processed".equals(file.getStatus())
+                                        && !"failed".equals(file.getStatus())) {
+                                    pollAnalysisInBackground(file);
+                                }
                             } catch (JSONException e) {
                                 Log.e(TAG, "Error parsing upload response", e);
                                 Utilities.toast(requireContext(), "Error processing upload response");
