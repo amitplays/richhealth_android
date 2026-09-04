@@ -1104,7 +1104,8 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
                             }
 
                             applyMedicationFilter();
-                            syncRemindersFromMedications(context);
+                            org.json.JSONObject pg0 = response.optJSONObject("pagination");
+                            syncRemindersFromMedications(context, pg0 == null || pg0.optInt("pages", 1) <= 1);
 
                             // Hide progress and show panel only after data is loaded
                             progress.hide();
@@ -1179,18 +1180,25 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
                         }
 
                         applyMedicationFilter();
-                        syncRemindersFromMedications(context);
+                        // Only prune orphaned reminder plans when we know we hold EVERY
+                        // medication. The endpoint paginates at 50 and this call sends no
+                        // page/limit, so on a 51st medication `pages` is 2 and pruning would
+                        // wipe reminders for the ones we never received.
+                        org.json.JSONObject pg = response.optJSONObject("pagination");
+                        boolean completeList = pg == null || pg.optInt("pages", 1) <= 1;
+                        syncRemindersFromMedications(context, completeList);
 
                     } catch (JSONException e) {
                         Log.e(TAG, "Error parsing medications response", e);
-                        Utilities.toast(requireContext(), "Error loading medications");
+                        // Captured context, not requireContext(): the fragment may be gone.
+                        Utilities.toast(context, "Error loading medications");
                     }
                 },
                 error -> {
                     ApiConfig.logRestCall(url, false, error.toString());
                     progress.hide();
                     Log.e(TAG, "Error fetching medications", error);
-                    Utilities.toast(requireContext(), "Failed to load medications");
+                    Utilities.toast(context, "Failed to load medications");
                     updateMedicationsEmptyState();
                 }
         ) {
@@ -1212,8 +1220,9 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
      * successful fetch. {@link Utils.MedicationReminderHelper#setForMedication} upserts
      * enabled ones and drops disabled / discontinued ones.
      */
-    private void syncRemindersFromMedications(Context context) {
+    private void syncRemindersFromMedications(Context context, boolean completeList) {
         if (context == null) return;
+        java.util.Set<String> seenIds = new java.util.HashSet<>();
         for (MedicationModel m : allMedications) {
             if (m == null || m.getServerId() == null) continue;
             boolean effectiveEnabled = m.isRemindersEnabled() && m.isActive();
@@ -1228,6 +1237,12 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
 
             Utils.MedicationReminderHelper.setForMedication(context, m.getServerId(),
                     m.getName(), m.getDosage(), effectiveEnabled, days, times);
+            seenIds.add(m.getServerId());
+        }
+        // Drop plans for medications the server no longer returns (deleted elsewhere).
+        // Skipped on a partial page — see pruneToServerIds.
+        if (completeList) {
+            Utils.MedicationReminderHelper.pruneToServerIds(context, seenIds);
         }
     }
 
@@ -1243,6 +1258,8 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
             medication.setName(json.getString("name"));
             medication.setDosage(json.getString("dosage"));
             medication.setFrequency(json.getString("frequency"));
+            // Needed so the edit dialog can re-show a Custom schedule instead of blanking it.
+            medication.setCustomFrequency(json.optString("customFrequency", ""));
             medication.setActive(json.optBoolean("isOngoing", true)); // Use isOngoing from backend
 
             if (json.has("notes") && !json.isNull("notes")) {
@@ -2113,6 +2130,9 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         AutoCompleteTextView medicationTypeDropdown = dialog.findViewById(R.id.medication_type_dropdown);
         AutoCompleteTextView administrationMethodDropdown = dialog.findViewById(R.id.administration_method_dropdown);
         SwitchMaterial shareSwitch = dialog.findViewById(R.id.share_with_family_switch);
+        // Only visible for frequency == "Custom"; the backend rejects that frequency without it.
+        final View customFrequencyLayout = dialog.findViewById(R.id.custom_frequency_layout);
+        final TextInputEditText customFrequencyInput = dialog.findViewById(R.id.custom_frequency_input);
 
         Button cancelButton = dialog.findViewById(R.id.cancel_button);
         Button saveButton = dialog.findViewById(R.id.save_button);
@@ -2133,6 +2153,17 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
                 requireContext(), android.R.layout.simple_dropdown_item_1line, frequencies
         );
         frequencyDropdown.setAdapter(frequencyAdapter);
+        // Reveal the custom-schedule field only for "Custom". Applied once up front so an
+        // edited medication that is already Custom opens with its description visible.
+        final Runnable syncCustomFrequencyVisibility = () -> {
+            if (customFrequencyLayout == null) return;
+            boolean isCustom = FREQ_CUSTOM.equalsIgnoreCase(
+                    frequencyDropdown.getText().toString().trim());
+            customFrequencyLayout.setVisibility(isCustom ? View.VISIBLE : View.GONE);
+        };
+        syncCustomFrequencyVisibility.run();
+        frequencyDropdown.setOnItemClickListener(
+                (parent, view, pos, id) -> syncCustomFrequencyVisibility.run());
 
         // Setup medication type dropdown
         String[] medicationTypes = {"Prescription", "Over-the-counter", "Supplement", "Herbal", "Vitamin", "Other"};
@@ -2198,6 +2229,11 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         if (medication.getAdministrationMethod() != null) {
             administrationMethodDropdown.setText(medication.getAdministrationMethod(), false);
         }
+        if (customFrequencyInput != null && medication.getCustomFrequency() != null) {
+            customFrequencyInput.setText(medication.getCustomFrequency());
+        }
+        // The frequency was set above, so re-evaluate whether the custom field should show.
+        syncCustomFrequencyVisibility.run();
         cancelButton.setOnClickListener(v -> dialog.dismiss());
         saveButton.setOnClickListener(v -> {
             String name = medicationNameInput.getText().toString().trim();
@@ -2212,8 +2248,25 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
             String endDateString = endDateInput.getText().toString().trim();
             String notes = notesInput.getText().toString().trim();
 
+            // Dosage is required by the backend (medicationController: "Name, dosage, and
+            // frequency are required"). Without this check the save left the dialog and came
+            // back as a generic error toast. iOS disables Save for the same reason.
+            if (dosage.isEmpty()) {
+                dosageInput.setError("Dosage is required");
+                return;
+            }
+
             if (frequency.isEmpty()) {
                 Utilities.toast(requireContext(), "Please select a frequency");
+                return;
+            }
+
+            String customFrequency = customFrequencyInput == null ? ""
+                    : customFrequencyInput.getText().toString().trim();
+            if (FREQ_CUSTOM.equalsIgnoreCase(frequency) && customFrequency.isEmpty()) {
+                if (customFrequencyInput != null) {
+                    customFrequencyInput.setError("Describe the custom schedule");
+                }
                 return;
             }
 
@@ -2265,7 +2318,7 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
 
             saveMedicationToAPI(medication, name, dosage, frequency, finalStartDate, finalEndDate, notes, isStillTaking[0],
                     purpose, prescribedBy, medicationType, administrationMethod, shareSwitch.isChecked(),
-                    remindersEnabled, reminderDays, reminderTimes);
+                    remindersEnabled, reminderDays, reminderTimes, customFrequency);
             dialog.dismiss();
         });
 
@@ -2334,14 +2387,19 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         Context context = getContext();
         if (context == null) return;
 
-        Utils.DialogUtils.showConfirmDialog(context,
+        // Reason is collected here and appended to the medication's notes by the server
+        // (medicationController.discontinueMedication). No date field: discontinuing means
+        // "I am stopping this now", so today is the only sensible answer and the server
+        // stamps it anyway when none is sent.
+        Utils.DialogUtils.showConfirmWithInputDialog(context,
                 "Discontinue " + medication.getName() + "?",
                 "This will mark the medication as discontinued and set today as the end date. You can re-add it later if needed.",
+                "Reason (optional)",
                 "Discontinue", "Cancel", true,
-                () -> discontinueMedication(medication, position));
+                reason -> discontinueMedication(medication, position, reason));
     }
 
-    private void discontinueMedication(MedicationModel medication, int position) {
+    private void discontinueMedication(MedicationModel medication, int position, String reason) {
         Context context = getContext();
         if (context == null || medication.getServerId() == null) return;
 
@@ -2354,6 +2412,9 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
             SimpleDateFormat isoFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
             isoFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
             requestBody.put("discontinueDate", isoFormat.format(today));
+            if (reason != null && !reason.trim().isEmpty()) {
+                requestBody.put("reason", reason.trim());
+            }
         } catch (Exception e) {
             Log.e(TAG, "Error creating discontinue request", e);
         }
@@ -3984,6 +4045,9 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         AutoCompleteTextView medicationTypeDropdown = dialog.findViewById(R.id.medication_type_dropdown);
         AutoCompleteTextView administrationMethodDropdown = dialog.findViewById(R.id.administration_method_dropdown);
         SwitchMaterial shareSwitch = dialog.findViewById(R.id.share_with_family_switch);
+        // Only visible for frequency == "Custom"; the backend rejects that frequency without it.
+        final View customFrequencyLayout = dialog.findViewById(R.id.custom_frequency_layout);
+        final TextInputEditText customFrequencyInput = dialog.findViewById(R.id.custom_frequency_input);
 
         Button cancelButton = dialog.findViewById(R.id.cancel_button);
         Button saveButton = dialog.findViewById(R.id.save_button);
@@ -4003,6 +4067,17 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
                 requireContext(), android.R.layout.simple_dropdown_item_1line, frequencies
         );
         frequencyDropdown.setAdapter(frequencyAdapter);
+        // Reveal the custom-schedule field only for "Custom". Applied once up front so an
+        // edited medication that is already Custom opens with its description visible.
+        final Runnable syncCustomFrequencyVisibility = () -> {
+            if (customFrequencyLayout == null) return;
+            boolean isCustom = FREQ_CUSTOM.equalsIgnoreCase(
+                    frequencyDropdown.getText().toString().trim());
+            customFrequencyLayout.setVisibility(isCustom ? View.VISIBLE : View.GONE);
+        };
+        syncCustomFrequencyVisibility.run();
+        frequencyDropdown.setOnItemClickListener(
+                (parent, view, pos, id) -> syncCustomFrequencyVisibility.run());
 
         String[] medicationTypes = {"Prescription", "Over-the-counter", "Supplement", "Herbal", "Vitamin", "Other"};
         ArrayAdapter<String> medicationTypeAdapter = new ArrayAdapter<>(
@@ -4052,8 +4127,25 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
             String endDateString = endDateInput.getText().toString().trim();
             String notes = notesInput.getText().toString().trim();
 
+            // Dosage is required by the backend (medicationController: "Name, dosage, and
+            // frequency are required"). Without this check the save left the dialog and came
+            // back as a generic error toast. iOS disables Save for the same reason.
+            if (dosage.isEmpty()) {
+                dosageInput.setError("Dosage is required");
+                return;
+            }
+
             if (frequency.isEmpty()) {
                 Utilities.toast(requireContext(), "Please select a frequency");
+                return;
+            }
+
+            String customFrequency = customFrequencyInput == null ? ""
+                    : customFrequencyInput.getText().toString().trim();
+            if (FREQ_CUSTOM.equalsIgnoreCase(frequency) && customFrequency.isEmpty()) {
+                if (customFrequencyInput != null) {
+                    customFrequencyInput.setError("Describe the custom schedule");
+                }
                 return;
             }
 
@@ -4108,7 +4200,7 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
 
             saveMedicationToAPI(null, name, dosage, frequency, finalStartDate, finalEndDate, notes, isStillTaking[0],
                     purpose, prescribedBy, medicationType, administrationMethod, shareSwitch.isChecked(),
-                    remindersEnabled, reminderDays, reminderTimes);
+                    remindersEnabled, reminderDays, reminderTimes, customFrequency);
             dialog.dismiss();
         });
 
@@ -4145,6 +4237,18 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
                                      String purpose, String prescribedBy, String medicationType,
                                      String administrationMethod, boolean shareWithFamily,
                                      boolean remindersEnabled, int[] reminderDays, int[][] reminderTimes) {
+        saveMedicationToAPI(existingMedication, name, dosage, frequency, startDateString, endDateString,
+                notes, isStillTaking, purpose, prescribedBy, medicationType, administrationMethod,
+                shareWithFamily, remindersEnabled, reminderDays, reminderTimes, null);
+    }
+
+    private void saveMedicationToAPI(MedicationModel existingMedication, String name, String dosage, String frequency,
+                                     String startDateString, String endDateString,
+                                     String notes, boolean isStillTaking,
+                                     String purpose, String prescribedBy, String medicationType,
+                                     String administrationMethod, boolean shareWithFamily,
+                                     boolean remindersEnabled, int[] reminderDays, int[][] reminderTimes,
+                                     String customFrequency) {
 
         Context context = getContext();
         if (context == null) return; // Fragment detached, skip operation safely
@@ -4178,10 +4282,14 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
             requestBody.put("dosage", dosage);
             requestBody.put("frequency", frequency);
             requestBody.put("isOngoing", isStillTaking);
+            // Required by the backend when frequency is "Custom"; harmless (and correct to
+            // clear) otherwise, e.g. when the user switches away from Custom.
+            requestBody.put("customFrequency", customFrequency == null ? "" : customFrequency);
 
-            if (notes != null && !notes.isEmpty()) {
-                requestBody.put("notes", notes);
-            }
+            // Sent even when empty. updateMedication only writes a field that is `!== undefined`,
+            // so OMITTING the key meant "leave it alone" — deleting a note in the form silently
+            // did nothing and the old text came back on the next load.
+            requestBody.put("notes", notes == null ? "" : notes);
 
             // Parse and format dates
             SimpleDateFormat inputFormat = new SimpleDateFormat("MM/dd/yyyy", Locale.US);
@@ -4210,13 +4318,12 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
                 requestBody.put("endDate", JSONObject.NULL);
             }
 
-            // Add new optional fields
-            if (purpose != null && !purpose.isEmpty()) {
-                requestBody.put("purpose", purpose);
-            }
-            if (prescribedBy != null && !prescribedBy.isEmpty()) {
-                requestBody.put("prescribedBy", prescribedBy);
-            }
+            // Free-text optional fields: always sent, for the same clear-means-clear reason
+            // as `notes` above.
+            requestBody.put("purpose", purpose == null ? "" : purpose);
+            requestBody.put("prescribedBy", prescribedBy == null ? "" : prescribedBy);
+            // These two stay conditional on purpose: they are dropdown values that are never
+            // deliberately cleared, and an empty string is not a valid choice for either.
             if (medicationType != null && !medicationType.isEmpty()) {
                 requestBody.put("medicationType", medicationType);
             }
@@ -4260,7 +4367,7 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
                     ApiConfig.logRestCall(finalUrl, true, isUpdate ? "Medication updated" : "Medication saved");
                     progress.hide();
                     String successMessage = isUpdate ? "Medication updated successfully" : "Medication saved successfully";
-                    Utilities.toast(requireContext(), successMessage);
+                    Utilities.toast(context, successMessage);
 
                     // Schedule (or clear) local reminders from the saved state. Reminders
                     // only make sense while the medication is ongoing.
@@ -4286,6 +4393,7 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
                         existingMedication.setName(name);
                         existingMedication.setDosage(dosage);
                         existingMedication.setFrequency(frequency);
+                        existingMedication.setCustomFrequency(customFrequency == null ? "" : customFrequency);
                         existingMedication.setActive(isStillTaking);
                         existingMedication.setNotes(notes);
                         existingMedication.setShareWithFamily(shareWithFamily);
@@ -4367,7 +4475,7 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
                         errorMessage = "Network error. Please check your connection.";
                     }
 
-                    Utilities.toastLong(requireContext(), errorMessage);
+                    Utilities.toastLong(context, errorMessage);
                 }
         ) {
             @Override
@@ -4394,6 +4502,8 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
     private static final String CAD_TWICE_DAY  = "Twice a day";
     private static final String CAD_THREE_DAY  = "Three times a day";
     private static final String CAD_TWICE_WEEK = "Twice a week";
+    /** Frequency option that requires a free-text description (backend validates this). */
+    private static final String FREQ_CUSTOM     = "Custom";
     private static final String[] REMINDER_CADENCES =
             { CAD_DAILY, CAD_TWICE_DAY, CAD_THREE_DAY, CAD_TWICE_WEEK };
     private static final String[] WEEKDAY_LABELS = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
@@ -4537,12 +4647,26 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
             chip.setText(WEEKDAY_LABELS[i]);
             chip.setTag(i);
             chip.setCheckable(true);
-            chip.setTextColor(Color.WHITE);
-            chip.setChipBackgroundColor(android.content.res.ColorStateList.valueOf(
-                    ContextCompat.getColor(requireContext(), R.color.rh_accent_dim)));
-            chip.setChipStrokeColor(android.content.res.ColorStateList.valueOf(
-                    ContextCompat.getColor(requireContext(), R.color.rh_accent)));
+            // State-aware colours. These used to be single-value ColorStateLists, so a chip
+            // looked identical checked and unchecked — the user had to pick exactly two days
+            // with no way to see which two were picked. Selected = filled teal (matching the
+            // iOS weekday capsule); unselected = the dim background with a teal outline.
+            int accent    = ContextCompat.getColor(requireContext(), R.color.rh_accent);
+            int accentDim = ContextCompat.getColor(requireContext(), R.color.rh_accent_dim);
+            int[][] states = new int[][]{
+                    new int[]{ android.R.attr.state_checked },
+                    new int[]{ -android.R.attr.state_checked }
+            };
+            chip.setChipBackgroundColor(new android.content.res.ColorStateList(
+                    states, new int[]{ accent, accentDim }));
+            chip.setChipStrokeColor(new android.content.res.ColorStateList(
+                    states, new int[]{ accent, accent }));
+            chip.setTextColor(new android.content.res.ColorStateList(
+                    states, new int[]{ Color.WHITE, ContextCompat.getColor(requireContext(), R.color.rh_text_secondary) }));
             chip.setChipStrokeWidth(density);
+            // Belt and braces for the colour cue: a tick on the selected chips.
+            chip.setCheckedIconVisible(true);
+            chip.setCheckedIconTint(android.content.res.ColorStateList.valueOf(Color.WHITE));
             st.chipGroupDays.addView(chip);
         }
     }

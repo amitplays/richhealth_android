@@ -139,6 +139,35 @@
                 </com.google.android.material.textfield.TextInputLayout>
             </LinearLayout>
 
+            <!-- Only shown when Frequency == "Custom". The backend REQUIRES this field in that
+                 case (medicationController.addMedication returns 400 without it), and iOS has
+                 always had it; Android offered "Custom" in the dropdown with nowhere to type,
+                 so choosing it could never save. -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/custom_frequency_layout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:visibility="gone"
+                android:textColorHint="#757575"
+                app:hintTextColor="@color/rh_accent"
+                app:boxStrokeColor="@color/rh_accent"
+                app:boxBackgroundColor="#1E1E1E"
+                app:boxCornerRadiusTopStart="8dp"
+                app:boxCornerRadiusTopEnd="8dp"
+                app:boxCornerRadiusBottomStart="8dp"
+                app:boxCornerRadiusBottomEnd="8dp"
+                app:boxStrokeWidth="1dp">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/custom_frequency_input"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Describe the schedule (e.g. 2 tablets every other morning)"
+                    android:inputType="textCapSentences"
+                    android:textColor="@color/white"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
             <!-- Start Date + End Date side by side with icons -->
             <LinearLayout
                 android:layout_width="match_parent"

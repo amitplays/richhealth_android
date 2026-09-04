@@ -575,6 +575,11 @@ public class DialogUtils {
         void onConfirm();
     }
 
+    /** Callback for {@link #showConfirmWithInputDialog} — carries whatever the user typed. */
+    public interface OnConfirmWithInputListener {
+        void onConfirm(String input);
+    }
+
     /**
      * App-styled confirmation dialog (same visual language as showChoiceDialog:
      * rounded #141C1C card, teal accent). Use this instead of a native
@@ -587,6 +592,24 @@ public class DialogUtils {
     public static void showConfirmDialog(Context ctx, String title, String message,
                                          String positiveText, String negativeText,
                                          boolean destructive, OnConfirmListener onConfirm) {
+        // Unchanged behaviour: this is the no-input case of the dialog below.
+        showConfirmWithInputDialog(ctx, title, message, null, positiveText, negativeText,
+                destructive, onConfirm == null ? null : input -> onConfirm.onConfirm());
+    }
+
+    /**
+     * Same dialog as {@link #showConfirmDialog} plus one optional free-text field, so a
+     * confirmation can also collect a short note (e.g. why a medication is being stopped)
+     * without inventing a second dialog style.
+     *
+     * @param inputHint hint for the text field; pass null for a plain confirmation, in which
+     *                  case the callback receives an empty string.
+     */
+    public static void showConfirmWithInputDialog(Context ctx, String title, String message,
+                                                  String inputHint,
+                                                  String positiveText, String negativeText,
+                                                  boolean destructive,
+                                                  OnConfirmWithInputListener onConfirm) {
         if (ctx == null) return;
         final float d = ctx.getResources().getDisplayMetrics().density;
 
@@ -624,6 +647,29 @@ public class DialogUtils {
                     LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
             mlp.bottomMargin = (int) (18 * d);
             root.addView(msgView, mlp);
+        }
+
+        final EditText inputView;
+        if (inputHint != null) {
+            inputView = new EditText(ctx);
+            inputView.setHint(inputHint);
+            inputView.setSingleLine(true);
+            inputView.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+            inputView.setTextColor(Color.WHITE);
+            inputView.setHintTextColor(Color.parseColor("#7A8C8C"));
+            inputView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f);
+            inputView.setPadding((int) (12 * d), (int) (12 * d), (int) (12 * d), (int) (12 * d));
+            GradientDrawable inputBg = new GradientDrawable();
+            inputBg.setCornerRadius(10 * d);
+            inputBg.setColor(Color.parseColor("#0E1616"));
+            inputBg.setStroke((int) d, Color.parseColor("#243A38"));
+            inputView.setBackground(inputBg);
+            LinearLayout.LayoutParams ilp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            ilp.bottomMargin = (int) (18 * d);
+            root.addView(inputView, ilp);
+        } else {
+            inputView = null;
         }
 
         LinearLayout buttonRow = new LinearLayout(ctx);
@@ -674,8 +720,9 @@ public class DialogUtils {
         plp.leftMargin = (int) (8 * d);
         positive.setLayoutParams(plp);
         positive.setOnClickListener(v -> {
+            String typed = inputView == null ? "" : inputView.getText().toString().trim();
             dialog.dismiss();
-            if (onConfirm != null) onConfirm.onConfirm();
+            if (onConfirm != null) onConfirm.onConfirm(typed);
         });
         buttonRow.addView(positive);
 

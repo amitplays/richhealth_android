@@ -160,6 +160,37 @@ public class MedicationReminderHelper {
         scheduleAlarmsForPlan(context, plan);
     }
 
+    /**
+     * Drop every stored plan whose medication is NOT in {@code keepServerIds}, cancelling its
+     * alarms. Without this the store only ever grew: {@code setForMedication} is called once per
+     * medication in a fetch, so a medication deleted (or discontinued) on another device simply
+     * stopped appearing in the response and its plan was left behind — and {@code rescheduleAll}
+     * re-armed that orphan on every boot and app start, reminding the user about a medication
+     * they no longer take. iOS avoids this by replacing its whole cache on each successful load.
+     *
+     * <p>ONLY safe to call with the COMPLETE medication list. The list endpoint paginates
+     * (default 50 per page), so the caller must confirm it holds every page before calling —
+     * pruning from a partial page would silently delete reminders for medications 51+.
+     */
+    public static void pruneToServerIds(Context context, java.util.Set<String> keepServerIds) {
+        if (context == null || keepServerIds == null) return;
+        JSONArray plans = loadPlans(context);
+        JSONArray kept = new JSONArray();
+        boolean changed = false;
+        for (int i = 0; i < plans.length(); i++) {
+            JSONObject p = plans.optJSONObject(i);
+            if (p == null) { changed = true; continue; }
+            String sid = p.optString("serverId", null);
+            if (sid != null && keepServerIds.contains(sid)) {
+                kept.put(p);
+            } else {
+                cancelAlarmsForPlan(context, p);
+                changed = true;
+            }
+        }
+        if (changed) saveAllPlans(context, kept);
+    }
+
     /** Remove a medication from the store and cancel its alarms. */
     public static void removeForMedication(Context context, String serverId) {
         if (context == null || serverId == null) return;

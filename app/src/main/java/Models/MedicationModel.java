@@ -8,6 +8,8 @@ public class MedicationModel {
     private String name;
     private String dosage;
     private String frequency;
+    /** Free-text schedule, required by the backend when frequency == "Custom". */
+    private String customFrequency;
     private Date startDate;
     private Date endDate;
     private String notes;
@@ -76,6 +78,14 @@ public class MedicationModel {
 
     public void setFrequency(String frequency) {
         this.frequency = frequency;
+    }
+
+    public String getCustomFrequency() {
+        return customFrequency;
+    }
+
+    public void setCustomFrequency(String customFrequency) {
+        this.customFrequency = customFrequency;
     }
 
     public Date getStartDate() {

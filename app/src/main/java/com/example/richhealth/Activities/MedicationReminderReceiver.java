@@ -38,9 +38,14 @@ public class MedicationReminderReceiver extends BroadcastReceiver {
         String sysAction = intent.getAction();
 
         // Reboot, OEM quick-boot, or an app update — rebuild alarms from the local store.
+        // Also a timezone change or a manual clock change: alarms are armed as absolute epoch
+        // times, so without this a user who flies somewhere keeps getting each reminder at the
+        // departure country's wall-clock time until it fires once.
         if (Intent.ACTION_BOOT_COMPLETED.equals(sysAction)
                 || ACTION_QUICKBOOT.equals(sysAction)
-                || Intent.ACTION_MY_PACKAGE_REPLACED.equals(sysAction)) {
+                || Intent.ACTION_MY_PACKAGE_REPLACED.equals(sysAction)
+                || Intent.ACTION_TIMEZONE_CHANGED.equals(sysAction)
+                || Intent.ACTION_TIME_CHANGED.equals(sysAction)) {
             MedicationReminderHelper.rescheduleAll(context);
             return;
         }

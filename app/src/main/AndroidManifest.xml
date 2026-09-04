@@ -129,6 +129,12 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.QUICKBOOT_POWERON" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <!-- Alarms are armed as absolute epoch times (RTC_WAKEUP), so a timezone or
+                     clock change leaves them pointing at the OLD wall-clock time until each
+                     one fires once. Re-arm on both so a user who travels keeps getting their
+                     reminders at the right local time. -->
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.TIME_SET" />
             </intent-filter>
         </receiver>
 

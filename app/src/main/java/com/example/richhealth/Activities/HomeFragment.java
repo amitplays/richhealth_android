@@ -4261,19 +4261,28 @@ public class HomeFragment extends Fragment {
                             if (checkInStartButton != null) {
                                 checkInStartButton.setText("Continue \u203a");
                             }
-                        } else if (pendingOnlyCount > 0) {
-                            setCheckInPill(Utils.StatusPill.Intent.NEUTRAL, "Pending");
+                        } else if (isDue) {
+                            // Overdue outranks "pending". When a check-in is BOTH overdue and
+                            // has unfinished ones waiting, being overdue is the more urgent
+                            // fact, so it wins the card. This ordering matches iOS
+                            // (CheckInHomeCardResponse.state: inProgress -> due -> pending);
+                            // Android used to test pending first and showed "N ready" for a
+                            // check-in that was actually overdue.
+                            setCheckInPill(Utils.StatusPill.Intent.WARNING, "Due now");
                             if (checkInStatusText != null) {
-                                checkInStatusText.setText(pendingOnlyCount + " check-in"
-                                        + (pendingOnlyCount > 1 ? "s" : "") + " ready");
+                                checkInStatusText.setText("Your check-in is ready");
                             }
                             if (checkInStartButton != null) {
                                 checkInStartButton.setText("Start \u203a");
                             }
-                        } else if (isDue) {
-                            setCheckInPill(Utils.StatusPill.Intent.WARNING, "Due now");
+                        } else if (pendingOnlyCount > 0) {
+                            // Reached only when nothing is in progress and nothing is overdue,
+                            // so pendingOnlyCount == pendingCount here (iOS reads the raw
+                            // pendingCount at the same point for the same reason).
+                            setCheckInPill(Utils.StatusPill.Intent.NEUTRAL, "Pending");
                             if (checkInStatusText != null) {
-                                checkInStatusText.setText("Your check-in is ready");
+                                checkInStatusText.setText(pendingOnlyCount + " check-in"
+                                        + (pendingOnlyCount > 1 ? "s" : "") + " ready");
                             }
                             if (checkInStartButton != null) {
                                 checkInStartButton.setText("Start \u203a");
