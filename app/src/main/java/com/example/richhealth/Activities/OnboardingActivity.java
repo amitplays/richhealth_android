@@ -579,8 +579,10 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
                                         // "both" existed in the backend + Profile edit but was
                                         // missing here — half the users drink both.
                                         new SelectableOption("Tea & coffee",  R.drawable.ic_signup_coffee,        "both"),
-                                        new SelectableOption("Energy drinks", R.drawable.ic_signup_energy_drink,  "energy_drinks"),
-                                        SelectableOption.other("Other — you tell us", R.drawable.ic_edit, true)
+                                        // No "Other": caffeineHabit is a backend enum, so free
+                                        // text ValidationErrors the whole signup (500). Only
+                                        // enum-backed question that offered one.
+                                        new SelectableOption("Energy drinks", R.drawable.ic_signup_energy_drink,  "energy_drinks")
                                 ),
                                 false, true, 2,
                                 (data, value) -> data.caffeineHabit = (String) value

@@ -122,17 +122,13 @@ public class OnboardingPersonalFragment extends BaseOnboardingFragment {
         genderAdapter = new SelectableCardAdapter(genderOptions, false);
         rvGender.setAdapter(genderAdapter);
 
-        // Restore gender selection
+        // Restore gender selection. This used to find the index and then deliberately do
+        // nothing, so stepping Back cleared the answer and validate() failed until the
+        // user re-tapped. DOB and country were already restored above.
         if (hostActivity != null) {
             String savedGender = hostActivity.getOnboardingData().gender;
-            if (!savedGender.isEmpty()) {
-                for (int i = 0; i < genderOptions.size(); i++) {
-                    if (genderOptions.get(i).value.equals(savedGender)) {
-                        // Pre-select by simulating click via adapter internals isn't ideal;
-                        // just leave it — user can re-tap on revisit.
-                        break;
-                    }
-                }
+            if (savedGender != null && !savedGender.isEmpty()) {
+                genderAdapter.setSelectedValue(savedGender);
             }
         }
 
@@ -140,13 +136,33 @@ public class OnboardingPersonalFragment extends BaseOnboardingFragment {
     }
 
     private void showDatePicker() {
+        // Minimum age 10, same cap the iOS picker uses. DateValidatorPointBackward.now()
+        // allowed today's date, i.e. an age of 0.
+        // UTC + zeroed time: the grid's cells are UTC midnights, so a local-zone cap with
+        // a time-of-day made the "exactly 10 years ago" cell unselectable for part of the
+        // day in zones ahead of UTC.
+        java.util.Calendar maxDob = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"));
+        maxDob.add(java.util.Calendar.YEAR, -10);
+        maxDob.set(java.util.Calendar.HOUR_OF_DAY, 0);
+        maxDob.set(java.util.Calendar.MINUTE, 0);
+        maxDob.set(java.util.Calendar.SECOND, 0);
+        maxDob.set(java.util.Calendar.MILLISECOND, 0);
+        final long maxDobMillis = maxDob.getTimeInMillis();
+
         CalendarConstraints constraints = new CalendarConstraints.Builder()
-                .setValidator(DateValidatorPointBackward.now())
+                .setEnd(maxDobMillis)
+                .setValidator(DateValidatorPointBackward.before(maxDobMillis))
                 .build();
 
         MaterialDatePicker<Long> picker = MaterialDatePicker.Builder.datePicker()
                 .setTitleText("Select your date of birth")
                 .setCalendarConstraints(constraints)
+                // Explicit, and clamped: the default selection is today (now out of range),
+                // and a DOB saved before this cap existed would open the calendar at
+                // January 1900 and could be re-confirmed while still under age.
+                .setSelection(selectedDob != null && selectedDob.getTime() <= maxDobMillis
+                        ? selectedDob.getTime()
+                        : maxDobMillis)
                 .build();
 
         picker.addOnPositiveButtonClickListener(selection -> {

@@ -141,6 +141,23 @@ public class SelectableCardAdapter extends RecyclerView.Adapter<SelectableCardAd
         }
     }
 
+    /**
+     * Pre-select the option whose value matches, for restoring a saved answer when the
+     * user steps back. Does not fire the selection listener — restoring is not a user
+     * action, and the host reads getSelectedValue() when it saves.
+     */
+    public void setSelectedValue(Object value) {
+        if (value == null) return;
+        for (int i = 0; i < options.size(); i++) {
+            if (value.equals(valueFor(options.get(i)))) {
+                if (!multiSelect) selectedPositions.clear();
+                selectedPositions.add(i);
+                notifyDataSetChanged();
+                return;
+            }
+        }
+    }
+
     public boolean hasSelection() {
         return !selectedPositions.isEmpty();
     }

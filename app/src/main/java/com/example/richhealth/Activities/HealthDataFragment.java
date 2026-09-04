@@ -3403,6 +3403,42 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
             view.findViewById(R.id.report_empty_text).setVisibility(View.VISIBLE);
         }
 
+        // Sharing switches — the two per-report settings the backend stores. Reports
+        // have no edit form, so each saves on flip and reverts if the save fails.
+        // The array holds a suppress flag so a programmatic revert doesn't re-fire.
+        final boolean[] suppressToggle = { false };
+        SwitchMaterial shareSwitch = view.findViewById(R.id.report_share_switch);
+        SwitchMaterial chatSwitch  = view.findViewById(R.id.report_chat_switch);
+        shareSwitch.setChecked(file.isShareWithFamily());
+        chatSwitch.setChecked(file.isIncludeInChat());
+        shareSwitch.setOnCheckedChangeListener((btn, isChecked) -> {
+            if (suppressToggle[0] || file.getReportId() == null) return;
+            apiService.setReportSharing(file.getReportId(), isChecked,
+                    new MedicalReportApiService.SimpleCallback() {
+                        @Override public void onOk() {
+                            file.setShareWithFamily(isChecked);
+                            if (reportFilesAdapter != null) reportFilesAdapter.notifyDataSetChanged();
+                        }
+                        @Override public void onFail(String error) {
+                            if (!isAdded()) return;
+                            suppressToggle[0] = true; btn.setChecked(!isChecked); suppressToggle[0] = false;
+                            Utilities.toast(requireContext(), "Couldn't update sharing");
+                        }
+                    });
+        });
+        chatSwitch.setOnCheckedChangeListener((btn, isChecked) -> {
+            if (suppressToggle[0] || file.getReportId() == null) return;
+            apiService.setReportChatContext(file.getReportId(), isChecked,
+                    new MedicalReportApiService.SimpleCallback() {
+                        @Override public void onOk() { file.setIncludeInChat(isChecked); }
+                        @Override public void onFail(String error) {
+                            if (!isAdded()) return;
+                            suppressToggle[0] = true; btn.setChecked(!isChecked); suppressToggle[0] = false;
+                            Utilities.toast(requireContext(), "Couldn't update chat setting");
+                        }
+                    });
+        });
+
         AlertDialog dialog = new AlertDialog.Builder(requireContext())
                 .setView(view)
                 .create();
@@ -3719,7 +3755,7 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
             Log.d(TAG, "saveReportToDatabase: copied to " + actualFile.getAbsolutePath()
                     + " size=" + actualFile.length());
 
-            uploadWithRawText(file, actualFile, "", progress);
+            uploadWithRawText(file, actualFile, "", progress, false);
 
         } catch (Exception e) {
             progress.hide();
@@ -3728,7 +3764,8 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         }
     }
 
-    private void uploadWithRawText(UploadedFile file, File actualFile, String rawText, SimpleProgress progress) {
+    private void uploadWithRawText(UploadedFile file, File actualFile, String rawText,
+                                   SimpleProgress progress, boolean force) {
         Log.d(TAG, "uploadWithRawText: POSTing " + actualFile.getName()
                 + " (" + actualFile.length() + " bytes) as " + file.getReportType());
         try {
@@ -3788,10 +3825,30 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
                         }
 
                         @Override
+                        public void onDuplicate(String message, boolean sameFile, String existingReportId) {
+                            progress.hide();
+                            if (!isAdded()) return;
+                            if (sameFile) {
+                                // Byte-identical: nothing to gain from re-uploading.
+                                Utilities.toastLong(requireContext(), message);
+                            } else {
+                                // Same name, different bytes — probably a different report. Ask.
+                                Utils.DialogUtils.showConfirmDialog(requireContext(),
+                                        "Already uploaded", message, "Upload anyway", "Cancel", false,
+                                        () -> {
+                                            SimpleProgress p2 = medicalReportsPanel != null && medicalReportsPanel.isShowing()
+                                                    ? SimpleProgress.show(medicalReportsPanel, "Uploading report...")
+                                                    : SimpleProgress.show(requireActivity(), "Uploading report...");
+                                            uploadWithRawText(file, actualFile, rawText, p2, true);
+                                        });
+                            }
+                        }
+
+                        @Override
                         public void onProgress(int progressValue) {
                             // Update progress dialog if needed
                         }
-                    }, rawText);
+                    }, rawText, force);
         } catch (Exception e) {
             progress.hide();
             Utilities.toast(requireContext(), "Error preparing file: " + e.getMessage());

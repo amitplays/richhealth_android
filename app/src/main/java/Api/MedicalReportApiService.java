@@ -45,6 +45,15 @@ public class MedicalReportApiService {
         void onError(String error);
         void onProgress(int progress);
         default void onLimitReached(String message) { onError(message); }
+        // sameFile true = byte-identical to a stored report (re-uploading is pointless);
+        // false = same name, different bytes → offer "upload anyway" (force).
+        default void onDuplicate(String message, boolean sameFile, String existingReportId) { onError(message); }
+    }
+
+    /** Result of a fire-and-forget PATCH (sharing / chat-context toggle). */
+    public interface SimpleCallback {
+        void onOk();
+        default void onFail(String error) {}
     }
 
     public interface OnReportsFetchListener {
@@ -71,11 +80,17 @@ public class MedicalReportApiService {
 
     public void uploadReport(File file, String reportType, JSONObject metadata,
                              OnReportUploadListener listener) {
-        uploadReport(file, reportType, metadata, listener, "");
+        uploadReport(file, reportType, metadata, listener, "", false);
     }
 
     public void uploadReport(File file, String reportType, JSONObject metadata,
                              OnReportUploadListener listener, String rawText) {
+        uploadReport(file, reportType, metadata, listener, rawText, false);
+    }
+
+    /** `force` re-sends past the duplicate-name guard, after the user confirms. */
+    public void uploadReport(File file, String reportType, JSONObject metadata,
+                             OnReportUploadListener listener, String rawText, boolean force) {
         String url = BASE_URL;
 
         // Send the REAL content type (from the file extension) instead of a
@@ -84,14 +99,15 @@ public class MedicalReportApiService {
         MediaType fileMediaType = MediaType.parse(guessMimeType(file.getName()));
 
         // Use OkHttp for multipart file upload
-        RequestBody requestBody = new MultipartBody.Builder()
+        MultipartBody.Builder bodyBuilder = new MultipartBody.Builder()
                 .setType(MultipartBody.FORM)
                 .addFormDataPart("file", file.getName(),
                         RequestBody.create(fileMediaType, file))
                 .addFormDataPart("reportType", reportType)
                 .addFormDataPart("metadata", metadata.toString())
-                .addFormDataPart("rawText", rawText != null ? rawText : "")
-                .build();
+                .addFormDataPart("rawText", rawText != null ? rawText : "");
+        if (force) bodyBuilder.addFormDataPart("force", "true");
+        RequestBody requestBody = bodyBuilder.build();
 
         okhttp3.Request request = new okhttp3.Request.Builder()
                 .url(url)
@@ -143,8 +159,28 @@ public class MedicalReportApiService {
                             ApiConfig.logRestCall(url, false, "Report limit reached (429)");
                             Log.w(TAG, "Report upload limit reached");
                             listener.onLimitReached(message);
+                        } else if (response.code() == 409) {
+                            String message = "This report is already in your library.";
+                            boolean sameFile = false;
+                            String existingId = null;
+                            try {
+                                JSONObject errJson = new JSONObject(responseBody);
+                                String msg = errJson.optString("message", "");
+                                if (!msg.isEmpty()) message = msg;
+                                sameFile = errJson.optBoolean("sameFile", false);
+                                existingId = errJson.optString("existingReportId", null);
+                            } catch (JSONException ignored) {}
+                            listener.onDuplicate(message, sameFile, existingId);
                         } else {
-                            listener.onError("Upload failed: " + response.message());
+                            // Parse the body — response.message() is the bare HTTP reason
+                            // phrase ("Conflict"), which is what the user used to see.
+                            String message = "Upload failed. Please try again.";
+                            try {
+                                JSONObject errJson = new JSONObject(responseBody);
+                                String msg = errJson.optString("message", "");
+                                if (!msg.isEmpty()) message = msg;
+                            } catch (JSONException ignored) {}
+                            listener.onError(message);
                         }
                     } catch (JSONException e) {
                         listener.onError("Parse error: " + e.getMessage());
@@ -152,6 +188,44 @@ public class MedicalReportApiService {
                 });
             }
         });
+    }
+
+    /** PATCH /:id/sharing — whether family members can see this report. */
+    public void setReportSharing(String reportId, boolean shareWithFamily, SimpleCallback cb) {
+        patchFlag(reportId + "/sharing", "shareWithFamily", shareWithFamily, cb);
+    }
+
+    /** PATCH /:id/chat-context — whether Richie may read this report. */
+    public void setReportChatContext(String reportId, boolean includeInChat, SimpleCallback cb) {
+        patchFlag(reportId + "/chat-context", "includeInChat", includeInChat, cb);
+    }
+
+    private void patchFlag(String pathSuffix, String field, boolean value, SimpleCallback cb) {
+        String url = BASE_URL + "/" + pathSuffix;
+        JSONObject bodyJson = new JSONObject();
+        try { bodyJson.put(field, value); } catch (JSONException ignored) {}
+        final String bodyStr = bodyJson.toString();
+        StringRequest request = new StringRequest(Request.Method.PATCH, url,
+                response -> { ApiConfig.logRestCall(url, true, "flag updated"); if (cb != null) cb.onOk(); },
+                error -> {
+                    ApiConfig.logRestCall(url, false, String.valueOf(error));
+                    if (cb != null) cb.onFail(getErrorMessage(error));
+                }) {
+            @Override
+            public Map<String, String> getHeaders() throws AuthFailureError {
+                Map<String, String> headers = new HashMap<>();
+                headers.put("Authorization", "Bearer " + tokenManager.getToken());
+                return headers;
+            }
+            @Override
+            public String getBodyContentType() { return "application/json; charset=utf-8"; }
+            @Override
+            public byte[] getBody() {
+                return bodyStr.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            }
+        };
+        request.setRetryPolicy(new DefaultRetryPolicy(15000, 0, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
+        requestQueue.add(request);
     }
 
     public void getUserReports(OnReportsFetchListener listener) {

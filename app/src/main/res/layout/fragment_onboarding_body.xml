@@ -115,7 +115,7 @@
             android:stepSize="1"
             android:value="70"
             android:valueFrom="30"
-            android:valueTo="200"
+            android:valueTo="250"
             app:haloColor="#1A008b8b"
             app:labelBehavior="gone"
             app:thumbColor="#008b8b"
@@ -168,11 +168,16 @@
             app:trackColorInactive="#2A2A2A"
             app:trackHeight="4dp" />
 
+        <!-- Checked by default: an untouched waist slider is NOT an 80 cm answer.
+             Dragging the slider unchecks it (OnboardingBodyFragment), and restoring a
+             saved non-zero waist unchecks it too. Matches iOS, where waistUnknown
+             starts true and the field is simply omitted from the payload. -->
         <CheckBox
             android:id="@+id/cb_waist_unknown"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
+            android:checked="true"
             android:buttonTint="#008b8b"
             android:text="I don't know my waist size"
             android:textColor="#AAAAAA"
