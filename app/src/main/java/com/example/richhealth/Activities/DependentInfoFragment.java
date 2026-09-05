@@ -46,6 +46,35 @@ public class DependentInfoFragment extends BaseOnboardingFragment {
     private static final SimpleDateFormat DISPLAY_FMT =
             new SimpleDateFormat("MMMM d, yyyy", Locale.getDefault());
 
+    /**
+     * MaterialDatePicker hands back UTC midnight of the chosen day, but DISPLAY_FMT here
+     * and every downstream reader of UserProfile.dateOfBirth work in the device timezone.
+     * West of UTC that showed and submitted the day BEFORE the one the user tapped.
+     * Re-anchoring to local midnight of the same calendar day keeps all of them correct.
+     */
+    private static Date localDayFrom(long utcMillis) {
+        java.util.Calendar utc = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"));
+        utc.setTimeInMillis(utcMillis);
+        java.util.Calendar local = java.util.Calendar.getInstance();
+        local.clear();
+        local.set(utc.get(java.util.Calendar.YEAR),
+                  utc.get(java.util.Calendar.MONTH),
+                  utc.get(java.util.Calendar.DAY_OF_MONTH));
+        return local.getTime();
+    }
+
+    /** Picker-space (UTC midnight) equivalent of a stored local-midnight DOB. */
+    private static long utcDayFrom(Date localDay) {
+        java.util.Calendar local = java.util.Calendar.getInstance();
+        local.setTime(localDay);
+        java.util.Calendar utc = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"));
+        utc.clear();
+        utc.set(local.get(java.util.Calendar.YEAR),
+                local.get(java.util.Calendar.MONTH),
+                local.get(java.util.Calendar.DAY_OF_MONTH));
+        return utc.getTimeInMillis();
+    }
+
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
@@ -71,6 +100,26 @@ public class DependentInfoFragment extends BaseOnboardingFragment {
         genderAdapter = new SelectableCardAdapter(genderOptions, false);
         rvGender.setAdapter(genderAdapter);
 
+        // Restore on back-navigation. AddDependentActivity uses FragmentTransaction.replace
+        // on a persistent instance, so onCreateView reruns and this whole step came back
+        // blank — the user had to retype the name and password and re-pick DOB and gender.
+        // handleContinue() calls collectData() before advancing, so the answers are already
+        // in the shared OnboardingData; nothing here is a default that could be mistaken
+        // for a real answer.
+        if (hostActivity != null) {
+            OnboardingData saved = hostActivity.getOnboardingData();
+            if (saved.name != null && !saved.name.isEmpty()) etName.setText(saved.name);
+            if (saved.password != null && !saved.password.isEmpty()) etPassword.setText(saved.password);
+            if (saved.dateOfBirth != null) {
+                selectedDob = saved.dateOfBirth;
+                tvDobDisplay.setText(DISPLAY_FMT.format(selectedDob));
+                tvDobDisplay.setTextColor(0xFFFFFFFF);
+            }
+            if (saved.gender != null && !saved.gender.isEmpty()) {
+                genderAdapter.setSelectedValue(saved.gender);
+            }
+        }
+
         return root;
     }
 
@@ -79,13 +128,20 @@ public class DependentInfoFragment extends BaseOnboardingFragment {
                 .setValidator(DateValidatorPointBackward.now())
                 .build();
 
-        MaterialDatePicker<Long> picker = MaterialDatePicker.Builder.datePicker()
-                .setTitleText("Select date of birth")
+        MaterialDatePicker.Builder<Long> builder = MaterialDatePicker.Builder.datePicker()
+                .setTitleText("Select date of birth");
+        // Only when one is already stored: with no selection the confirm button stays
+        // disabled, which is what we want for a first visit.
+        if (selectedDob != null) {
+            builder.setSelection(utcDayFrom(selectedDob));
+        }
+
+        MaterialDatePicker<Long> picker = builder
                 .setCalendarConstraints(constraints)
                 .build();
 
         picker.addOnPositiveButtonClickListener(selection -> {
-            selectedDob = new Date(selection);
+            selectedDob = localDayFrom(selection);
             tvDobDisplay.setText(DISPLAY_FMT.format(selectedDob));
             tvDobDisplay.setTextColor(0xFFFFFFFF);
         });
@@ -102,8 +158,16 @@ public class DependentInfoFragment extends BaseOnboardingFragment {
             Utilities.toast(getContext(), "Please enter a name");
             return false;
         }
-        if (password.length() < 6) {
-            Utilities.toast(getContext(), "Password must be at least 6 characters");
+        // 8 to match signup, the backend validator and both apps' copy.
+        if (password.length() < 8) {
+            Utilities.toast(getContext(), "Password must be at least 8 characters");
+            return false;
+        }
+        // Was never checked, so collectData() could write a null date of birth — age drives
+        // every risk model downstream. Checked before gender because it sits above it on
+        // screen, so the message points at the first empty field.
+        if (selectedDob == null) {
+            Utilities.toast(getContext(), "Please select a date of birth");
             return false;
         }
         if (!genderAdapter.hasSelection()) {

@@ -1087,7 +1087,10 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
                 return;
             }
 
-            String url = ApiConfig.BASE_URL + "/api/medications";
+            // getMedications paginates at limit=50. Ask for the whole list in one page so the
+            // reminder prune below (which only runs on a complete list) can actually run for
+            // users with more than 50 medications.
+            String url = ApiConfig.BASE_URL + "/api/medications?limit=500&page=1";
 
             JsonObjectRequest request = new JsonObjectRequest(Request.Method.GET, url, null,
                     response -> {
@@ -1104,8 +1107,11 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
                             }
 
                             applyMedicationFilter();
+                            // No pagination block means we cannot prove we hold every
+                            // medication, so it must mean "don't prune" — the old default
+                            // treated it as a complete list and would wipe every plan.
                             org.json.JSONObject pg0 = response.optJSONObject("pagination");
-                            syncRemindersFromMedications(context, pg0 == null || pg0.optInt("pages", 1) <= 1);
+                            syncRemindersFromMedications(context, pg0 != null && pg0.optInt("pages", 2) <= 1);
 
                             // Hide progress and show panel only after data is loaded
                             progress.hide();
@@ -1161,7 +1167,9 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
                 ? SimpleProgress.show(medicationsPanel, "Fetching your medications securely...")
                 : SimpleProgress.show(requireActivity(), "Fetching your medications securely...");
 
-        String url = ApiConfig.BASE_URL + "/api/medications";
+        // getMedications paginates at limit=50; request the whole list in one page so the
+        // reminder prune below is reachable for users with more than 50 medications.
+        String url = ApiConfig.BASE_URL + "/api/medications?limit=500&page=1";
 
         JsonObjectRequest request = new JsonObjectRequest(Request.Method.GET, url, null,
                 response -> {
@@ -1181,11 +1189,12 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
 
                         applyMedicationFilter();
                         // Only prune orphaned reminder plans when we know we hold EVERY
-                        // medication. The endpoint paginates at 50 and this call sends no
-                        // page/limit, so on a 51st medication `pages` is 2 and pruning would
-                        // wipe reminders for the ones we never received.
+                        // medication. The request asks for one big page, but if the server
+                        // still reports more than one, pruning would wipe reminders for the
+                        // medications we never received. A MISSING pagination block is not
+                        // proof of a complete list either, so it too must skip the prune.
                         org.json.JSONObject pg = response.optJSONObject("pagination");
-                        boolean completeList = pg == null || pg.optInt("pages", 1) <= 1;
+                        boolean completeList = pg != null && pg.optInt("pages", 2) <= 1;
                         syncRemindersFromMedications(context, completeList);
 
                     } catch (JSONException e) {
@@ -2261,9 +2270,14 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
                 return;
             }
 
-            String customFrequency = customFrequencyInput == null ? ""
+            // Only "Custom" carries a schedule description. Reading the field regardless of
+            // the dropdown sent the text typed before the user switched to e.g. "Weekly", and
+            // the backend stored that stale schedule against the new frequency. iOS sends
+            // nothing unless the frequency is Custom.
+            boolean isCustomFrequency = FREQ_CUSTOM.equalsIgnoreCase(frequency);
+            String customFrequency = (!isCustomFrequency || customFrequencyInput == null) ? ""
                     : customFrequencyInput.getText().toString().trim();
-            if (FREQ_CUSTOM.equalsIgnoreCase(frequency) && customFrequency.isEmpty()) {
+            if (isCustomFrequency && customFrequency.isEmpty()) {
                 if (customFrequencyInput != null) {
                     customFrequencyInput.setError("Describe the custom schedule");
                 }
@@ -2426,6 +2440,13 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
                     Utils.MedicationReminderHelper.removeForMedication(context, medication.getServerId());
                     medication.setEndDate(today);
                     medication.setActive(false);
+                    // The server APPENDS "\n\nDiscontinued: <reason>" to notes and returns the
+                    // updated document. Without copying it back, the model keeps the pre-append
+                    // text and the next edit-save (notes are always sent) wipes the reason.
+                    JSONObject discontinuedMed = response.optJSONObject("medication");
+                    if (discontinuedMed != null && discontinuedMed.has("notes")) {
+                        medication.setNotes(discontinuedMed.optString("notes", ""));
+                    }
                     if (medicationsAdapter != null) {
                         medicationsAdapter.notifyItemChanged(position);
                     }
@@ -2802,8 +2823,14 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
             loadMedications();
         }
 
-        // Show success message
-        Utilities.toast(requireContext(), "Medication updated successfully");
+        // Show success message.
+        // Called from saveMedicationToAPI's async success listener: closing the Medications
+        // panel while the save is in flight detaches the fragment, and requireContext() then
+        // throws IllegalStateException. Same null-checked getContext() as the callers.
+        Context ctx = getContext();
+        if (ctx != null) {
+            Utilities.toast(ctx, "Medication updated successfully");
+        }
     }
 
     private void showDeleteConfirmDialog(MedicalData data, int position) {
@@ -3111,7 +3138,21 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
                         if ("processed".equals(status)) {
                             if (progress != null) progress.hide();
                             stopPoll(reportId);
-                            if (foreground) showAnalysisDialog(target, false);
+                            // stopPoll only frees the de-dup registry; it cannot cancel this
+                            // chain, so a poll started from the reports sheet keeps running for
+                            // minutes after the sheet is closed. Present the result only while
+                            // that sheet is still open — otherwise the dialog lands on top of
+                            // whatever the user navigated to.
+                            if (foreground && medicalReportsPanel != null && medicalReportsPanel.isShowing()) {
+                                showAnalysisDialog(target, false);
+                            } else if (foreground) {
+                                // Sheet already closed: say the result is ready rather than
+                                // finishing in silence after the user sat through a spinner.
+                                Context pollCtx = getContext();
+                                if (pollCtx != null) {
+                                    Utilities.toast(pollCtx, "Analysis ready — open Medical Reports to view it");
+                                }
+                            }
                         } else if ("failed".equals(status)) {
                             if (progress != null) progress.hide();
                             stopPoll(reportId);
@@ -3441,18 +3482,27 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         attachBulletList(view, R.id.report_lifestyle_card, R.id.report_lifestyle_container,
                 trustworthy ? file.getLifestyleAdvice() : null);
 
-        // Empty state — only when trustworthy AND nothing to show AND no banner
-        // The chips live inside the hero now, so they have to count: a report with
-        // a risk level and nothing else would otherwise have them computed, set
-        // visible, and then hidden along with their parent.
-        boolean anyContent = summaryCard.getVisibility() == View.VISIBLE
+        // Two different questions, so two predicates.
+        // The hero's wash and border only make sense when the hero itself holds something,
+        // and only the chips, banner, summary and opinion live inside it — counting the
+        // cards BELOW it left a teal-washed, bordered box holding just a name and a date
+        // for a report whose only analysis was, say, key findings.
+        boolean anyHeroContent = chipsRow.getVisibility() == View.VISIBLE
+                || statusBanner.getVisibility() == View.VISIBLE
+                || summaryCard.getVisibility() == View.VISIBLE
+                || opinionCard.getVisibility() == View.VISIBLE;
+        // "No analysis available yet." is about the whole dialog, so it has to count every
+        // card outside the hero as well — including the three bullet lists, which are made
+        // visible by attachBulletList and were missing here, so the empty text could sit
+        // directly above a populated Recommendations card.
+        boolean anyContent = anyHeroContent
                 || keyFindingsCard.getVisibility() == View.VISIBLE
-                || opinionCard.getVisibility() == View.VISIBLE
                 || detailedCard.getVisibility() == View.VISIBLE
                 || conditionsCard.getVisibility() == View.VISIBLE
-                || statusBanner.getVisibility() == View.VISIBLE
-                || chipsRow.getVisibility() == View.VISIBLE;
-        if (!anyContent) {
+                || view.findViewById(R.id.report_recommendations_card).getVisibility() == View.VISIBLE
+                || view.findViewById(R.id.report_followup_card).getVisibility() == View.VISIBLE
+                || view.findViewById(R.id.report_lifestyle_card).getVisibility() == View.VISIBLE;
+        if (!anyHeroContent) {
             // Flatten the hero rather than hide it. Hiding took the report's type,
             // file name and date with it, leaving a dialog that said only "No
             // analysis available yet" about a report it never named. Stripping the
@@ -3461,6 +3511,8 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
                     view.findViewById(R.id.report_hero_card);
             hero.setCardBackgroundColor(android.graphics.Color.TRANSPARENT);
             hero.setStrokeWidth(0);
+        }
+        if (!anyContent) {
             view.findViewById(R.id.report_empty_text).setVisibility(View.VISIBLE);
         }
 
@@ -4140,9 +4192,14 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
                 return;
             }
 
-            String customFrequency = customFrequencyInput == null ? ""
+            // Only "Custom" carries a schedule description. Reading the field regardless of
+            // the dropdown sent the text typed before the user switched to e.g. "Weekly", and
+            // the backend stored that stale schedule against the new frequency. iOS sends
+            // nothing unless the frequency is Custom.
+            boolean isCustomFrequency = FREQ_CUSTOM.equalsIgnoreCase(frequency);
+            String customFrequency = (!isCustomFrequency || customFrequencyInput == null) ? ""
                     : customFrequencyInput.getText().toString().trim();
-            if (FREQ_CUSTOM.equalsIgnoreCase(frequency) && customFrequency.isEmpty()) {
+            if (isCustomFrequency && customFrequency.isEmpty()) {
                 if (customFrequencyInput != null) {
                     customFrequencyInput.setError("Describe the custom schedule");
                 }
@@ -4396,6 +4453,20 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
                         existingMedication.setCustomFrequency(customFrequency == null ? "" : customFrequency);
                         existingMedication.setActive(isStillTaking);
                         existingMedication.setNotes(notes);
+                        // purpose/prescribedBy are always sent (clear means clear), so the local
+                        // copy has to follow: without this, clearing one cleared it server-side
+                        // while the row and the next Edit still showed the old value — and the
+                        // following save wrote it straight back.
+                        existingMedication.setPurpose(purpose == null ? "" : purpose);
+                        existingMedication.setPrescribedBy(prescribedBy == null ? "" : prescribedBy);
+                        // The two dropdowns are only sent when non-empty (see request body), so
+                        // only mirror them when they were actually sent.
+                        if (medicationType != null && !medicationType.isEmpty()) {
+                            existingMedication.setMedicationType(medicationType);
+                        }
+                        if (administrationMethod != null && !administrationMethod.isEmpty()) {
+                            existingMedication.setAdministrationMethod(administrationMethod);
+                        }
                         existingMedication.setShareWithFamily(shareWithFamily);
                         existingMedication.setRemindersEnabled(remindersEnabled);
                         java.util.List<Integer> updDays = new ArrayList<>();
@@ -4642,31 +4713,39 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
     private void buildWeekdayChips(ReminderUiState st) {
         st.chipGroupDays.removeAllViews();
         float density = getResources().getDisplayMetrics().density;
+        // State-aware colours. These used to be single-value ColorStateLists, so a chip
+        // looked identical checked and unchecked — the user had to pick exactly two days
+        // with no way to see which two were picked. Selected = filled teal (matching the
+        // iOS weekday capsule); unselected = the dim background with a teal outline.
+        // Identical for all seven chips, so they are built once instead of per iteration.
+        int accent    = ContextCompat.getColor(requireContext(), R.color.rh_accent);
+        int accentDim = ContextCompat.getColor(requireContext(), R.color.rh_accent_dim);
+        int textDim   = ContextCompat.getColor(requireContext(), R.color.rh_text_secondary);
+        int[][] states = new int[][]{
+                new int[]{ android.R.attr.state_checked },
+                new int[]{ -android.R.attr.state_checked }
+        };
+        android.content.res.ColorStateList chipBackground =
+                new android.content.res.ColorStateList(states, new int[]{ accent, accentDim });
+        android.content.res.ColorStateList chipStroke =
+                new android.content.res.ColorStateList(states, new int[]{ accent, accent });
+        android.content.res.ColorStateList chipText =
+                new android.content.res.ColorStateList(states, new int[]{ Color.WHITE, textDim });
         for (int i = 0; i < 7; i++) {
             Chip chip = new Chip(requireContext());
             chip.setText(WEEKDAY_LABELS[i]);
             chip.setTag(i);
             chip.setCheckable(true);
-            // State-aware colours. These used to be single-value ColorStateLists, so a chip
-            // looked identical checked and unchecked — the user had to pick exactly two days
-            // with no way to see which two were picked. Selected = filled teal (matching the
-            // iOS weekday capsule); unselected = the dim background with a teal outline.
-            int accent    = ContextCompat.getColor(requireContext(), R.color.rh_accent);
-            int accentDim = ContextCompat.getColor(requireContext(), R.color.rh_accent_dim);
-            int[][] states = new int[][]{
-                    new int[]{ android.R.attr.state_checked },
-                    new int[]{ -android.R.attr.state_checked }
-            };
-            chip.setChipBackgroundColor(new android.content.res.ColorStateList(
-                    states, new int[]{ accent, accentDim }));
-            chip.setChipStrokeColor(new android.content.res.ColorStateList(
-                    states, new int[]{ accent, accent }));
-            chip.setTextColor(new android.content.res.ColorStateList(
-                    states, new int[]{ Color.WHITE, ContextCompat.getColor(requireContext(), R.color.rh_text_secondary) }));
+            chip.setChipBackgroundColor(chipBackground);
+            chip.setChipStrokeColor(chipStroke);
+            chip.setTextColor(chipText);
             chip.setChipStrokeWidth(density);
-            // Belt and braces for the colour cue: a tick on the selected chips.
-            chip.setCheckedIconVisible(true);
-            chip.setCheckedIconTint(android.content.res.ColorStateList.valueOf(Color.WHITE));
+            // No checked icon: it widens only the checked chip, so the seven-chip row
+            // rewraps and unrelated chips jump while the user picks their two days. The
+            // state-aware colours above already show what is selected. Set explicitly —
+            // the default Chip.Action style turns the checked icon ON, so simply not
+            // asking for it is not enough.
+            chip.setCheckedIconVisible(false);
             st.chipGroupDays.addView(chip);
         }
     }

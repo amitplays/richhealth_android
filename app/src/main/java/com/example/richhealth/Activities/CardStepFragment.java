@@ -57,6 +57,27 @@ public class CardStepFragment extends BaseOnboardingFragment {
     private final List<View> animTargets = new ArrayList<>();
     // Per-section views, for in-step conditional visibility (visibleWhen).
     private final List<List<View>> sectionViews = new ArrayList<>();
+    // Answers, kept across a view rebuild. OnboardingActivity uses
+    // FragmentTransaction.replace on persistent fragment instances, so stepping Back and
+    // forward reruns onCreateView and every adapter and slider is constructed empty — the
+    // user's taps on this step were simply gone.
+    //
+    // Snapshotted from the views themselves rather than read back out of OnboardingData,
+    // for two reasons: handleBack() never calls collectData(), so a Back press never
+    // reaches OnboardingData at all; and OnboardingData ships real values as defaults
+    // (activityLevel 2 IS "Light Activity", dietType "Regular" IS "Everything"), so
+    // restoring from it would light a card on a first visit and satisfy a required
+    // section the user never answered.
+    private final List<List<Object>> savedSelections = new ArrayList<>();
+    private final List<Float> savedSliderValues = new ArrayList<>();
+    // Section titles at snapshot time. Steps 16/18/21 are rebuilt per fetch
+    // (buildSmokingDetailConfig / buildConditionDetailConfig / buildFamilyRelativesConfig)
+    // and emit one identically-shaped section PER selected condition, with the same slider
+    // spec and the same Yes/Some/No option values. Matching on section count alone would
+    // therefore happily restore the Diabetes answers onto Asthma after the user went back
+    // and changed which conditions they picked. The condition name is in the title, so
+    // comparing titles is what actually detects that.
+    private final List<String> savedSectionTitles = new ArrayList<>();
 
     public static CardStepFragment newInstance(int stepIndex) {
         CardStepFragment f = new CardStepFragment();
@@ -72,6 +93,9 @@ public class CardStepFragment extends BaseOnboardingFragment {
                              @Nullable Bundle savedInstanceState) {
         int stepIndex = getArguments() != null ? getArguments().getInt(ARG_STEP_INDEX) : 0;
         config = hostActivity.getCardStepConfig(stepIndex);
+        // Only restore into a step whose shape still matches the snapshot; otherwise the
+        // snapshot is discarded rather than applied to the wrong sections.
+        final boolean canRestore = snapshotMatches();
         adapters.clear();
         sliders.clear();
         animTargets.clear();
@@ -223,6 +247,16 @@ public class CardStepFragment extends BaseOnboardingFragment {
                 slider.setStepSize(spec.stepSize);
                 slider.setValue(spec.defaultValue);
 
+                if (canRestore) {
+                    Float prev = savedSliderValues.get(adapters.size());
+                    // Range AND step alignment: Slider.setValue throws for either, and a
+                    // rebuilt config can legitimately have moved the bounds.
+                    if (prev != null && prev >= spec.valueFrom && prev <= spec.valueTo
+                            && isOnStep(prev, spec.valueFrom, spec.stepSize)) {
+                        slider.setValue(prev);
+                    }
+                }
+
                 Runnable updateLabel = () -> {
                     float v = slider.getValue();
                     String num = (spec.stepSize < 1f && v != Math.round(v))
@@ -273,6 +307,10 @@ public class CardStepFragment extends BaseOnboardingFragment {
             }
             adapters.add(adapter);
             sliders.add(null);
+            if (canRestore) {
+                List<Object> prev = savedSelections.get(adapters.size() - 1);
+                if (prev != null && !prev.isEmpty()) adapter.setSelectedValues(prev);
+            }
             rv.setAdapter(adapter);
 
             content.addView(rv);
@@ -319,6 +357,43 @@ public class CardStepFragment extends BaseOnboardingFragment {
         });
 
         return scroll;
+    }
+
+    @Override
+    public void onDestroyView() {
+        // Take the snapshot before the views go away; onCreateView reads it back.
+        savedSelections.clear();
+        savedSliderValues.clear();
+        savedSectionTitles.clear();
+        for (int i = 0; i < adapters.size(); i++) {
+            SelectableCardAdapter a = adapters.get(i);
+            savedSelections.add(a != null ? a.getSelectedValues() : null);
+            savedSliderValues.add(sliders.get(i) != null ? sliders.get(i).getValue() : null);
+            savedSectionTitles.add(config.sections.get(i).sectionTitle);
+        }
+        super.onDestroyView();
+    }
+
+    /** Does the snapshot describe the step we are about to build, section for section? */
+    private boolean snapshotMatches() {
+        int n = config.sections.size();
+        if (savedSelections.size() != n || savedSliderValues.size() != n
+                || savedSectionTitles.size() != n) {
+            return false;
+        }
+        for (int i = 0; i < n; i++) {
+            String was = savedSectionTitles.get(i);
+            String now = config.sections.get(i).sectionTitle;
+            if (was == null ? now != null : !was.equals(now)) return false;
+        }
+        return true;
+    }
+
+    /** True when v sits exactly on one of the slider's steps. */
+    private static boolean isOnStep(float v, float from, float step) {
+        if (step <= 0f) return true;
+        float steps = (v - from) / step;
+        return Math.abs(steps - Math.round(steps)) < 1e-4f;
     }
 
     /** Is section i currently shown (its gating answer, if any, matches)? */

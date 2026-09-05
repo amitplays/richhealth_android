@@ -55,6 +55,61 @@ public class OnboardingPersonalFragment extends BaseOnboardingFragment {
     private static final int REQ_LOCATION = 7301;
     private Date selectedDob = null;
     private static final SimpleDateFormat DISPLAY_FMT = new SimpleDateFormat("MMMM d, yyyy", Locale.getDefault());
+    private static final int MIN_AGE_YEARS = 10;
+
+    /**
+     * Newest date of birth that still clears the minimum age, expressed as the picker's
+     * UTC midnight so it can be compared against a selection directly. Used both to
+     * constrain the picker and to re-check a stored value in validate() — the picker
+     * constraint alone only governs what the calendar OPENS on.
+     *
+     * The birthday is worked out from the user's LOCAL today, then converted. Deriving it
+     * from UTC "today" instead just moves the off-by-one: for the hours when UTC is still
+     * on yesterday's date (any zone ahead of UTC), a user turning exactly MIN_AGE_YEARS
+     * today was told they were too young and could not even select their real birthday.
+     */
+    private static long maxDobMillis() {
+        java.util.Calendar cutoff = java.util.Calendar.getInstance();
+        cutoff.add(java.util.Calendar.YEAR, -MIN_AGE_YEARS);
+        return utcDayFrom(cutoff.getTime());
+    }
+
+    /**
+     * MaterialDatePicker hands back UTC midnight of the chosen day, but everything
+     * downstream — DISPLAY_FMT here, the "yyyy-MM-dd" signup payload in
+     * OnboardingActivity, and ProfileFragment's formatters — reads it in the device
+     * timezone. West of UTC that printed and SENT the day before the one the user tapped.
+     * Re-anchoring to local midnight of the same calendar day at the source keeps every
+     * one of those readers correct without changing any of them.
+     */
+    private static Date localDayFrom(long utcMillis) {
+        java.util.Calendar utc = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"));
+        utc.setTimeInMillis(utcMillis);
+        java.util.Calendar local = java.util.Calendar.getInstance();
+        local.clear();
+        local.set(utc.get(java.util.Calendar.YEAR),
+                  utc.get(java.util.Calendar.MONTH),
+                  utc.get(java.util.Calendar.DAY_OF_MONTH));
+        return local.getTime();
+    }
+
+    /**
+     * Inverse of {@link #localDayFrom(long)} — the picker's UTC midnight for the same
+     * calendar day. Needed whenever a stored DOB is handed BACK to the picker or compared
+     * against {@link #maxDobMillis()}: those live in UTC-midnight space, and comparing a
+     * local midnight against them is off by the UTC offset, which would reject a
+     * legitimate "exactly MIN_AGE_YEARS ago" birthday west of UTC.
+     */
+    private static long utcDayFrom(Date localDay) {
+        java.util.Calendar local = java.util.Calendar.getInstance();
+        local.setTime(localDay);
+        java.util.Calendar utc = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"));
+        utc.clear();
+        utc.set(local.get(java.util.Calendar.YEAR),
+                local.get(java.util.Calendar.MONTH),
+                local.get(java.util.Calendar.DAY_OF_MONTH));
+        return utc.getTimeInMillis();
+    }
 
     @Nullable
     @Override
@@ -136,37 +191,36 @@ public class OnboardingPersonalFragment extends BaseOnboardingFragment {
     }
 
     private void showDatePicker() {
-        // Minimum age 10, same cap the iOS picker uses. DateValidatorPointBackward.now()
-        // allowed today's date, i.e. an age of 0.
-        // UTC + zeroed time: the grid's cells are UTC midnights, so a local-zone cap with
-        // a time-of-day made the "exactly 10 years ago" cell unselectable for part of the
-        // day in zones ahead of UTC.
-        java.util.Calendar maxDob = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"));
-        maxDob.add(java.util.Calendar.YEAR, -10);
-        maxDob.set(java.util.Calendar.HOUR_OF_DAY, 0);
-        maxDob.set(java.util.Calendar.MINUTE, 0);
-        maxDob.set(java.util.Calendar.SECOND, 0);
-        maxDob.set(java.util.Calendar.MILLISECOND, 0);
-        final long maxDobMillis = maxDob.getTimeInMillis();
+        // Minimum age MIN_AGE_YEARS, same cap the iOS picker uses.
+        // DateValidatorPointBackward.now() allowed today's date, i.e. an age of 0.
+        final long maxDobMillis = maxDobMillis();
 
-        CalendarConstraints constraints = new CalendarConstraints.Builder()
+        CalendarConstraints.Builder constraints = new CalendarConstraints.Builder()
                 .setEnd(maxDobMillis)
-                .setValidator(DateValidatorPointBackward.before(maxDobMillis))
-                .build();
+                .setValidator(DateValidatorPointBackward.before(maxDobMillis));
 
-        MaterialDatePicker<Long> picker = MaterialDatePicker.Builder.datePicker()
-                .setTitleText("Select your date of birth")
-                .setCalendarConstraints(constraints)
-                // Explicit, and clamped: the default selection is today (now out of range),
-                // and a DOB saved before this cap existed would open the calendar at
-                // January 1900 and could be re-confirmed while still under age.
-                .setSelection(selectedDob != null && selectedDob.getTime() <= maxDobMillis
-                        ? selectedDob.getTime()
-                        : maxDobMillis)
+        MaterialDatePicker.Builder<Long> builder = MaterialDatePicker.Builder.datePicker()
+                .setTitleText("Select your date of birth");
+
+        if (selectedDob != null) {
+            // Returning to this step: re-select their answer, clamped — a DOB saved before
+            // this cap existed would otherwise open the calendar at January 1900.
+            builder.setSelection(Math.min(utcDayFrom(selectedDob), maxDobMillis));
+        } else {
+            // First time here: open on the newest allowed month but create NO selection, so
+            // the confirm button stays DISABLED until the user actually picks a day.
+            // Setting a selection unconditionally (as this did) pre-picked "exactly
+            // MIN_AGE_YEARS ago" and enabled OK, so one stray tap recorded that as a real
+            // date of birth and walked straight past the "Please select..." guard below.
+            constraints.setOpenAt(maxDobMillis);
+        }
+
+        MaterialDatePicker<Long> picker = builder
+                .setCalendarConstraints(constraints.build())
                 .build();
 
         picker.addOnPositiveButtonClickListener(selection -> {
-            selectedDob = new Date(selection);
+            selectedDob = localDayFrom(selection);
             tvDobDisplay.setText(DISPLAY_FMT.format(selectedDob));
             tvDobDisplay.setTextColor(0xFFFFFFFF);
         });
@@ -178,6 +232,13 @@ public class OnboardingPersonalFragment extends BaseOnboardingFragment {
     public boolean validate() {
         if (selectedDob == null) {
             Utilities.toast(getContext(), "Please select your date of birth");
+            return false;
+        }
+        // The picker constraint only governs what the calendar opens on. A DOB stored
+        // before that cap existed survives untouched if the user just hits Cancel, so it
+        // has to be rejected here too.
+        if (utcDayFrom(selectedDob) > maxDobMillis()) {
+            Utilities.toast(getContext(), "You must be at least " + MIN_AGE_YEARS + " years old");
             return false;
         }
         if (!genderAdapter.hasSelection()) {

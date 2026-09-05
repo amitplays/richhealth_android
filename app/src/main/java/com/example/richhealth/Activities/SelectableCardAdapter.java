@@ -148,14 +148,32 @@ public class SelectableCardAdapter extends RecyclerView.Adapter<SelectableCardAd
      */
     public void setSelectedValue(Object value) {
         if (value == null) return;
-        for (int i = 0; i < options.size(); i++) {
-            if (value.equals(valueFor(options.get(i)))) {
-                if (!multiSelect) selectedPositions.clear();
-                selectedPositions.add(i);
-                notifyDataSetChanged();
-                return;
+        setSelectedValues(java.util.Collections.singletonList(value));
+    }
+
+    /**
+     * Restore a whole selection, for multi-select sections. Counterpart to
+     * {@link #getSelectedValues()}. Replaces the current selection rather than adding to
+     * it, so a restore can never leave a stale card lit; values with no matching option
+     * (an options list rebuilt since the snapshot) are simply skipped. Like
+     * setSelectedValue this does NOT fire the selection listener — restoring is not a
+     * user action.
+     */
+    public void setSelectedValues(List<?> values) {
+        if (values == null) return;
+        selectedPositions.clear();
+        for (Object value : values) {
+            if (value == null) continue;
+            for (int i = 0; i < options.size(); i++) {
+                if (value.equals(valueFor(options.get(i)))) {
+                    selectedPositions.add(i);
+                    // Single-select sections hold at most one, so stop at the first match.
+                    if (!multiSelect) { notifyDataSetChanged(); return; }
+                    break;
+                }
             }
         }
+        notifyDataSetChanged();
     }
 
     public boolean hasSelection() {
