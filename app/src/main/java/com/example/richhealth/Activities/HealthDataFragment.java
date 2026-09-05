@@ -1465,6 +1465,11 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
                                 relationship.setProSource(relationshipObj.optString("proSource", "none"));
                                 relationship.setPlan(relationshipObj.optString("plan", ""));
                                 relationship.setCoveredByMyPlan(relationshipObj.optBoolean("isCoveredByMyPlan", false));
+                                // "dependent" | "guardian" | absent/null. Only accepted
+                                // relatives ever carry it; optString(...,null) keeps null
+                                // (rather than "null"/"") for everyone else.
+                                relationship.setDependency(relationshipObj.isNull("dependency")
+                                        ? null : relationshipObj.optString("dependency", null));
 
                                 Log.d(TAG, "Adding relationship: " + relationship.getEmail());
                                 familyRelationships.add(relationship);
@@ -5110,6 +5115,9 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
                             relationship.setProSource(relationshipObj.optString("proSource", "none"));
                             relationship.setPlan(relationshipObj.optString("plan", ""));
                             relationship.setCoveredByMyPlan(relationshipObj.optBoolean("isCoveredByMyPlan", false));
+                            // Same guardian-layer field as the panel fetch above.
+                            relationship.setDependency(relationshipObj.isNull("dependency")
+                                    ? null : relationshipObj.optString("dependency", null));
 
                             familyRelationships.add(relationship);
                         }
@@ -5362,6 +5370,111 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
                     ApiConfig.logRestCall(url, false, error.toString());
                     Log.e(TAG, "Error deleting relationship", error);
                     String errorMsg = "Failed to remove member";
+                    if (error.networkResponse != null && error.networkResponse.data != null) {
+                        try {
+                            JSONObject errJson = new JSONObject(new String(error.networkResponse.data, StandardCharsets.UTF_8));
+                            if (errJson.has("message")) errorMsg = errJson.getString("message");
+                        } catch (Exception ignored) {}
+                    }
+                    Utilities.toast(requireContext(), errorMsg);
+                }
+        ) {
+            @Override
+            public String getBodyContentType() {
+                return "application/json; charset=utf-8";
+            }
+
+            @Override
+            public byte[] getBody() {
+                return requestBody.toString().getBytes(StandardCharsets.UTF_8);
+            }
+
+            @Override
+            public Map<String, String> getHeaders() throws AuthFailureError {
+                Map<String, String> headers = new HashMap<>();
+                headers.put("Authorization", "Bearer " + token);
+                return headers;
+            }
+        };
+
+        Volley.newRequestQueue(context).add(request);
+    }
+
+    /**
+     * Either side of a dependency may end it, and both need to be told the same thing up
+     * front: this removes ONLY the guardian layer. Deliberately not folded into
+     * confirmDeleteRelationship — that one deletes the family connection outright and
+     * revokes family-Pro coverage, which is exactly what this must not do.
+     */
+    private void confirmRemoveDependency(UserProfile.RelationshipRequest relationship, int position) {
+        String displayName = relationship.getName();
+        if (displayName == null || displayName.isEmpty()) displayName = relationship.getEmail();
+
+        boolean relativeIsMyDependent = "dependent".equalsIgnoreCase(relationship.getDependency());
+        String detail = relativeIsMyDependent
+                ? displayName + " will no longer be listed as your dependent."
+                : displayName + " will no longer be listed as your guardian.";
+
+        Utils.DialogUtils.showConfirmDialog(requireContext(),
+                "Remove Dependency",
+                detail + "\n\nYou stay connected as family — the connection itself, and any "
+                        + "pro plan coverage, are not affected. Only the dependency ends, "
+                        + "for both of you.",
+                "Remove Dependency", "Cancel", true,
+                () -> removeDependency(relationship, position));
+    }
+
+    /**
+     * POST /api/user/relationship/dependency/remove — clears the dependency on BOTH sides
+     * and keeps the family relationship. The row therefore stays; only its guardian layer
+     * is refreshed away.
+     */
+    private void removeDependency(UserProfile.RelationshipRequest relationship, int position) {
+        Context context = getContext();
+        if (context == null || relationship == null) return;
+        final String relativeUserId = relationship.getUserId();
+        if (relativeUserId == null || relativeUserId.isEmpty()) return;
+
+        TokenManager tokenManager = TokenManager.getInstance(context);
+        String token = tokenManager.getToken();
+        if (token == null) {
+            Utilities.toast(context, "Authentication error");
+            return;
+        }
+
+        String url = ApiConfig.BASE_URL + "/api/user/relationship/dependency/remove";
+
+        JSONObject requestBody = new JSONObject();
+        try {
+            requestBody.put("relativeUserId", relativeUserId);
+        } catch (JSONException e) {
+            Log.e(TAG, "Error creating remove-dependency request body", e);
+            return;
+        }
+
+        StringRequest request = new StringRequest(Request.Method.POST, url,
+                response -> {
+                    ApiConfig.logRestCall(url, true, "Dependency removed");
+                    String msg = "Dependency removed. You are still connected as family.";
+                    try {
+                        JSONObject json = new JSONObject(response);
+                        if (json.has("message")) msg = json.getString("message");
+                    } catch (Exception ignored) {}
+                    Utilities.toast(requireContext(), msg);
+                    // Re-bind by identity rather than by the captured position: the list can
+                    // have been refetched (and reordered) while the dialog was open.
+                    relationship.setDependency(null);
+                    int index = familyRelationships.indexOf(relationship);
+                    if (index >= 0) {
+                        relationshipAdapter.notifyItemChanged(index);
+                    } else {
+                        relationshipAdapter.notifyDataSetChanged();
+                    }
+                },
+                error -> {
+                    ApiConfig.logRestCall(url, false, error.toString());
+                    Log.e(TAG, "Error removing dependency", error);
+                    String errorMsg = "Failed to remove dependency";
                     if (error.networkResponse != null && error.networkResponse.data != null) {
                         try {
                             JSONObject errJson = new JSONObject(new String(error.networkResponse.data, StandardCharsets.UTF_8));
@@ -6053,6 +6166,25 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
 
             boolean isDependent = "dependent".equals(status);
 
+            // Guardian layer (2026-09). Carried by /api/users/relationships on ACCEPTED
+            // relatives and completely independent of `status` — it is NOT the same thing
+            // as the synthetic "dependent" status above, which belongs to the older
+            // profile-only dependent records fetched by fetchDependentUsers().
+            //   "dependent" → this relative is someone I look after
+            //   "guardian"  → this relative looks after me
+            boolean hasCareLink = "accepted".equals(status) && relationship.hasDependency();
+            boolean relativeIsMyDependent =
+                    hasCareLink && "dependent".equalsIgnoreCase(relationship.getDependency());
+
+            // Spell the direction out under the name. The plain relationship label
+            // ("Son") does not say who looks after whom, and getting that backwards is
+            // the one thing a guardian must not have to guess. Rows without the layer
+            // keep the untouched label set above.
+            if (hasCareLink) {
+                holder.relationshipText.setText(relationship.getRelationship()
+                        + (relativeIsMyDependent ? " · your dependent" : " · your guardian"));
+            }
+
             // Status icon
             if (isDependent) {
                 holder.statusIcon.setImageResource(R.drawable.ic_person);
@@ -6088,6 +6220,18 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
             } else {
                 holder.statusChip.setText(status != null ? status.toUpperCase() : "UNKNOWN");
                 holder.statusChip.setChipBackgroundColorResource(android.R.color.darker_gray);
+            }
+
+            // Guardian layer supersedes the plain "CONNECTED" chip. Applied as an override
+            // AFTER the chain above so none of the existing branches change for a row that
+            // has no dependency. "CARE LINK" on purpose: it is one label for both sides
+            // (the direction is spelled out under the name), and it can collide neither
+            // with "CONNECTED"/"PENDING" nor with the synthetic-dependent branch, which
+            // prints the relationship label itself and could well read "DEPENDENT".
+            if (hasCareLink) {
+                holder.statusChip.setText("CARE LINK");
+                holder.statusChip.setChipBackgroundColor(
+                        android.content.res.ColorStateList.valueOf(0xFF7E57C2));
             }
 
             // Badges
@@ -6165,6 +6309,21 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
                 holder.removeButton.setVisibility(View.GONE);
                 holder.cancelRequestButton.setVisibility(View.GONE);
             }
+
+            // "Remove dependency" — its own row, so the edit / remove / Pro-seat controls
+            // decided above are untouched. Offered to BOTH sides (guardian and dependent):
+            // the endpoint clears the flag on both, and either of them may outgrow it.
+            if (hasCareLink) {
+                holder.dependencyActionsRow.setVisibility(View.VISIBLE);
+                holder.removeDependencyButton.setOnClickListener(v -> {
+                    if (relationship.getUserId() != null && !relationship.getUserId().isEmpty()) {
+                        confirmRemoveDependency(relationship, position);
+                    }
+                });
+            } else {
+                holder.dependencyActionsRow.setVisibility(View.GONE);
+                holder.removeDependencyButton.setOnClickListener(null);
+            }
         }
 
         @Override
@@ -6180,6 +6339,8 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
             LinearLayout actionButtonsContainer, mainActionsRow;
             MaterialButton addToProButton, removeFromProButton;
             MaterialButton editButton, removeButton, cancelRequestButton;
+            LinearLayout dependencyActionsRow;
+            MaterialButton removeDependencyButton;
 
             public RelationshipViewHolder(@NonNull View itemView) {
                 super(itemView);
@@ -6198,6 +6359,8 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
                 editButton = itemView.findViewById(R.id.edit_button);
                 removeButton = itemView.findViewById(R.id.remove_button);
                 cancelRequestButton = itemView.findViewById(R.id.cancel_request_button);
+                dependencyActionsRow = itemView.findViewById(R.id.dependency_actions_row);
+                removeDependencyButton = itemView.findViewById(R.id.remove_dependency_button);
             }
         }
     }

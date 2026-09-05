@@ -55,6 +55,10 @@ public class OnboardingPersonalFragment extends BaseOnboardingFragment {
     private static final int REQ_LOCATION = 7301;
     private Date selectedDob = null;
     private static final SimpleDateFormat DISPLAY_FMT = new SimpleDateFormat("MMMM d, yyyy", Locale.getDefault());
+    // NO LONGER APPLIED. The minimum-age floor was removed (2026-09): an account may now
+    // be created for someone of any age — a newborn included — because a guardian can sign
+    // up on their behalf from the account step. Kept, together with maxDobMillis(), so the
+    // reasoning behind the UTC/local handling below stays readable; nothing calls them.
     private static final int MIN_AGE_YEARS = 10;
 
     /**
@@ -67,11 +71,26 @@ public class OnboardingPersonalFragment extends BaseOnboardingFragment {
      * from UTC "today" instead just moves the off-by-one: for the hours when UTC is still
      * on yesterday's date (any zone ahead of UTC), a user turning exactly MIN_AGE_YEARS
      * today was told they were too young and could not even select their real birthday.
+     *
+     * Superseded by {@link #latestDobMillis()} — see the note on MIN_AGE_YEARS.
      */
     private static long maxDobMillis() {
         java.util.Calendar cutoff = java.util.Calendar.getInstance();
         cutoff.add(java.util.Calendar.YEAR, -MIN_AGE_YEARS);
         return utcDayFrom(cutoff.getTime());
+    }
+
+    /**
+     * Newest selectable date of birth now that there is no age floor: LOCAL today, in the
+     * picker's UTC-midnight space. Only the future is excluded.
+     *
+     * Derived from local today for the same reason maxDobMillis() was, and deliberately
+     * used with DateValidatorPointBackward.before() (which is inclusive) rather than
+     * .now(): east of UTC, local today's UTC midnight is still in the future against the
+     * wall clock, and .now() would refuse a baby born today.
+     */
+    private static long latestDobMillis() {
+        return utcDayFrom(new Date());
     }
 
     /**
@@ -191,9 +210,10 @@ public class OnboardingPersonalFragment extends BaseOnboardingFragment {
     }
 
     private void showDatePicker() {
-        // Minimum age MIN_AGE_YEARS, same cap the iOS picker uses.
-        // DateValidatorPointBackward.now() allowed today's date, i.e. an age of 0.
-        final long maxDobMillis = maxDobMillis();
+        // No age floor any more — the only bound left is "not in the future", so the cap is
+        // today rather than "MIN_AGE_YEARS ago". Everything else about this method is
+        // unchanged on purpose: both bugs fixed here previously still have to stay fixed.
+        final long maxDobMillis = latestDobMillis();
 
         CalendarConstraints.Builder constraints = new CalendarConstraints.Builder()
                 .setEnd(maxDobMillis)
@@ -209,8 +229,8 @@ public class OnboardingPersonalFragment extends BaseOnboardingFragment {
         } else {
             // First time here: open on the newest allowed month but create NO selection, so
             // the confirm button stays DISABLED until the user actually picks a day.
-            // Setting a selection unconditionally (as this did) pre-picked "exactly
-            // MIN_AGE_YEARS ago" and enabled OK, so one stray tap recorded that as a real
+            // Setting a selection unconditionally (as this did) pre-picked the newest
+            // allowed date and enabled OK, so one stray tap recorded that as a real
             // date of birth and walked straight past the "Please select..." guard below.
             constraints.setOpenAt(maxDobMillis);
         }
@@ -234,13 +254,9 @@ public class OnboardingPersonalFragment extends BaseOnboardingFragment {
             Utilities.toast(getContext(), "Please select your date of birth");
             return false;
         }
-        // The picker constraint only governs what the calendar opens on. A DOB stored
-        // before that cap existed survives untouched if the user just hits Cancel, so it
-        // has to be rejected here too.
-        if (utcDayFrom(selectedDob) > maxDobMillis()) {
-            Utilities.toast(getContext(), "You must be at least " + MIN_AGE_YEARS + " years old");
-            return false;
-        }
+        // The minimum-age re-check that used to sit here is gone with the floor itself
+        // (2026-09) — any age is allowed now. Only the "required" guard above remains;
+        // a future date is already impossible through the picker's constraint.
         if (!genderAdapter.hasSelection()) {
             Utilities.toast(getContext(), "Please select your gender");
             return false;

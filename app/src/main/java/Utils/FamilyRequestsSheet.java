@@ -31,8 +31,10 @@ import java.util.Map;
  * app's {@link UsageBottomSheet} styling) that lets a user Accept/Reject relatives
  * who invited them to connect. Backend was fully built; there was no reachable UI.
  *
- * Data:  GET  /api/user/relationship/requests  → { incomingRequests: [{email,name,relationship,status}] }
+ * Data:  GET  /api/user/relationship/requests  → { incomingRequests: [{email,name,relationship,status,isDependency}] }
  * Action: POST /api/user/relationship/respond   { email, accept }
+ *         → 403 { message, requiresUpgrade:true } when accepting a dependency the
+ *           accepter's plan has no room for.
  */
 public final class FamilyRequestsSheet {
 
@@ -101,6 +103,11 @@ public final class FamilyRequestsSheet {
         final String email = req.optString("email", "");
         String name = req.optString("name", "");
         String relationship = req.optString("relationship", "");
+        // Raised either by signup ("a parent is creating this account for me") or by an
+        // ordinary request flagged as a dependency. Accepting it makes the sender this
+        // user's DEPENDENT, which is a great deal more than "we are related" — so the row
+        // has to say so before anyone taps Accept.
+        final boolean isDependency = req.optBoolean("isDependency", false);
 
         TextView nameView = card.findViewById(R.id.request_name);
         TextView descView = card.findViewById(R.id.request_description);
@@ -109,9 +116,16 @@ public final class FamilyRequestsSheet {
         final MaterialButton reject = card.findViewById(R.id.reject_button);
 
         nameView.setText(!name.isEmpty() ? name : (!email.isEmpty() ? email : "Someone"));
-        descView.setText(relationship.isEmpty()
-                ? "Wants to connect with you as family"
-                : "Wants to connect as " + relationship);
+        if (isDependency) {
+            descView.setText(relationship.isEmpty()
+                    ? "Wants to be linked to you as your dependent — you would look after their account"
+                    : "Wants to be linked as your " + relationship
+                            + " and your dependent — you would look after their account");
+        } else {
+            descView.setText(relationship.isEmpty()
+                    ? "Wants to connect with you as family"
+                    : "Wants to connect as " + relationship);
+        }
         if (icon != null) icon.setImageResource(R.drawable.ic_family_group);
 
         accept.setOnClickListener(v -> respond(activity, dialog, rows, empty, card,
@@ -151,6 +165,33 @@ public final class FamilyRequestsSheet {
                     ApiConfig.logRestCall(url, false, error.toString());
                     acceptBtn.setEnabled(true);
                     rejectBtn.setEnabled(true);
+                    // Accepting a dependency can come back 403 {message, requiresUpgrade:true}
+                    // when the accepter's plan has no dependent seat left. Same treatment
+                    // AddDependentActivity gives that flag: the app's ProUpgradeDialog with
+                    // the server's own limit text, and the action retried once they upgrade.
+                    String msg = null;
+                    boolean requiresUpgrade = false;
+                    if (error.networkResponse != null && error.networkResponse.data != null) {
+                        try {
+                            JSONObject errJson = new JSONObject(
+                                    new String(error.networkResponse.data, StandardCharsets.UTF_8));
+                            msg = errJson.optString("message", null);
+                            requiresUpgrade = errJson.optBoolean("requiresUpgrade", false);
+                        } catch (Exception ignored) {}
+                    }
+                    if (requiresUpgrade) {
+                        ProUpgradeDialog proDialog = new ProUpgradeDialog(activity);
+                        if (msg != null && !msg.isEmpty()) proDialog.setLimitContext(msg);
+                        proDialog.show(isPro -> {
+                            if (isPro) {
+                                respond(activity, dialog, rows, empty, card, email, accept,
+                                        acceptBtn, rejectBtn, onChanged);
+                            }
+                        });
+                        return;
+                    }
+                    // Every other failure keeps the original wording — only the
+                    // upgrade case above is new.
                     Toast.makeText(activity, "Couldn't update the request. Please try again.",
                             Toast.LENGTH_SHORT).show();
                 }) {

@@ -12,6 +12,18 @@ public class OnboardingData {
     public String confirmPassword = "";
     public String phoneNumber = "";
 
+    // Guardian/dependent signup (asked on the account step). Both stay EMPTY unless the
+    // "I'm creating this for someone else" toggle is on — buildPayload omits the keys
+    // entirely in that case, so an ordinary signup's payload is unchanged.
+    // parentEmail        = the parent/guardian/caretaker's OWN address (must already
+    //                      be a registered account — the server 400s otherwise).
+    // parentRelationship = this NEW account's self-description towards that guardian
+    //                      ("Son"/"Daughter"/"Grandson"/"Granddaughter"), i.e. the same
+    //                      sender-side direction a normal relationship request stores.
+    //                      Do NOT invert it.
+    public String parentEmail = "";
+    public String parentRelationship = "";
+
     // Step: Personal
     public Date dateOfBirth = null;
     public String gender = "";

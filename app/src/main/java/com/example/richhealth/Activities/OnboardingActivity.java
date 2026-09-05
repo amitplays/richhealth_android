@@ -1106,9 +1106,85 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
                     }
                     ApiConfig.logRestCall("/api/auth/check-email", true, "available=" + available);
                     if (available) {
-                        advanceAfterStep(fragmentIndex);
+                        // Own address is free — now confirm the guardian's address (no-op
+                        // when the guardian toggle is off).
+                        checkGuardianEmailThenAdvance(accountFragment, fragmentIndex);
                     } else {
                         accountFragment.setEmailError("Email already registered");
+                    }
+                },
+                error -> {
+                    // Fail open — a backend hiccup shouldn't block onboarding.
+                    checkingEmail = false;
+                    showLoading(false);
+                    ApiConfig.logRestCall("/api/auth/check-email", false, error.toString());
+                    advanceAfterStep(fragmentIndex);
+                }
+        ) {
+            @Override
+            public byte[] getBody() {
+                return body.toString().getBytes(StandardCharsets.UTF_8);
+            }
+
+            @Override
+            public String getBodyContentType() {
+                return "application/json; charset=utf-8";
+            }
+        };
+
+        request.setRetryPolicy(new DefaultRetryPolicy(15000, 0, 1f));
+        Volley.newRequestQueue(this).add(request);
+    }
+
+    /**
+     * Guardian-address guard, layered on the duplicate check above and running only when
+     * the account step's guardian toggle is on (otherwise it advances immediately, so an
+     * ordinary signup makes exactly one network call, as before).
+     *
+     * Same endpoint, opposite reading: /api/auth/check-email answers {available:true} for
+     * an address that is NOT registered, and the guardian MUST already be registered —
+     * signup 400s on an unknown address — so available:true is the failure here.
+     * Fails OPEN on any network or parse error, matching checkEmailThenAdvance: a backend
+     * hiccup must not block onboarding, and signup still rejects a bad address (which
+     * handleSignupError now walks the user back to).
+     */
+    private void checkGuardianEmailThenAdvance(OnboardingAccountFragment accountFragment, int fragmentIndex) {
+        final String guardianEmail = onboardingData.parentEmail;
+        if (guardianEmail == null || guardianEmail.isEmpty()) {
+            advanceAfterStep(fragmentIndex);
+            return;
+        }
+        if (checkingEmail) return; // same double-fire guard as above
+        checkingEmail = true;
+
+        final JSONObject body = new JSONObject();
+        try {
+            body.put("email", Utils.EmailVerificationHelper.normalize(guardianEmail));
+        } catch (JSONException e) {
+            checkingEmail = false;
+            advanceAfterStep(fragmentIndex); // fail open
+            return;
+        }
+
+        showLoading(true);
+        StringRequest request = new StringRequest(
+                Request.Method.POST,
+                ApiConfig.BASE_URL + "/api/auth/check-email",
+                response -> {
+                    checkingEmail = false;
+                    showLoading(false);
+                    boolean available;
+                    try {
+                        available = new JSONObject(response).optBoolean("available", false);
+                    } catch (JSONException e) {
+                        available = false; // fail open on parse error (false = "registered")
+                    }
+                    ApiConfig.logRestCall("/api/auth/check-email", true, "guardian available=" + available);
+                    if (available) {
+                        accountFragment.setParentEmailError(
+                                "No RichHealth account uses that email. Ask them to sign up first.");
+                    } else {
+                        advanceAfterStep(fragmentIndex);
                     }
                 },
                 error -> {
@@ -1595,6 +1671,14 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
 
         p.put("weeklyGoal", 0.5);
 
+        // Guardian link (account step). Added ONLY when the toggle was on: the server
+        // treats a present parentEmail as "make this a dependency request", so an
+        // ordinary signup must not carry the keys at all.
+        if (!d.parentEmail.isEmpty() && !d.parentRelationship.isEmpty()) {
+            p.put("parentEmail", Utils.EmailVerificationHelper.normalize(d.parentEmail));
+            p.put("parentRelationship", d.parentRelationship);
+        }
+
         return p;
     }
 
@@ -1688,6 +1772,12 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
 
     private void handleSignupError(com.android.volley.VolleyError error) {
         String message = "Signup failed. Please try again.";
+        // Guardian-link rejections (400 with errors.parentEmail / errors.parentRelationship).
+        // Unlike errors.email — which is already screened at the account step — these can
+        // only surface here, at the very last step, so the toast alone would leave the user
+        // 20 steps away from the field that is actually wrong.
+        String parentEmailError = null;
+        String parentRelationshipError = null;
         if (error.networkResponse != null) {
             try {
                 String body = new String(error.networkResponse.data, StandardCharsets.UTF_8);
@@ -1697,6 +1787,8 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
                     if (errors.names() != null && errors.names().length() > 0) {
                         message = errors.getString(errors.names().getString(0));
                     }
+                    parentEmailError = errors.optString("parentEmail", null);
+                    parentRelationshipError = errors.optString("parentRelationship", null);
                 } else if (json.has("message")) {
                     message = json.getString("message");
                 }
@@ -1707,6 +1799,18 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
             message = "No internet connection. Please check your network.";
         }
         Utilities.toastLong(this, message);
+
+        // Walk back to the account step and mark the offending field. Nothing changes for
+        // any other signup failure — the toast above stays the whole story there.
+        if (parentEmailError != null || parentRelationshipError != null) {
+            BaseOnboardingFragment accountFragment = allFragments.get(ACCOUNT_FRAGMENT_INDEX);
+            if (accountFragment instanceof OnboardingAccountFragment) {
+                ((OnboardingAccountFragment) accountFragment)
+                        .setSignupFieldErrors(null, parentEmailError, parentRelationshipError);
+            }
+            int accountStep = activeSteps.indexOf(ACCOUNT_FRAGMENT_INDEX);
+            if (accountStep >= 0) showStep(accountStep, false);
+        }
     }
 
     private void showLoading(boolean show) {

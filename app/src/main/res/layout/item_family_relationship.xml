@@ -3,7 +3,8 @@
      HealthDataFragment.RelationshipAdapter — do not rename or remove:
      status_icon, name_text, status_chip, edit_button, remove_button, cancel_request_button,
      relationship_text, pro_badge, covered_badge, email_text, action_buttons_container,
-     add_to_pro_button, remove_from_pro_button, main_actions_row, status_text. -->
+     add_to_pro_button, remove_from_pro_button, main_actions_row, status_text,
+     dependency_actions_row, remove_dependency_button. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -233,6 +234,45 @@
             app:backgroundTint="@android:color/transparent"
             app:cornerRadius="8dp"
             android:visibility="gone" />
+    </LinearLayout>
+
+    <!-- Dependency action. Shown by the adapter ONLY on an accepted row that also carries
+         the guardian layer (dependency = dependent|guardian). Deliberately its own row
+         rather than a third button inside action_buttons_container: that container is
+         governed by the family-plan-owner Pro-seat logic, and either side of a dependency
+         must be able to end it whatever their plan. -->
+    <LinearLayout
+        android:id="@+id/dependency_actions_row"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="end"
+        android:layout_marginStart="30dp"
+        android:layout_marginTop="2dp"
+        android:visibility="gone">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/remove_dependency_button"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="30dp"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:paddingHorizontal="10dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:insetLeft="0dp"
+            android:insetRight="0dp"
+            android:text="Remove dependency"
+            android:textSize="12sp"
+            android:textColor="#FF9800"
+            app:icon="@drawable/ic_close"
+            app:iconSize="14dp"
+            app:iconTint="#FF9800"
+            app:iconPadding="3dp"
+            app:iconGravity="textStart"
+            app:backgroundTint="@android:color/transparent"
+            app:cornerRadius="8dp" />
     </LinearLayout>
 
     <!-- Hidden views kept for Java (adapter) compatibility. -->

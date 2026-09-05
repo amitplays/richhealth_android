@@ -557,6 +557,14 @@ public class UserProfile {
         /** Their actual tier from /api/users/relationships: ultra|family|family_member|plus|pro|free. */
         private String plan;
         private boolean isCoveredByMyPlan;
+        /**
+         * Guardian layer on top of an ordinary family link, from /api/users/relationships:
+         * "dependent" (this relative is someone I look after), "guardian" (this relative
+         * looks after me), or null for an ordinary relative. Independent of {@link #status}
+         * — do not confuse it with the synthetic status "dependent" that HealthDataFragment
+         * uses for the older profile-only dependent records.
+         */
+        private String dependency;
 
         public RelationshipRequest() {
         }
@@ -593,6 +601,12 @@ public class UserProfile {
 
         public boolean isCoveredByMyPlan() { return isCoveredByMyPlan; }
         public void setCoveredByMyPlan(boolean coveredByMyPlan) { isCoveredByMyPlan = coveredByMyPlan; }
+
+        /** "dependent" | "guardian" | null. */
+        public String getDependency() { return dependency; }
+        public void setDependency(String dependency) { this.dependency = dependency; }
+        /** True when this accepted link also carries the guardian layer. */
+        public boolean hasDependency() { return dependency != null && !dependency.isEmpty(); }
     }
 
     // Add getters and setters for the new lists
