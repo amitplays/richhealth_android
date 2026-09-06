@@ -130,6 +130,7 @@ public class TokenManager {
             "checkin_notif_prefs",
             "notif_perm_prefs",
             "push_prefs",
+            "family_notif_prefs",    // family/dependency snapshot — holds relatives' emails
     };
 
     // Logout — clear all user-specific caches

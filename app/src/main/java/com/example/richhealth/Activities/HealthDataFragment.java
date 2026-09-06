@@ -5028,6 +5028,13 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
                 response -> {
                     ApiConfig.logRestCall(url, true, "Family relationship request sent");
                     Utilities.toast(requireContext(), "Request sent successfully");
+                    // Record the new pending sent request in the family snapshot straight
+                    // away. Sending is not itself a notified event, but "accepted"/"declined"
+                    // is detected by this email LEAVING the stored sent set — so without this
+                    // an answer arriving before the next Home visit would go unnoticed.
+                    // The notifying variant is safe here: sending only ADDS to a watched set,
+                    // and every notified event is a removal or a brand-new incoming request.
+                    Utils.FamilyNotificationHelper.refreshAndNotify(context);
                     fetchFamilyRelationships();
                 },
                 error -> {
@@ -5367,6 +5374,9 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
                 response -> {
                     ApiConfig.logRestCall(url, true, "Relationship deleted");
                     Utilities.toast(requireContext(), "Member removed");
+                    // Deleting the connection also ends any dependency it carried, so this
+                    // is the user's own action on a watched set too — re-seed silently.
+                    Utils.FamilyNotificationHelper.refreshAfterLocalAction(context);
                     if (position >= 0 && position < familyRelationships.size()) {
                         familyRelationships.remove(position);
                         relationshipAdapter.notifyItemRemoved(position);
@@ -5472,6 +5482,10 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
                     // Re-bind by identity rather than by the captured position: the list can
                     // have been refetched (and reordered) while the dialog was open.
                     relationship.setDependency(null);
+                    // This user removed the dependency themselves; re-seed the family
+                    // notification snapshot silently so the diff does not tell them about
+                    // their own action on the next refresh.
+                    Utils.FamilyNotificationHelper.refreshAfterLocalAction(context);
                     int index = familyRelationships.indexOf(relationship);
                     if (index >= 0) {
                         relationshipAdapter.notifyItemChanged(index);
@@ -5548,6 +5562,10 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
                 response -> {
                     ApiConfig.logRestCall(url, true, "Relationship request cancelled");
                     Utilities.toast(requireContext(), "Request cancelled");
+                    // A cancelled sent request disappears from the pending-sent set exactly
+                    // like an accepted or declined one does. Re-seed silently, or the next
+                    // diff would announce the user's own cancellation as a decline.
+                    Utils.FamilyNotificationHelper.refreshAfterLocalAction(context);
                     if (position >= 0 && position < familyRelationships.size()) {
                         familyRelationships.remove(position);
                         relationshipAdapter.notifyItemRemoved(position);
@@ -6125,6 +6143,15 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
                 && "medications".equals(getActivity().getIntent().getStringExtra("navigate_to"))) {
             getActivity().getIntent().removeExtra("navigate_to");
             try { showMedicationsPanel(); } catch (Exception ignored) {}
+        }
+        // Same one-shot deep-link, for a tapped family notification (accepted / declined /
+        // dependency removed). MainActivity has already switched to this tab; open the
+        // Family panel once and clear the extra so it does not reopen on the next resume.
+        if (getActivity() != null && getActivity().getIntent() != null
+                && Utils.FamilyNotificationHelper.NAV_FAMILY.equals(
+                        getActivity().getIntent().getStringExtra("navigate_to"))) {
+            getActivity().getIntent().removeExtra("navigate_to");
+            try { showFamilyMembersPanel(); } catch (Exception ignored) {}
         }
     }
 

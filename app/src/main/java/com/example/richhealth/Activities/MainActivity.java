@@ -175,6 +175,16 @@ public class MainActivity extends AppCompatActivity implements PaymentResultWith
             // Switch to Health Hub; HealthDataFragment reads this same extra on resume, opens the
             // Medications panel, and clears it. (Extra left in place so the fragment can consume it.)
             bottomNav.setSelectedItemId(R.id.navigation_tools);
+        } else if (Utils.FamilyNotificationHelper.NAV_FAMILY_REQUESTS.equals(navigateTo)) {
+            // A tapped family-request notification. Profile is where the requests sheet lives
+            // (the only place the user can accept or decline), so land there and leave the
+            // extra in place for ProfileFragment.onResume() to consume and open the sheet.
+            bottomNav.setSelectedItemId(R.id.navigation_profile);
+        } else if (Utils.FamilyNotificationHelper.NAV_FAMILY.equals(navigateTo)) {
+            // Accepted / declined / dependency-removed: nothing to act on, so open the Family
+            // panel in Health Hub where the connection itself is shown. Same hand-off as
+            // "medications" — HealthDataFragment.onResume() consumes the extra.
+            bottomNav.setSelectedItemId(R.id.navigation_tools);
         }
     }
     @Override

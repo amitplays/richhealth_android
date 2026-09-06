@@ -2121,6 +2121,10 @@ public class HomeFragment extends Fragment {
                     // Remove the request from the list
                     incomingRequests.remove(position);
                     updateNotificationBadge();
+                    // The user just acted on this request themselves. Re-seed the family
+                    // snapshot silently so the next diff does not report their own accept
+                    // or decline back to them as a notification.
+                    Utils.FamilyNotificationHelper.refreshAfterLocalAction(context);
                 },
                 error -> {
                     ApiConfig.logRestCall(url, false, error.toString());
@@ -2259,6 +2263,15 @@ public class HomeFragment extends Fragment {
 
                         // Update notification badge visibility
                         updateNotificationBadge();
+
+                        // Family / dependency events have no push channel (APNS/FCM is not
+                        // configured for this app), so they are detected locally by diffing
+                        // against a stored snapshot. This method already runs on every Home
+                        // onResume, which makes it the natural refresh point.
+                        // Deliberately NOT placed inside updateNotificationBadge(): that stub
+                        // is also called straight after this user's OWN accept/decline, and a
+                        // user must never be notified about their own action.
+                        Utils.FamilyNotificationHelper.refreshAndNotify(context);
 
                     } catch (JSONException e) {
                         Log.e(TAG, "Error parsing relationship requests response", e);
@@ -4214,6 +4227,10 @@ public class HomeFragment extends Fragment {
         Utils.MedicationReminderHelper.ensureChannel(context);
         Utils.MedicationReminderHelper.rescheduleAll(context);
         Utils.MedicationReminderHelper.flushDoseQueue(context);
+        // Family/dependency alerts get their own channel, created here for the same reason
+        // as the two above: it then exists in system settings before the first one fires,
+        // so the user can configure (or mute) it independently of check-in reminders.
+        Utils.FamilyNotificationHelper.ensureChannel(context);
         Utils.NotificationPermissionHelper.requestIfNeeded(this);
 
         String url = ApiConfig.BASE_URL + "/api/checkin/home-card";

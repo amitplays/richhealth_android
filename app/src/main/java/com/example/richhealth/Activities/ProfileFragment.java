@@ -3355,6 +3355,23 @@ public class ProfileFragment extends Fragment {
         // self-heal devices whose local cache was written with a partial login payload.
         refreshProfileFromServer();
         updateProUI();
+        // Deep-link: a tapped family-request notification set navigate_to on the Activity
+        // intent and MainActivity switched to this tab. Open the requests sheet once — the
+        // place the user can actually accept or decline — then clear the extra so it does
+        // not reopen on every later resume. Mirrors HealthDataFragment's medications hook.
+        if (getActivity() != null && getActivity().getIntent() != null
+                && Utils.FamilyNotificationHelper.NAV_FAMILY_REQUESTS.equals(
+                        getActivity().getIntent().getStringExtra("navigate_to"))) {
+            getActivity().getIntent().removeExtra("navigate_to");
+            try {
+                Utils.FamilyRequestsSheet.show(requireActivity(), () -> {
+                    refreshFamilyRequestsBadge();
+                    if (proStatusManager != null && proStatusManager.canManageFamilyPro()) {
+                        loadFamilyMembers();
+                    }
+                });
+            } catch (Exception ignored) {}
+        }
     }
 
 }

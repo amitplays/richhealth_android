@@ -260,6 +260,11 @@ public class RequestsFragment extends Fragment {
                     String action = accept ? "accepted" : "declined";
                     Utilities.toast(requireContext(), "Request " + action);
 
+                    // Third surface that answers an incoming request (with HomeFragment and
+                    // FamilyRequestsSheet). Re-seed the family notification snapshot silently
+                    // so the next diff does not report the user's own answer back to them.
+                    Utils.FamilyNotificationHelper.refreshAfterLocalAction(requireContext());
+
                     // Remove the item from data and rebuild
                     if (isDoctor) {
                         doctorRequests.removeIf(r -> email.equals(r.get("email")));

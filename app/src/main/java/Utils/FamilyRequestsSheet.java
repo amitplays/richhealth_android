@@ -159,6 +159,10 @@ public final class FamilyRequestsSheet {
                     if (rows.getChildCount() == 0) empty.setVisibility(View.VISIBLE);
                     Toast.makeText(activity, accept ? "Request accepted" : "Request declined",
                             Toast.LENGTH_SHORT).show();
+                    // The user just answered this request themselves. Re-seed the family
+                    // notification snapshot silently, so the next diff does not report
+                    // their own accept/decline back to them.
+                    FamilyNotificationHelper.refreshAfterLocalAction(activity);
                     if (onChanged != null) onChanged.onChanged();
                 },
                 error -> {
