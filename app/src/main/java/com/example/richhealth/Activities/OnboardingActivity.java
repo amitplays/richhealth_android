@@ -60,6 +60,12 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
     private static final int HABITS_FRAGMENT_INDEX = 12;
     private static final int FAMILY_FRAGMENT_INDEX = 15;
     private static final int CONDITIONS_FRAGMENT_INDEX = 19;        // shifted by the inserted step
+    // "Who are you creating this account for?" (2026-09). APPENDED to allFragments rather
+    // than inserted at 0, because every constant above and several bare literals below
+    // (fragmentIndex == 1, getCardStepConfig(n)) address fragments by index — inserting
+    // would have shifted all of them. rebuildActiveSteps puts it FIRST in the running
+    // order instead, which is where the user sees it.
+    private static final int CREATING_FOR_FRAGMENT_INDEX = 22;
 
     private final List<BaseOnboardingFragment> allFragments = new ArrayList<>();
     private final List<Integer> activeSteps = new ArrayList<>();
@@ -67,6 +73,10 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
 
     private LinearProgressIndicator progressBar;
     private TextView tvStepLabel;
+    // "Creating for your Father" — shown for the whole run once the first step says this
+    // account is for someone else, so it is never a question of who is being described.
+    // Stays GONE for a "Myself" signup, which is every signup that existed before.
+    private TextView tvDependentPill;
     private ImageButton btnBack;
     private MaterialButton btnContinue;
     private View loadingOverlay;
@@ -94,6 +104,7 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
 
         progressBar    = findViewById(R.id.progress_bar);
         tvStepLabel    = findViewById(R.id.tv_step_label);
+        tvDependentPill = findViewById(R.id.tv_dependent_pill);
         btnBack        = findViewById(R.id.btn_back);
         btnContinue    = findViewById(R.id.btn_continue);
         loadingOverlay = findViewById(R.id.loading_overlay);
@@ -125,6 +136,9 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
         allFragments.add(CardStepFragment.newInstance(15));         // 19 – blood type + conditions
         allFragments.add(CardStepFragment.newInstance(18));         // 20 – conditions detail (conditional, per condition)
         allFragments.add(CardStepFragment.newInstance(19));         // 21 – ancestry
+        // 22 – "who is this account for?". Last in this list, FIRST on screen; see the
+        // note on CREATING_FOR_FRAGMENT_INDEX.
+        allFragments.add(new OnboardingCreatingForFragment());       // 22 – creating for
 
         rebuildActiveSteps();
 
@@ -966,7 +980,12 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
      */
     private void rebuildActiveSteps() {
         activeSteps.clear();
+        // "Who is this account for?" runs FIRST even though it is stored last, so it is
+        // added by hand here and skipped by the loop below. Everything else keeps the
+        // order — and the indices — it has always had.
+        activeSteps.add(CREATING_FOR_FRAGMENT_INDEX);
         for (int i = 0; i < allFragments.size(); i++) {
+            if (i == CREATING_FOR_FRAGMENT_INDEX) continue;   // already added, above
             if (isStepActive(i)) activeSteps.add(i);
         }
     }
@@ -991,6 +1010,10 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
             case CONDITIONS_DETAIL_FRAGMENT_INDEX:
                 return onboardingData.medicalConditions != null
                         && !onboardingData.medicalConditions.isEmpty();
+            case CREATING_FOR_FRAGMENT_INDEX:
+                // Always shown, but rebuildActiveSteps adds it explicitly (first) and
+                // skips it in the loop, so this answer is never the one that places it.
+                return true;
             default:
                 return true;
         }
@@ -1021,12 +1044,32 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
     private void updateTopBar(int step) {
         int total = getTotalSteps();
         tvStepLabel.setText("Step " + (step + 1) + " of " + total);
+        updateDependentPill();
         btnBack.setVisibility(step == 0 ? View.INVISIBLE : View.VISIBLE);
 
         int progress = (int) Math.round((step + 1) * 100.0 / total);
         progressBar.setProgressCompat(progress, true);
 
         btnContinue.setText(step == total - 1 ? "Let's Go  →" : "Continue");
+    }
+
+    /**
+     * Show or hide the "creating for a dependent" pill. Driven off OnboardingData rather
+     * than a flag of its own, so it follows the answer automatically: the first step
+     * writes both fields on Continue, and clears both if the user goes back and switches
+     * to "Myself". Called from updateTopBar, i.e. on every step change.
+     */
+    private void updateDependentPill() {
+        if (tvDependentPill == null) return;
+        boolean forDependent = !onboardingData.parentEmail.isEmpty()
+                && !onboardingData.parentRelationship.isEmpty();
+        if (forDependent) {
+            tvDependentPill.setText("Creating this account for your "
+                    + onboardingData.parentRelationship);
+            tvDependentPill.setVisibility(View.VISIBLE);
+        } else {
+            tvDependentPill.setVisibility(View.GONE);
+        }
     }
 
     private void handleContinue() {
@@ -1040,6 +1083,17 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
         // advancing. This is async, so advance only in its callback.
         if (fragmentIndex == ACCOUNT_FRAGMENT_INDEX && current instanceof OnboardingAccountFragment) {
             checkEmailThenAdvance((OnboardingAccountFragment) current, fragmentIndex);
+            return;
+        }
+
+        // On the "who is this for?" step, the creator's own address must be confirmed to
+        // belong to a real account before the step can be left. Also async, and only for
+        // a "Someone else" answer — "Myself" advances with no network call at all, exactly
+        // as this step did not exist.
+        if (fragmentIndex == CREATING_FOR_FRAGMENT_INDEX
+                && current instanceof OnboardingCreatingForFragment
+                && ((OnboardingCreatingForFragment) current).isCreatingForSomeoneElse()) {
+            checkGuardianEmailThenAdvance((OnboardingCreatingForFragment) current, fragmentIndex);
             return;
         }
 
@@ -1106,9 +1160,10 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
                     }
                     ApiConfig.logRestCall("/api/auth/check-email", true, "available=" + available);
                     if (available) {
-                        // Own address is free — now confirm the guardian's address (no-op
-                        // when the guardian toggle is off).
-                        checkGuardianEmailThenAdvance(accountFragment, fragmentIndex);
+                        // Own address is free. The guardian's address is no longer checked
+                        // here — it is confirmed on the FIRST step now, before any of this
+                        // form is filled in (see checkGuardianEmailThenAdvance).
+                        advanceAfterStep(fragmentIndex);
                     } else {
                         accountFragment.setEmailError("Email already registered");
                     }
@@ -1137,62 +1192,85 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
     }
 
     /**
-     * Guardian-address guard, layered on the duplicate check above and running only when
-     * the account step's guardian toggle is on (otherwise it advances immediately, so an
-     * ordinary signup makes exactly one network call, as before).
+     * Guardian-address guard for the FIRST onboarding step ("who are you creating this
+     * account for?"). Runs only for a "Someone else" answer, so an ordinary signup still
+     * makes exactly one check-email call, from the account step, as it always did.
      *
-     * Same endpoint, opposite reading: /api/auth/check-email answers {available:true} for
-     * an address that is NOT registered, and the guardian MUST already be registered —
-     * signup 400s on an unknown address — so available:true is the failure here.
-     * Fails OPEN on any network or parse error, matching checkEmailThenAdvance: a backend
-     * hiccup must not block onboarding, and signup still rejects a bad address (which
-     * handleSignupError now walks the user back to).
+     * Same endpoint as checkEmailThenAdvance, opposite reading: /api/auth/check-email
+     * answers {available:true} for an address that is NOT registered, and the guardian
+     * MUST already be registered — signup 400s on an unknown address — so available:true
+     * is the FAILURE here.
+     *
+     * And unlike checkEmailThenAdvance this fails CLOSED. Failing open was defensible at
+     * the old placement (bottom of the account step): blocking there meant discarding a
+     * filled-in form over a network blip. Here the user has made one tap and typed one
+     * address, so blocking costs them a retry and nothing else — while failing open would
+     * let an unverifiable address walk 20 steps to a signup that rejects it. A check that
+     * gives up the moment the network coughs is not a check.
      */
-    private void checkGuardianEmailThenAdvance(OnboardingAccountFragment accountFragment, int fragmentIndex) {
+    private boolean checkingGuardianEmail = false;
+
+    private void checkGuardianEmailThenAdvance(OnboardingCreatingForFragment creatingForFragment,
+                                               int fragmentIndex) {
         final String guardianEmail = onboardingData.parentEmail;
         if (guardianEmail == null || guardianEmail.isEmpty()) {
+            // validate() already requires the address for a "Someone else" answer, so this
+            // is only reachable for "Myself" — nothing to confirm.
             advanceAfterStep(fragmentIndex);
             return;
         }
-        if (checkingEmail) return; // same double-fire guard as above
-        checkingEmail = true;
+        if (checkingGuardianEmail) return; // guard against double-fire
+        checkingGuardianEmail = true;
 
         final JSONObject body = new JSONObject();
         try {
             body.put("email", Utils.EmailVerificationHelper.normalize(guardianEmail));
         } catch (JSONException e) {
-            checkingEmail = false;
-            advanceAfterStep(fragmentIndex); // fail open
+            checkingGuardianEmail = false;
+            creatingForFragment.setParentEmailError(
+                    "We couldn't check that address. Please try again.");
             return;
         }
 
-        showLoading(true);
+        showLoading(true, "Checking your account...");
         StringRequest request = new StringRequest(
                 Request.Method.POST,
                 ApiConfig.BASE_URL + "/api/auth/check-email",
                 response -> {
-                    checkingEmail = false;
+                    checkingGuardianEmail = false;
                     showLoading(false);
-                    boolean available;
+                    Boolean available;
                     try {
-                        available = new JSONObject(response).optBoolean("available", false);
+                        JSONObject json = new JSONObject(response);
+                        // No default: an answer we cannot read is not an answer, and must
+                        // block like any other failure rather than be guessed at.
+                        available = json.has("available")
+                                ? Boolean.valueOf(json.getBoolean("available")) : null;
                     } catch (JSONException e) {
-                        available = false; // fail open on parse error (false = "registered")
+                        available = null;
                     }
                     ApiConfig.logRestCall("/api/auth/check-email", true, "guardian available=" + available);
-                    if (available) {
-                        accountFragment.setParentEmailError(
-                                "No RichHealth account uses that email. Ask them to sign up first.");
+                    if (available == null) {
+                        creatingForFragment.setParentEmailError(
+                                "We couldn't check that address. Please try again.");
+                    } else if (available) {
+                        creatingForFragment.setParentEmailError(
+                                "No RichHealth account uses that email. Sign up yourself first, then create this account.");
                     } else {
                         advanceAfterStep(fragmentIndex);
                     }
                 },
                 error -> {
-                    // Fail open — a backend hiccup shouldn't block onboarding.
-                    checkingEmail = false;
+                    // Fails CLOSED — see the note above. The user stays on this step with a
+                    // message that says retrying is the fix.
+                    checkingGuardianEmail = false;
                     showLoading(false);
                     ApiConfig.logRestCall("/api/auth/check-email", false, error.toString());
-                    advanceAfterStep(fragmentIndex);
+                    String message = (error instanceof com.android.volley.NoConnectionError)
+                            ? "No internet connection — we need it to check your account. Please try again."
+                            : "We couldn't check that address. Please try again.";
+                    creatingForFragment.setParentEmailError(message);
+                    Utilities.toastLong(this, message);
                 }
         ) {
             @Override
@@ -1800,16 +1878,18 @@ public class OnboardingActivity extends AppCompatActivity implements CardStepHos
         }
         Utilities.toastLong(this, message);
 
-        // Walk back to the account step and mark the offending field. Nothing changes for
-        // any other signup failure — the toast above stays the whole story there.
+        // Walk back to the step that owns the offending field and mark it. That is the
+        // "who is this account for?" step now, not the account step — both keys moved
+        // there with the fields. Nothing changes for any other signup failure: the toast
+        // above stays the whole story there.
         if (parentEmailError != null || parentRelationshipError != null) {
-            BaseOnboardingFragment accountFragment = allFragments.get(ACCOUNT_FRAGMENT_INDEX);
-            if (accountFragment instanceof OnboardingAccountFragment) {
-                ((OnboardingAccountFragment) accountFragment)
-                        .setSignupFieldErrors(null, parentEmailError, parentRelationshipError);
+            BaseOnboardingFragment creatingForFragment = allFragments.get(CREATING_FOR_FRAGMENT_INDEX);
+            if (creatingForFragment instanceof OnboardingCreatingForFragment) {
+                ((OnboardingCreatingForFragment) creatingForFragment)
+                        .setSignupFieldErrors(parentEmailError, parentRelationshipError);
             }
-            int accountStep = activeSteps.indexOf(ACCOUNT_FRAGMENT_INDEX);
-            if (accountStep >= 0) showStep(accountStep, false);
+            int creatingForStep = activeSteps.indexOf(CREATING_FOR_FRAGMENT_INDEX);
+            if (creatingForStep >= 0) showStep(creatingForStep, false);
         }
     }
 

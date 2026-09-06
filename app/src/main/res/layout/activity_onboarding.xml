@@ -52,6 +52,26 @@
             app:trackCornerRadius="4dp"
             app:trackThickness="4dp" />
 
+        <!-- "Creating for a dependent" pill (2026-09). Sits under the progress bar so it
+             cannot collide with the centred step label, and is GONE unless the first step
+             said this account is for someone else — a signup for yourself never sees it,
+             and a GONE view contributes no height. -->
+        <TextView
+            android:id="@+id/tv_dependent_pill"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/chip_bg_teal_outline"
+            android:paddingStart="12dp"
+            android:paddingTop="4dp"
+            android:paddingEnd="12dp"
+            android:paddingBottom="4dp"
+            android:text="Creating this account for your Son"
+            android:textColor="#008b8b"
+            android:textSize="12sp"
+            android:visibility="gone" />
+
         <!-- Fragment Container -->
         <FrameLayout
             android:id="@+id/fragment_container"

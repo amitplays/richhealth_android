@@ -4934,7 +4934,15 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
      * what the backend stores for the recipient.
      */
     private static final String[] RELATIONSHIP_OPTIONS = new String[] {
-            "Grandfather", "Grandmother",
+            // Split by side (2026-09) to match the Paternal/Maternal Uncle+Aunt pattern
+            // just below, now that the backend's reciprocal map carries all four. The
+            // plain "Grandfather"/"Grandmother" are deliberately NOT offered any more —
+            // but they are still understood everywhere they are read (FamilyGraph keeps
+            // its keys, and the backend keeps its map entries), because existing accounts
+            // already store them and the server still EMITS them for grandson/
+            // granddaughter, where the side cannot be known.
+            "Paternal Grandfather", "Paternal Grandmother",
+            "Maternal Grandfather", "Maternal Grandmother",
             "Father", "Mother",
             "Paternal Uncle", "Paternal Aunt",
             "Maternal Uncle", "Maternal Aunt",

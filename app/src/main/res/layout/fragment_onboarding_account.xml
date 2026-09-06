@@ -154,97 +154,11 @@
             android:textColor="#555555"
             android:textSize="12sp" />
 
-        <!-- Guardian / dependent signup. Asked of EVERYONE here rather than behind a
-             separate flow: the link has to be raised before the account exists, and a
-             parent who misses it would have to redo the whole signup. Everything below
-             the toggle stays hidden (and unsent) unless it is switched on. -->
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="0.5dp"
-            android:layout_marginTop="18dp"
-            android:background="#2C2C2C" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Are you a parent, guardian or caretaker creating this account for someone else?"
-                android:textColor="#FFFFFF"
-                android:textSize="14sp" />
-
-            <com.google.android.material.switchmaterial.SwitchMaterial
-                android:id="@+id/switch_guardian_signup"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="10dp"
-                android:checked="false"
-                app:thumbTint="@color/rh_accent"
-                app:trackTint="#33008b8b" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/guardian_fields_container"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:orientation="vertical"
-            android:visibility="gone">
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/layout_parent_email"
-                style="@style/CustomTextInputLayout"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:hint="Your email (parent / guardian)">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/input_parent_email"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="textEmailAddress"
-                    android:textColor="#FFFFFF" />
-
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <!-- The picker value is the NEW account's own description ("You are signing
-                 up for your Son"), which is exactly what the server stores as
-                 parentRelationship. -->
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/layout_parent_relationship"
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="You are signing up for your…"
-                android:textColorHint="#888888"
-                app:boxStrokeColor="#008b8b"
-                app:hintTextColor="#008b8b">
-
-                <AutoCompleteTextView
-                    android:id="@+id/input_parent_relationship"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="none"
-                    android:textColor="#FFFFFF" />
-
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="You need a RichHealth account already. We'll send you a request to confirm the link once this account is created."
-                android:textColor="#555555"
-                android:textSize="12sp" />
-
-        </LinearLayout>
+        <!-- The guardian/dependent question that used to live here (a SwitchMaterial plus
+             a hidden email + relationship pair) is now the FIRST onboarding step, with
+             selectable cards, in fragment_onboarding_creating_for.xml. It is the same
+             feature in a different place: it is asked before signup begins, and the
+             guardian's address is verified there, before this form is filled in. -->
 
     </LinearLayout>
 

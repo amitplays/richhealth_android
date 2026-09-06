@@ -96,6 +96,15 @@ public final class FamilyGraph {
         put("grandfather",     GEN_GRANDPARENT, 0);
         put("grandmother",     GEN_GRANDPARENT, 0);
         put("grandparent",     GEN_GRANDPARENT, 1);
+        // Side-split forms (2026-09) — what the pickers now offer, and what the guardian
+        // signup can send. The plain keys above are KEPT: accounts created before this
+        // already store them, and the backend still emits them for grandson/granddaughter
+        // where the side is unknowable. Dropping either set would silently unplace a
+        // grandparent into the "Other family" strip.
+        put("paternal grandfather", GEN_GRANDPARENT, 0);
+        put("paternal grandmother", GEN_GRANDPARENT, 0);
+        put("maternal grandfather", GEN_GRANDPARENT, 0);
+        put("maternal grandmother", GEN_GRANDPARENT, 0);
 
         put("father",          GEN_PARENT, 0);
         put("mother",          GEN_PARENT, 0);
