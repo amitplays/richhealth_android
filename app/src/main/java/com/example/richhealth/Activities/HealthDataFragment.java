@@ -4344,9 +4344,19 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
             requestBody.put("dosage", dosage);
             requestBody.put("frequency", frequency);
             requestBody.put("isOngoing", isStillTaking);
-            // Required by the backend when frequency is "Custom"; harmless (and correct to
-            // clear) otherwise, e.g. when the user switches away from Custom.
-            requestBody.put("customFrequency", customFrequency == null ? "" : customFrequency);
+            // Sent ONLY when it means something — i.e. when the frequency is "Custom" and the
+            // dialog collected a description. It used to go out as "" for every other
+            // frequency, and updateMedication writes any field that is `!== undefined`, so
+            // moving a medication from Custom to "Once daily" erased the stored schedule for
+            // good: switching back re-opened the form with an empty box and nothing to
+            // recover. Omitting the key is the only way to say "not applicable here, leave it
+            // as it is" to that controller — which is exactly the fix iOS already carries
+            // (HealthDataModels: encodeIfPresent for this one field, always-encode for the
+            // rest). Clearing a custom schedule on purpose is done by editing the text, not
+            // by leaving Custom.
+            if (customFrequency != null && !customFrequency.trim().isEmpty()) {
+                requestBody.put("customFrequency", customFrequency);
+            }
 
             // Sent even when empty. updateMedication only writes a field that is `!== undefined`,
             // so OMITTING the key meant "leave it alone" — deleting a note in the form silently
@@ -4455,7 +4465,14 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
                         existingMedication.setName(name);
                         existingMedication.setDosage(dosage);
                         existingMedication.setFrequency(frequency);
-                        existingMedication.setCustomFrequency(customFrequency == null ? "" : customFrequency);
+                        // Mirror only what was actually SENT (see the request body): with the
+                        // field omitted the server still holds the old schedule, so blanking
+                        // the local copy here would put the row out of step with the record
+                        // until the next fetch — and pre-fill the next edit with an empty box,
+                        // which is the very confusion the omission exists to prevent.
+                        if (customFrequency != null && !customFrequency.trim().isEmpty()) {
+                            existingMedication.setCustomFrequency(customFrequency);
+                        }
                         existingMedication.setActive(isStillTaking);
                         existingMedication.setNotes(notes);
                         // purpose/prescribedBy are always sent (clear means clear), so the local

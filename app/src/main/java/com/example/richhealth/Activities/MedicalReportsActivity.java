@@ -337,6 +337,26 @@ public class MedicalReportsActivity extends Activity {
                 return;
             }
 
+            uploadReport(file, actualFile, progress, false);
+        } catch (Exception e) {
+            progress.hide();
+            Utilities.toast(this, "Error preparing file: " + e.getMessage());
+        }
+    }
+
+    /**
+     * The POST itself, split out from the picker flow so the duplicate answer has something to
+     * call again.
+     *
+     * `force` re-sends past the backend's duplicate-name guard. Without it this screen sent no
+     * force flag and implemented no `onDuplicate`, so a 409 fell through to the interface's
+     * default — which routes to onError — and the user got "Upload failed: ..." with no way
+     * forward, for a file the server had merely RECOGNISED. The medical-reports panel in
+     * HealthDataFragment and the iOS sheet both offer "upload anyway" here; this is the same
+     * flow, with the same two cases and the same wording.
+     */
+    private void uploadReport(UploadedFile file, File actualFile, SimpleProgress progress, boolean force) {
+        try {
             JSONObject metadata = new JSONObject();
             metadata.put("originalFileName", file.getName());
 
@@ -389,9 +409,30 @@ public class MedicalReportsActivity extends Activity {
                         }
 
                         @Override
+                        public void onDuplicate(String message, boolean sameFile, String existingReportId) {
+                            progress.hide();
+                            if (sameFile) {
+                                // Byte-identical to a report already stored: re-uploading would
+                                // only make a second copy of the same file, so this is told,
+                                // not asked. Long toast — it names the report it matched.
+                                Utilities.toastLong(MedicalReportsActivity.this, message);
+                            } else {
+                                // Same NAME, different bytes. That is very often a genuinely
+                                // different report (a second "report.pdf" from the same lab),
+                                // and only the user can say — so ask, and re-send with force
+                                // when they confirm.
+                                Utils.DialogUtils.showConfirmDialog(MedicalReportsActivity.this,
+                                        "Already uploaded", message, "Upload anyway", "Cancel", false,
+                                        () -> uploadReport(file, actualFile,
+                                                SimpleProgress.show(MedicalReportsActivity.this, "Uploading report..."),
+                                                true));
+                            }
+                        }
+
+                        @Override
                         public void onProgress(int p) {
                         }
-                    });
+                    }, "", force);
         } catch (Exception e) {
             progress.hide();
             Utilities.toast(this, "Error preparing file: " + e.getMessage());
