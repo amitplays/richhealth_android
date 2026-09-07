@@ -271,7 +271,12 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         loadUserProfile();
         setupFamilyMedicalRecordsSection(rootView);
         setupPanels();
-        fetchMedicalDataStats(view);
+        // Through the debouncer rather than straight to the fetch: onResume runs immediately
+        // after this on every entry to the Hub (MainActivity replaces the fragment on each tab
+        // switch) and asks for the same two numbers, so calling the fetch directly from here
+        // meant two identical requests for one screen open. Whichever of the two posts last
+        // cancels the other's pending tick, and exactly one request goes out.
+        refreshMedicalDataStats(view);
         animateCardsEntry(view);
         return view;
     }
@@ -304,9 +309,20 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
                         }
 
                         TextView statsText = view.findViewById(R.id.medical_data_stats_text);
-                        if (statsText != null && (symptomsCount > 0 || measurementsCount > 0)) {
-                            statsText.setText(symptomsCount + " symptoms · " + measurementsCount + " measurements tracked");
-                            statsText.setVisibility(View.VISIBLE);
+                        if (statsText != null) {
+                            // Render EVERY response, the all-zero one included. The guard used to
+                            // be `(symptomsCount > 0 || measurementsCount > 0)`, which reads as
+                            // "don't greet a new user with 0 · 0" but actually meant the line was
+                            // never corrected once it had something to say: deleting the last
+                            // record left "3 symptoms · 1 measurement tracked" sitting on the card
+                            // for good. The empty-state intent is worth keeping, so it moves to
+                            // VISIBILITY — an empty vault shows nothing rather than something
+                            // nothing-shaped — while the TEXT now always matches what came back.
+                            // Singular/plural to match the panel hints ("Search in 1 symptom").
+                            statsText.setText(symptomsCount + (symptomsCount == 1 ? " symptom · " : " symptoms · ")
+                                    + measurementsCount + (measurementsCount == 1 ? " measurement tracked" : " measurements tracked"));
+                            statsText.setVisibility(symptomsCount > 0 || measurementsCount > 0
+                                    ? View.VISIBLE : View.GONE);
                         }
                     } catch (JSONException e) {
                         Log.e(TAG, "Error parsing medical data stats", e);
@@ -326,6 +342,44 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         };
 
         Volley.newRequestQueue(context).add(request);
+    }
+
+    /** Long enough to swallow one user action's worth of handlers, short enough to feel instant. */
+    private static final long MEDICAL_DATA_STATS_DEBOUNCE_MS = 250L;
+
+    /**
+     * Re-resolves the view at fire time rather than capturing one: the fragment can be torn
+     * down between the post and the tick, and the response handler writes into whatever view
+     * it is handed.
+     */
+    private final Runnable medicalDataStatsRefresh = () -> {
+        View v = getView();
+        if (v != null) fetchMedicalDataStats(v);
+    };
+
+    /**
+     * Ask for fresh summary counts, coalescing bursts into one request.
+     *
+     * The counts were fetched exactly once, from onCreateView, so the card kept whatever the
+     * numbers were when it was built: every add and every delete left it stale, and short of
+     * restarting the app there was nothing the user could do about it. iOS hit the same wall
+     * with its `hasLoaded` latch and fixed it the same way — refresh on the events that put
+     * the summary back in front of the user, instead of on a one-way flag.
+     *
+     * Posted rather than called directly because one user action routinely lands in more than
+     * one handler (deleting a record with no server id refreshes BOTH the symptoms and the
+     * measurements list), and each would otherwise fire its own identical GET. Re-posting
+     * cancels the pending tick, so a burst collapses into a single request a moment later.
+     */
+    private void refreshMedicalDataStats() {
+        refreshMedicalDataStats(getView());
+    }
+
+    /** Variant for callers that hold the view before the fragment publishes it (onCreateView). */
+    private void refreshMedicalDataStats(View view) {
+        if (view == null) return;   // not laid out yet, or already torn down
+        view.removeCallbacks(medicalDataStatsRefresh);
+        view.postDelayed(medicalDataStatsRefresh, MEDICAL_DATA_STATS_DEBOUNCE_MS);
     }
 
     private void loadUserProfile() {
@@ -695,6 +749,22 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         setupMedicalReportsPanel();
         setupMedicationsPanel();
         setupFamilyMembersPanel();
+
+        // One hook instead of a dozen. Every add, edit and delete of a symptom, a measurement
+        // or a period log happens inside one of these three panels — their add/edit/delete
+        // dialogs are reachable from nowhere else — and the summary line those counts feed
+        // sits on the card BEHIND the panel. So a panel closing is both the moment the numbers
+        // can have changed and the moment they are worth looking at again, which makes it a
+        // better place to refresh from than any individual success handler: it also catches
+        // the paths that change data without one, such as the server sync that runs on panel
+        // open, and whatever add path gets written next.
+        // Reports, medications and family are deliberately not hooked: their records are
+        // counted by other endpoints and never appear in this line.
+        Dialog[] countedPanels = { symptomsPanel, measurementsPanel, periodLogsPanel };
+        for (Dialog panel : countedPanels) {
+            if (panel == null) continue;
+            panel.setOnDismissListener(d -> refreshMedicalDataStats());
+        }
     }
 
     private void setupPeriodLogsPanel() {
@@ -6154,6 +6224,13 @@ public class HealthDataFragment extends Fragment implements BackPressHandler {
         super.onResume();
         // Refresh data if needed
         refreshPlanPill();
+        // The other moment the summary is on screen and may be wrong: coming back to the Hub
+        // from the background, from a full-screen flow like AddDependentActivity, or from
+        // another tab. Records can also move under us — another device, a guardian editing a
+        // dependent — so returning has to re-ask rather than trust what the card already says.
+        // onCreateView's single fetch never ran a second time, which is why the counts could
+        // only ever be as fresh as the fragment instance itself.
+        refreshMedicalDataStats();
         // Deep-link: a tapped medication reminder set navigate_to=medications on the Activity
         // intent. Open the Medications panel once, then clear the extra so it doesn't reopen.
         if (getActivity() != null && getActivity().getIntent() != null

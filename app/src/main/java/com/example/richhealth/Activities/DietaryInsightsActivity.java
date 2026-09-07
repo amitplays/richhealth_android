@@ -259,21 +259,39 @@ public class DietaryInsightsActivity extends AppCompatActivity {
                     ApiConfig.logRestCall(dataUrl, false, error.toString());
                     hideLoading();
 
-                    // Check for 429 (limit reached)
+                    // Two different things answer 429 on this endpoint. GET
+                    // /api/home/dietary-insights is behind the shared aiLimiter (10 AI requests
+                    // a minute) as well as the monthly Diet Guide quota, and only the quota one
+                    // names itself — errorCode LIMIT_REACHED plus the usageStatus block the
+                    // badge reads. The limiter sends a bare {message}. Treating both as the
+                    // quota is what offered an upgrade to a paying user who had merely opened
+                    // this screen once too often in a minute, and blanked the usage badge
+                    // (updateUsageBadge(null) hides it) while doing so.
                     if (error.networkResponse != null && error.networkResponse.statusCode == 429) {
                         try {
                             String body = new String(error.networkResponse.data, "UTF-8");
                             JSONObject errJson = new JSONObject(body);
                             String msg = errJson.optString("message", "Diet Guide limit reached for this period.");
 
-                            // Update usage badge to show limit reached
-                            updateUsageBadge(errJson.optJSONObject("usageStatus"));
+                            if (Utils.ErrorHandler.isPlanQuota(errJson)) {
+                                // Update usage badge to show limit reached
+                                updateUsageBadge(errJson.optJSONObject("usageStatus"));
 
-                            Utils.DialogUtils.showConfirmDialog(DietaryInsightsActivity.this,
-                                "Limit Reached",
-                                msg + "\n\nUpgrade your plan for more dietary insights.",
-                                "Upgrade", "OK", false,
-                                () -> new ProUpgradeDialog(DietaryInsightsActivity.this).show(isPro -> {}));
+                                Utils.DialogUtils.showConfirmDialog(DietaryInsightsActivity.this,
+                                    "Limit Reached",
+                                    msg + "\n\nUpgrade your plan for more dietary insights.",
+                                    "Upgrade", "OK", false,
+                                    () -> new ProUpgradeDialog(DietaryInsightsActivity.this).show(isPro -> {}));
+                            } else {
+                                // Per-minute limiter: nothing about the plan has changed, so the
+                                // badge is left alone and the server's own wording goes out in the
+                                // same toast the 503 branch below uses. The cached-insights
+                                // fallback underneath still runs, so the screen keeps its content.
+                                Utilities.toastLong(DietaryInsightsActivity.this,
+                                    errJson.optString("message", "").isEmpty()
+                                        ? "Just a moment \u2014 try that again shortly."
+                                        : msg);
+                            }
                         } catch (Exception ignored) {}
 
                         // Still try to show cached data if available

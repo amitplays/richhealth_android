@@ -4180,10 +4180,24 @@ public class AIFragment extends Fragment implements BackPressHandler {
                             return;
 
                         case RATE_LIMIT:
-                            // 429 — usage limit: go straight to ProUpgradeDialog.
-                            // The message never reached the server, so hand it back.
+                            // 429 — but which one? The send route carries the shared aiLimiter
+                            // (10 AI requests a minute across chat, nutri-check and insights) on
+                            // top of the plan quota, and the limiter's body is a bare {message}
+                            // with no errorCode. Mapping every 429 to ProUpgradeDialog meant an
+                            // eleventh message in a minute told a paying Pro user she had used up
+                            // a monthly chat limit and should upgrade — twice wrong: nothing was
+                            // used up, and there was nothing to sell her. ErrorHandler.planQuota
+                            // is the discriminator; the message is handed back either way, since
+                            // neither 429 reached the model.
                             restoreComposerText(messageText);
                             saveFailedDraft(sessionId, messageText);
+                            if (!parsed.planQuota) {
+                                // Per-minute limiter: a wait, not a paywall. Use the composer's
+                                // own failure affordance (error row + Retry snackbar) and the
+                                // server's wording, which is the part that names the wait.
+                                showRetryableError(parsed.message, messageText);
+                                return;
+                            }
                             if (isAdded()) {
                                 Utils.ProUpgradeDialog rateLimitDlg = new Utils.ProUpgradeDialog(requireActivity());
                                 rateLimitDlg.setLimitContext("You've reached your monthly chat limit.");

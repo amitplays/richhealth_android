@@ -215,14 +215,31 @@ public class NutriCheckCheckFragment extends Fragment {
 
                     NetworkResponse networkResponse = error.networkResponse;
                     if (networkResponse != null && networkResponse.statusCode == 429) {
+                        // POST /api/home/nutri-check sits behind aiLimiter (10 AI requests a
+                        // minute) AND behind the monthly NutriCheck quota, and both refuse with
+                        // 429. Only the quota one names itself (errorCode / usageStatus); the
+                        // limiter sends a bare {message}. Branching on the status code alone is
+                        // what made checking two foods in quick succession answer "Monthly Limit
+                        // Reached — Upgrade", complete with a "0 / 0 scans used" bar built from
+                        // the usageStatus that was never there. ErrorHandler owns the question so
+                        // every screen asks it the same way.
                         String msg = "You've used all your NutriCheck scans this month.";
+                        boolean planQuota = false;
+                        // Kept separate from msg: the quota default above is the wrong thing to
+                        // say on the limiter path, so that branch falls back to its own wording
+                        // when the body can't be read at all.
+                        String serverMsg = null;
                         int usedCount = 0;
                         int limitCount = 0;
                         try {
                             String errBody = new String(networkResponse.data, "UTF-8");
                             JSONObject errJson = new JSONObject(errBody);
-                            String serverMsg = errJson.optString("message", "");
-                            if (!serverMsg.isEmpty()) msg = serverMsg;
+                            planQuota = Utils.ErrorHandler.isPlanQuota(errJson);
+                            String parsedMsg = errJson.optString("message", "");
+                            if (!parsedMsg.isEmpty()) {
+                                serverMsg = parsedMsg;
+                                msg = parsedMsg;
+                            }
                             JSONObject usage = errJson.optJSONObject("usageStatus");
                             if (usage != null) {
                                 usedCount = usage.optInt("count", 0);
@@ -230,7 +247,15 @@ public class NutriCheckCheckFragment extends Fragment {
                             }
                         } catch (Exception ignored) {}
 
-                        showLimitReachedDialog(msg, usedCount, limitCount);
+                        if (planQuota) {
+                            showLimitReachedDialog(msg, usedCount, limitCount);
+                        } else {
+                            // Per-minute limiter: nothing is used up and there is nothing to buy,
+                            // so this gets the same quiet toast the 503 does. The server's own
+                            // wording is the right thing to show — it is the one that names the wait.
+                            Utilities.toastLong(requireContext(), serverMsg != null ? serverMsg
+                                    : "That was quick \u2014 give it a few seconds and try again.");
+                        }
                     } else if (networkResponse != null && networkResponse.statusCode == 503) {
                         // AI temporarily unavailable
                         String msg = "AI analysis is temporarily unavailable. Please try again in a few minutes.";

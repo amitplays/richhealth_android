@@ -50,6 +50,7 @@ public class MainActivity extends AppCompatActivity implements PaymentResultWith
     private boolean biometricVerified = false;
     private boolean waitingForBiometric = false;
     private View biometricOverlay;
+    private android.widget.TextView biometricReasonView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -194,10 +195,12 @@ public class MainActivity extends AppCompatActivity implements PaymentResultWith
         // listener in onActivityCreated (which runs after this Activity's onCreate), so we
         // override it here, once that global setup is guaranteed to be in place.
         setupKeyboardInsets();
-        // If biometric is enabled and user hasn't verified yet this session, prompt.
-        // Guard on canAuthenticate so a device without usable biometrics never gets
-        // locked behind the overlay.
-        if (BiometricHelper.isBiometricEnabled(this) && BiometricHelper.canAuthenticate(this)
+        // Lock whenever the user asked for a lock. This used to also require
+        // canAuthenticate(), which was the hole: with the sensor unavailable — broken,
+        // busy, or biometrics removed since setup — the lock simply never engaged and the
+        // health record opened straight up. Availability is now handled INSIDE the lock,
+        // where the answer is "explain and offer a way out", never "show the data".
+        if (BiometricHelper.isBiometricEnabled(this)
                 && !biometricVerified && !waitingForBiometric) {
             showBiometricLock();
         }
@@ -256,29 +259,79 @@ public class MainActivity extends AppCompatActivity implements PaymentResultWith
     }
 
     private void showBiometricLock() {
-        // Safety: if this device can't actually authenticate right now, don't lock —
-        // showing the blocking overlay with no working prompt would freeze the app.
-        if (!BiometricHelper.canAuthenticate(this)) {
-            biometricVerified = true;
-            waitingForBiometric = false;
-            if (biometricOverlay != null) biometricOverlay.setVisibility(View.GONE);
-            return;
-        }
-
-        // Show a dark overlay to hide content until authenticated.
+        // The overlay carries its own controls. It used to be a bare View whose only
+        // affordance was an undiscoverable tap-to-retry, which is why a failed prompt had
+        // to fail open — there was no other way out. With Unlock and Sign out on the lock
+        // itself, failing closed costs the user nothing.
         if (biometricOverlay == null) {
-            biometricOverlay = new View(this);
-            biometricOverlay.setBackgroundColor(Color.parseColor("#F0121212"));
-            biometricOverlay.setClickable(true);   // block touches to the content
-            biometricOverlay.setFocusable(true);
+            final float d = getResources().getDisplayMetrics().density;
+            android.widget.LinearLayout lock = new android.widget.LinearLayout(this);
+            lock.setOrientation(android.widget.LinearLayout.VERTICAL);
+            lock.setGravity(android.view.Gravity.CENTER);
+            lock.setBackgroundColor(Color.parseColor("#F0121212"));
+            lock.setClickable(true);   // block touches to the content behind it
+            lock.setFocusable(true);
             // CRITICAL: raise the overlay above the elevated input bar / bottom nav.
             // Without this, elevation-0 overlay covered only the (elevation-0) message
             // list while the raised input bar poked through — so the chat area looked
             // dead but the input still worked. A huge elevation makes it a true full lock.
-            biometricOverlay.setElevation(1_000_000f);
-            // Tap-to-retry: if the prompt was dismissed or never showed, tapping the
-            // dark screen re-triggers it instead of leaving the user stranded.
-            biometricOverlay.setOnClickListener(v -> promptBiometric());
+            lock.setElevation(1_000_000f);
+            lock.setPadding((int) (32 * d), (int) (32 * d), (int) (32 * d), (int) (32 * d));
+
+            android.widget.TextView title = new android.widget.TextView(this);
+            title.setText("RichHealth is locked");
+            title.setTextColor(Color.WHITE);
+            title.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 18f);
+            title.setTypeface(null, android.graphics.Typeface.BOLD);
+            title.setGravity(android.view.Gravity.CENTER);
+            lock.addView(title);
+
+            biometricReasonView = new android.widget.TextView(this);
+            biometricReasonView.setTextColor(Color.parseColor("#B8C4C4"));
+            biometricReasonView.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 14f);
+            biometricReasonView.setGravity(android.view.Gravity.CENTER);
+            biometricReasonView.setLineSpacing(0f, 1.15f);
+            android.widget.LinearLayout.LayoutParams rlp = new android.widget.LinearLayout.LayoutParams(
+                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
+                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT);
+            rlp.topMargin = (int) (10 * d);
+            rlp.bottomMargin = (int) (24 * d);
+            lock.addView(biometricReasonView, rlp);
+
+            com.google.android.material.button.MaterialButton unlockBtn =
+                    new com.google.android.material.button.MaterialButton(this);
+            unlockBtn.setText("Unlock");
+            unlockBtn.setAllCaps(false);
+            unlockBtn.setTextSize(15f);
+            unlockBtn.setCornerRadius((int) (10 * d));
+            unlockBtn.setBackgroundTintList(
+                    android.content.res.ColorStateList.valueOf(Color.parseColor("#37C9A6")));
+            unlockBtn.setTextColor(Color.parseColor("#08201C"));
+            unlockBtn.setOnClickListener(v -> promptBiometric());
+            lock.addView(unlockBtn, new android.widget.LinearLayout.LayoutParams(
+                    (int) (200 * d), (int) (46 * d)));
+
+            // The escape hatch, and a SAFE one: it clears the session and sends the user to
+            // Login, where their password proves who they are — the same proof this lock
+            // stands in for. Nobody is bricked out of their account; they just cannot step
+            // over the lock into the data.
+            com.google.android.material.button.MaterialButton signOutBtn =
+                    new com.google.android.material.button.MaterialButton(this);
+            signOutBtn.setText("Sign out");
+            signOutBtn.setAllCaps(false);
+            signOutBtn.setTextSize(14f);
+            signOutBtn.setBackgroundTintList(
+                    android.content.res.ColorStateList.valueOf(Color.TRANSPARENT));
+            signOutBtn.setTextColor(Color.parseColor("#9BB0B0"));
+            signOutBtn.setElevation(0f);
+            signOutBtn.setStateListAnimator(null);
+            signOutBtn.setOnClickListener(v -> signOutFromLock());
+            android.widget.LinearLayout.LayoutParams slp = new android.widget.LinearLayout.LayoutParams(
+                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, (int) (44 * d));
+            slp.topMargin = (int) (6 * d);
+            lock.addView(signOutBtn, slp);
+
+            biometricOverlay = lock;
             android.widget.FrameLayout rootLayout = findViewById(android.R.id.content);
             rootLayout.addView(biometricOverlay,
                     new android.widget.FrameLayout.LayoutParams(
@@ -288,7 +341,42 @@ public class MainActivity extends AppCompatActivity implements PaymentResultWith
         biometricOverlay.setVisibility(View.VISIBLE);
         biometricOverlay.bringToFront();
 
+        // The overlay goes up FIRST, then we work out whether a prompt can even run. The
+        // old order unlocked on an unusable sensor to avoid "freezing" the app — but a lock
+        // that opens itself when the lock is broken is not a lock, and this screen is the
+        // user's health record. Unusable now means: keep it covered, say why, and offer the
+        // two ways out that do not involve showing the data.
+        if (!BiometricHelper.canAuthenticate(this)) {
+            waitingForBiometric = false;
+            setLockReason(BiometricHelper.getUnavailableReason(this));
+            return;
+        }
+
+        setLockReason("Verify your identity to continue.");
         promptBiometric();
+    }
+
+    /** The line under the title on the lock. Safe to call before the overlay exists. */
+    private void setLockReason(String reason) {
+        if (biometricReasonView == null) return;
+        biometricReasonView.setText(reason == null || reason.isEmpty()
+                ? "We could not verify it is you."
+                : reason);
+    }
+
+    /**
+     * Device credential (PIN/pattern) would be the nicer fallback than signing out, but this
+     * module is androidx.biometric 1.1.0 on minSdk 29, where DEVICE_CREDENTIAL cannot be
+     * combined with a biometric authenticator reliably below API 30. Adding it untested
+     * would risk an IllegalArgumentException at the exact moment the user is locked out.
+     *
+     * Clears the session and returns to Login. Same teardown ProfileFragment's logout uses. */
+    private void signOutFromLock() {
+        TokenManager.getInstance(this).logout();
+        Intent intent = new Intent(this, LoginActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+        finish();
     }
 
     /** Shows the system biometric prompt and resolves the lock overlay. Extracted so
@@ -306,14 +394,22 @@ public class MainActivity extends AppCompatActivity implements PaymentResultWith
                     if (BiometricHelper.isUserCancel(errorCode)) {
                         // Deliberate cancel / lockout — don't reveal content.
                         finishAffinity();
-                    } else {
-                        // Transient/system error (prompt couldn't show, app briefly
-                        // paused, hardware busy, etc.). FAIL OPEN: reveal content so the
-                        // app is never hard-stuck — the user already authenticated with
-                        // their password at login this session.
-                        biometricVerified = true;
-                        if (biometricOverlay != null) biometricOverlay.setVisibility(View.GONE);
+                        return;
                     }
+                    // Everything else used to FAIL OPEN — reveal the content on the grounds
+                    // that the user had already signed in this session. That reasoning does
+                    // not hold: the lock exists precisely for the window AFTER sign-in, when
+                    // the phone may be in someone else's hands, and "the sensor errored" is
+                    // trivially reachable (cover the reader, or just wait for a busy one).
+                    // So the overlay stays up. The screen is never revealed by a failure.
+                    if (biometricOverlay != null) {
+                        biometricOverlay.setVisibility(View.VISIBLE);
+                        biometricOverlay.bringToFront();
+                    }
+                    // A dialog is only right when we are actually on screen. ERROR_CANCELED
+                    // fires as the app goes to the background, and onResume re-prompts when
+                    // it comes back — tap-to-retry on the overlay covers the rest.
+                    setLockReason(errString == null ? null : errString.toString());
                 });
     }
 
