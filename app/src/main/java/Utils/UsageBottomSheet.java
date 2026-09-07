@@ -200,22 +200,17 @@ public final class UsageBottomSheet {
 
     // ── Badge / button / subtitle ───────────────────────────────────────────
 
+    /**
+     * Plan badge for the sheet header.
+     *
+     * This used to hand-roll its own switch over ultra / pro / plus, with everything else
+     * falling through to "Free" — so a FAMILY owner and anyone on family_member opened the
+     * usage sheet and saw a grey "Free" badge while holding a paid plan. PlanBadge has
+     * covered all six tiers since it shipped; there was never a reason for a second copy.
+     */
     private static void bindBadge(TextView badge, String tier) {
         if (badge == null) return;
-        String t = tier == null ? "free" : tier.toLowerCase();
-        String label; int bg;
-        switch (t) {
-            case "ultra": label = "Ultra"; bg = Color.parseColor("#F2C14E"); break;
-            case "pro":   label = "Pro";   bg = Color.parseColor("#008B8B"); break;
-            case "plus":  label = "Plus";  bg = Color.parseColor("#4FB0A6"); break;
-            default:      label = "Free";  bg = Color.parseColor("#8A8A8A"); break;
-        }
-        badge.setText(label);
-        float d = badge.getResources().getDisplayMetrics().density;
-        GradientDrawable bgd = new GradientDrawable();
-        bgd.setCornerRadius(20 * d);
-        bgd.setColor(bg);
-        badge.setBackground(bgd);
+        PlanBadge.apply(badge, tier);
     }
 
     private static void bindUpgradeButton(final Activity activity, final BottomSheetDialog dialog,

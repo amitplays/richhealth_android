@@ -90,7 +90,7 @@
                     android:layout_height="wrap_content"
                     android:text="Loading your check-ins..."
                     android:textColor="#808080"
-                    android:textSize="14sp" />
+                    android:textSize="13sp" />
             </LinearLayout>
 
             <!-- No access state -->
@@ -117,7 +117,7 @@
                     android:layout_height="wrap_content"
                     android:text="Health Check-In is available on all plans."
                     android:textColor="@color/white"
-                    android:textSize="16sp"
+                    android:textSize="15sp"
                     android:textStyle="bold"
                     android:gravity="center"
                     android:layout_marginBottom="8dp" />
@@ -173,6 +173,44 @@
                     app:cornerRadius="12dp" />
             </LinearLayout>
 
+            <!-- (1) DATES STRIP — which check-in you are reading.
+                 Replaces BOTH the old bottom "Past reads" list and the "Rhythm" streak row,
+                 matching iOS CheckInSheetView.datesStrip. Only completed cycles are
+                 selectable: a missed one has no read to show. -->
+            <LinearLayout
+                android:id="@+id/dates_strip_section"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="18dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Your check-ins"
+                    android:textColor="#9E9E9E"
+                    android:textSize="12sp"
+                    android:textAllCaps="true"
+                    android:letterSpacing="0.09"
+                    android:fontFamily="sans-serif-medium"
+                    android:layout_marginBottom="10dp" />
+
+                <HorizontalScrollView
+                    android:id="@+id/dates_strip_scroll"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:scrollbars="none"
+                    android:clipToPadding="false">
+
+                    <LinearLayout
+                        android:id="@+id/dates_strip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal" />
+                </HorizontalScrollView>
+            </LinearLayout>
+
             <!-- Empty state: no history yet AND not due -->
             <LinearLayout
                 android:id="@+id/empty_state"
@@ -197,7 +235,7 @@
                     android:layout_height="wrap_content"
                     android:text="No check-ins yet"
                     android:textColor="@color/white"
-                    android:textSize="16sp"
+                    android:textSize="15sp"
                     android:textStyle="bold"
                     android:gravity="center"
                     android:layout_marginBottom="8dp" />
@@ -246,7 +284,7 @@
                         android:layout_height="wrap_content"
                         android:text="Richie is reviewing your check-in…"
                         android:textColor="#C7C9CE"
-                        android:textSize="14sp"
+                        android:textSize="13sp"
                         android:layout_marginStart="11dp" />
                 </LinearLayout>
 
@@ -285,7 +323,7 @@
                             android:layout_weight="1"
                             android:text=""
                             android:textColor="#FFD5D5"
-                            android:textSize="14sp"
+                            android:textSize="13sp"
                             android:lineSpacingExtra="2dp"
                             android:textStyle="bold" />
                     </LinearLayout>
@@ -344,7 +382,7 @@
                             android:layout_height="wrap_content"
                             android:layout_gravity="top"
                             android:text=""
-                            android:textSize="10sp"
+                            android:textSize="11sp"
                             android:textStyle="bold"
                             android:textAllCaps="true"
                             android:letterSpacing="0.06"
@@ -360,7 +398,7 @@
                         android:layout_height="wrap_content"
                         android:text=""
                         android:textColor="#F1F2F3"
-                        android:textSize="16sp"
+                        android:textSize="15sp"
                         android:lineSpacingExtra="4dp" />
 
                     <!-- Read the Council · N perspectives → opens a bottom sheet -->
@@ -390,7 +428,7 @@
                             android:layout_height="wrap_content"
                             android:text="›"
                             android:textColor="#008b8b"
-                            android:textSize="18sp"
+                            android:textSize="13sp"
                             android:contentDescription="@null" />
                     </LinearLayout>
 
@@ -421,7 +459,7 @@
                             android:layout_height="wrap_content"
                             android:text="›"
                             android:textColor="#008b8b"
-                            android:textSize="18sp"
+                            android:textSize="13sp"
                             android:contentDescription="@null" />
                     </LinearLayout>
 
@@ -451,7 +489,7 @@
                         android:layout_height="wrap_content"
                         android:text="Couldn't generate your read this time."
                         android:textColor="#C7C9CE"
-                        android:textSize="14sp" />
+                        android:textSize="13sp" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/richie_retry_btn"
@@ -621,6 +659,39 @@
                     android:orientation="vertical" />
             </LinearLayout>
 
+            <!-- (7) WHAT YOU ANSWERED — shown INSTEAD of the analysis sections when a past
+                 date is selected. The read belongs to the CURRENT check-in only, so a past
+                 cycle shows exactly what was answered then (iOS pastResponsesSection). Rows are
+                 built by renderPastResponses(), reusing the question/emoji/label/delete row the
+                 accordion already drew. -->
+            <LinearLayout
+                android:id="@+id/past_responses_section"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="18dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="What you answered"
+                    android:textColor="#9E9E9E"
+                    android:textSize="12sp"
+                    android:textAllCaps="true"
+                    android:letterSpacing="0.09"
+                    android:fontFamily="sans-serif-medium"
+                    android:layout_marginBottom="10dp" />
+
+                <LinearLayout
+                    android:id="@+id/past_responses_container"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+            </LinearLayout>
+
+            <!-- Superseded by the dates strip, which carries both the cadence (cell tint) and
+                 the history (the cells themselves). Kept hidden rather than deleted. -->
             <!-- ═══════════════════════════════════════════════════════════════ -->
             <!-- (6) RHYTHM                                                       -->
             <!-- ═══════════════════════════════════════════════════════════════ -->
@@ -664,7 +735,7 @@
                         android:layout_height="wrap_content"
                         android:text=""
                         android:textColor="#C7C9CE"
-                        android:textSize="14sp" />
+                        android:textSize="13sp" />
 
                     <LinearLayout
                         android:id="@+id/rhythm_spark"

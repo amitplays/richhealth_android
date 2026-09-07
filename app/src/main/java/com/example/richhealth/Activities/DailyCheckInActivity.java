@@ -98,6 +98,16 @@ public class DailyCheckInActivity extends AppCompatActivity {
     // (7) Past reads — timeline list.
     private LinearLayout pastReadsSection;
 
+    // (1) Dates strip — which check-in is being read. Supersedes rhythmSection (cadence,
+    // now the cell tint) and pastReadsSection (history, now the cells themselves).
+    private LinearLayout datesStripSection;
+    private android.widget.HorizontalScrollView datesStripScroll;
+    private LinearLayout datesStrip;
+    private LinearLayout pastResponsesSection;
+    private LinearLayout pastResponsesContainer;
+    /** Session the body is showing. null = the latest completed one, i.e. the live read. */
+    private String selectedSessionId = null;
+
     // (1) HERO — "Richie's read on you"
     private LinearLayout richieSection;
     private LinearLayout richieSafetyBanner;
@@ -199,6 +209,13 @@ public class DailyCheckInActivity extends AppCompatActivity {
         rhythmText         = findViewById(R.id.rhythm_text);
         rhythmSpark        = findViewById(R.id.rhythm_spark);
         pastReadsSection   = findViewById(R.id.past_reads_section);
+
+        // (1) Dates strip + (7) what you answered
+        datesStripSection      = findViewById(R.id.dates_strip_section);
+        datesStripScroll       = findViewById(R.id.dates_strip_scroll);
+        datesStrip             = findViewById(R.id.dates_strip);
+        pastResponsesSection   = findViewById(R.id.past_responses_section);
+        pastResponsesContainer = findViewById(R.id.past_responses_container);
 
         // (2) Focus, (3) Wins, (4) Watchlist, (5) Sharpen your care
         focusSection       = findViewById(R.id.focus_section);
@@ -627,6 +644,8 @@ public class DailyCheckInActivity extends AppCompatActivity {
         sharpenSection.setVisibility(View.GONE);
         rhythmSection.setVisibility(View.GONE);
         pastReadsSection.setVisibility(View.GONE);
+        if (pastResponsesSection != null) pastResponsesSection.setVisibility(View.GONE);
+        if (datesStripSection != null) datesStripSection.setVisibility(View.GONE);
     }
 
     private void showNoAccess() {
@@ -642,6 +661,8 @@ public class DailyCheckInActivity extends AppCompatActivity {
         sharpenSection.setVisibility(View.GONE);
         rhythmSection.setVisibility(View.GONE);
         pastReadsSection.setVisibility(View.GONE);
+        if (pastResponsesSection != null) pastResponsesSection.setVisibility(View.GONE);
+        if (datesStripSection != null) datesStripSection.setVisibility(View.GONE);
     }
 
     private void showEmpty() {
@@ -657,9 +678,11 @@ public class DailyCheckInActivity extends AppCompatActivity {
                     ? "Your next check-in will be ready on " + formatDate(nextDueDate, "")
                     : "Your first check-in will appear here when it's ready.");
         }
-        // No sessions → no hero / focus / wins / watchlist / sharpen / rhythm / past reads.
+        // No sessions → no strip, hero, focus, wins, watchlist, sharpen or past answers.
         pastReadsSection.setVisibility(View.GONE);
         rhythmSection.setVisibility(View.GONE);
+        if (pastResponsesSection != null) pastResponsesSection.setVisibility(View.GONE);
+        bindDatesStrip();
         populateSummary(sessionItems);
     }
 
@@ -670,17 +693,230 @@ public class DailyCheckInActivity extends AppCompatActivity {
         emptyState.setVisibility(View.GONE);
         // (0) Action zone: start banner at top when due or resumable, even alongside history.
         bindStartBanner();
-        // (7) Past reads — newest-first timeline.
-        pastReadsSection.setVisibility(View.VISIBLE);
+        // (7) Past reads is superseded by the dates strip — the cells ARE the history.
+        // Left in place, hidden, rather than deleted.
+        pastReadsSection.setVisibility(View.GONE);
         sortSessionsDescending();
         listAdapter.notifyDataSetChanged();
-        // Builds hero (1), watchlist (2), rhythm (4) from real data.
-        populateSummary(sessionItems);
+        // (1) Dates strip, then the body for whichever check-in is selected.
+        bindDatesStrip();
+        applySelection();
     }
 
     /** Orders the adapter-backing list newest → oldest for the timeline. */
     private void sortSessionsDescending() {
         Collections.sort(sessionItems, (a, b) -> Long.compare(sessionTime(b), sessionTime(a)));
+    }
+
+    // ─── Answer rows (shared) ─────────────────────────────────────────────────
+
+    /**
+     * Builds one "question → answer" row per recorded response into {@code container}, with
+     * a delete affordance on each. Extracted from the accordion's renderAnswers so the dates
+     * strip's past view and the (now superseded) accordion draw the SAME row rather than two
+     * that drift apart.
+     *
+     * @param onChanged run after a successful delete, so each caller can refresh whatever
+     *                  else it shows for that session.
+     */
+    private void buildResponseRows(SessionItem item, LinearLayout container, Runnable onChanged) {
+        if (item == null || item.responses == null) return;
+        final android.content.Context ctx = container.getContext();
+        for (JSONObject r : new ArrayList<>(item.responses)) {
+            final String rid = r.optString("_id", "");
+            String q = r.optString("questionText", "");
+            String emoji = r.optString("selectedEmoji", "");
+            String label = r.optString("selectedLabel", r.optString("selectedValue", "\u2014"));
+
+            LinearLayout row = new LinearLayout(ctx);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+            row.setPadding(0, dpToPx(6), 0, dpToPx(6));
+
+            LinearLayout textCol = new LinearLayout(ctx);
+            textCol.setOrientation(LinearLayout.VERTICAL);
+            textCol.setLayoutParams(new LinearLayout.LayoutParams(0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+            if (!q.isEmpty()) {
+                TextView qv = new TextView(ctx);
+                qv.setText(q);
+                qv.setTextSize(12f);
+                qv.setTextColor(0xFF9E9E9E);
+                textCol.addView(qv);
+            }
+            TextView av = new TextView(ctx);
+            av.setText(emoji.isEmpty() ? label : emoji + "  " + label);
+            av.setTextSize(13f);
+            av.setTypeface(av.getTypeface(), android.graphics.Typeface.BOLD);
+            av.setTextColor(0xFFFFFFFF);
+            textCol.addView(av);
+            row.addView(textCol);
+
+            if (!rid.isEmpty()) {
+                Runnable confirmDelete = () ->
+                        new androidx.appcompat.app.AlertDialog.Builder(ctx)
+                                .setTitle("Remove this answer?")
+                                .setMessage("Only this one answer is removed \u2014 the rest of the check-in stays.")
+                                .setPositiveButton("Remove", (d, w) -> deleteResponse(rid, () -> {
+                                    item.responses.remove(r);
+                                    if (onChanged != null) onChanged.run();
+                                }))
+                                .setNegativeButton("Cancel", null)
+                                .show();
+
+                android.widget.ImageButton del = new android.widget.ImageButton(ctx);
+                del.setImageResource(R.drawable.ic_delete);
+                del.setColorFilter(0xFF9E9E9E);
+                del.setBackground(null);
+                del.setPadding(dpToPx(6), dpToPx(6), 0, dpToPx(6));
+                del.setContentDescription("Remove this answer");
+                del.setLayoutParams(new LinearLayout.LayoutParams(dpToPx(32), dpToPx(32)));
+                del.setOnClickListener(view -> confirmDelete.run());
+                row.addView(del);
+                row.setOnLongClickListener(view -> { confirmDelete.run(); return true; });
+            }
+            container.addView(row);
+        }
+    }
+
+    // ─── (1) Dates strip ──────────────────────────────────────────────────────
+
+    /**
+     * Builds the horizontal strip of check-in dates. Android twin of iOS
+     * CheckInSheetView.datesStrip, and it replaces BOTH of the blocks that used to sit at
+     * the bottom of this screen: the "Past reads" list (the cells ARE the history) and the
+     * "Rhythm" streak row (the cell tint IS the cadence the sparkline drew).
+     *
+     * Oldest → newest so the most recent sits on the trailing edge, then scrolled to the
+     * end the way a calendar opens on today. Only completed cycles are selectable — a
+     * missed or still-open one has nothing to show.
+     */
+    private void bindDatesStrip() {
+        if (datesStrip == null || datesStripSection == null) return;
+        datesStrip.removeAllViews();
+        if (sessionItems.isEmpty()) {
+            datesStripSection.setVisibility(View.GONE);
+            return;
+        }
+        datesStripSection.setVisibility(View.VISIBLE);
+
+        // A refresh can retire the session that was selected; fall back to the live read.
+        if (selectedSessionId != null && sessionById(selectedSessionId) == null) {
+            selectedSessionId = null;
+        }
+
+        List<SessionItem> asc = new ArrayList<>(sessionItems);
+        Collections.sort(asc, (a, b) -> Long.compare(sessionTime(a), sessionTime(b)));
+
+        String shown = shownSessionId();
+        for (SessionItem item : asc) {
+            View cell = getLayoutInflater().inflate(R.layout.item_checkin_date_cell, datesStrip, false);
+            TextView month = cell.findViewById(R.id.date_cell_month);
+            TextView day   = cell.findViewById(R.id.date_cell_day);
+            View dot       = cell.findViewById(R.id.date_cell_dot);
+
+            long t = sessionTime(item);
+            Date d = t > 0 ? new Date(t) : null;
+            month.setText(d == null ? "" : new SimpleDateFormat("MMM", Locale.getDefault()).format(d));
+            day.setText(d == null ? "\u2014" : new SimpleDateFormat("d", Locale.getDefault()).format(d));
+            dot.setBackgroundTintList(ColorStateList.valueOf(sparkColor(item.status)));
+
+            boolean readable = "completed".equals(item.status)
+                    && item.sessionId != null && !item.sessionId.isEmpty();
+            boolean isSelected = readable && item.sessionId.equals(shown);
+
+            // Selection is a ring, not a fill: the fill already carries status.
+            cell.setSelected(isSelected);
+            cell.setBackgroundTintList(ColorStateList.valueOf(isSelected ? 0xFF12403F : 0xFF141414));
+            cell.setAlpha(readable ? 1f : 0.45f);
+            day.setTextColor(isSelected ? 0xFF3FC9C9 : 0xFFFFFFFF);
+            cell.setContentDescription(month.getText() + " " + day.getText()
+                    + ", " + sessionStatusLabel(item.status));
+
+            if (readable) {
+                final String sid = item.sessionId;
+                cell.setOnClickListener(v -> selectSession(sid));
+            } else {
+                cell.setOnClickListener(null);
+                cell.setClickable(false);
+            }
+            datesStrip.addView(cell);
+        }
+
+        // Land on the newest, the way a calendar opens on today.
+        if (datesStripScroll != null) {
+            datesStripScroll.post(() -> datesStripScroll.fullScroll(View.FOCUS_RIGHT));
+        }
+    }
+
+    /** The session the body is showing: the explicit selection, else the latest completed. */
+    private String shownSessionId() {
+        if (selectedSessionId != null && !selectedSessionId.isEmpty()) return selectedSessionId;
+        List<SessionItem> asc = new ArrayList<>(sessionItems);
+        Collections.sort(asc, (a, b) -> Long.compare(sessionTime(a), sessionTime(b)));
+        SessionItem latest = latestCompleted(asc);
+        return latest == null ? null : latest.sessionId;
+    }
+
+    /** True when the body is showing the most recent completed check-in. */
+    private boolean isViewingLatest() {
+        List<SessionItem> asc = new ArrayList<>(sessionItems);
+        Collections.sort(asc, (a, b) -> Long.compare(sessionTime(a), sessionTime(b)));
+        SessionItem latest = latestCompleted(asc);
+        if (latest == null) return true;
+        String shown = shownSessionId();
+        return shown == null || shown.equals(latest.sessionId);
+    }
+
+    private SessionItem sessionById(String id) {
+        if (id == null) return null;
+        for (SessionItem s : sessionItems) if (id.equals(s.sessionId)) return s;
+        return null;
+    }
+
+    /**
+     * Tap a date. Selecting the latest completed cycle returns to the live read; selecting
+     * an older one shows what was ANSWERED then and nothing else — the analysis belongs to
+     * the current check-in only, which is the rule iOS follows.
+     */
+    private void selectSession(String sessionId) {
+        selectedSessionId = sessionId;
+        bindDatesStrip();
+        applySelection();
+    }
+
+    /** Swaps the body between the live read and a past cycle's answers. */
+    private void applySelection() {
+        boolean latest = isViewingLatest();
+        if (latest) {
+            if (pastResponsesSection != null) pastResponsesSection.setVisibility(View.GONE);
+            // Hand the hero back to the live read; populateSummary re-runs the analysis sync.
+            populateSummary(sessionItems);
+        } else {
+            stopAnalysisPolling();
+            // syncAnalysis() early-returns when the id still matches analysisSessionId, and
+            // stopAnalysisPolling() does NOT clear it. Without this, coming back to the latest
+            // date would skip the fetch and leave the hero hidden until the screen reopened.
+            analysisSessionId = null;
+            hideRichie();            // hero + focus/wins/watchlist/sharpen
+            renderPastResponses(sessionById(shownSessionId()));
+        }
+    }
+
+    /** "What you answered" for a past cycle, from the responses the list endpoint already sent. */
+    private void renderPastResponses(SessionItem item) {
+        if (pastResponsesSection == null || pastResponsesContainer == null) return;
+        pastResponsesContainer.removeAllViews();
+        pastResponsesSection.setVisibility(View.VISIBLE);
+        if (item == null || item.responses == null || item.responses.isEmpty()) {
+            TextView empty = new TextView(this);
+            empty.setText("No answers recorded for this check-in.");
+            empty.setTextSize(13f);
+            empty.setTextColor(0xFF9E9E9E);
+            pastResponsesContainer.addView(empty);
+            return;
+        }
+        buildResponseRows(item, pastResponsesContainer, () -> renderPastResponses(item));
     }
 
     // ─── Check-in summary (streak + consistency grid + last check-in) ───────────
@@ -704,8 +940,11 @@ public class DailyCheckInActivity extends AppCompatActivity {
         List<SessionItem> sorted = new ArrayList<>(items);
         Collections.sort(sorted, (a, b) -> Long.compare(sessionTime(a), sessionTime(b)));
 
-        // (4) RHYTHM — slim streak + completion + sparkline.
-        buildRhythm(sorted);
+        // (4) RHYTHM — superseded by the dates strip. Each cell there is tinted by status,
+        // which is exactly what the sparkline encoded, so the cadence now reads off the
+        // history itself instead of being restated as a sentence beneath it. buildRhythm()
+        // and computeStreak() are left intact and simply no longer called.
+        if (rhythmSection != null) rhythmSection.setVisibility(View.GONE);
 
         // (1) HERO — only when there's a completed session Richie can review.
         SessionItem lastCompleted = latestCompleted(sorted);
@@ -1747,7 +1986,9 @@ public class DailyCheckInActivity extends AppCompatActivity {
 
             private final LinearLayout answersContainer;
 
-            /** Render this session's individual answers; long-press one to remove it. */
+            /** Render this session's individual answers; long-press one to remove it.
+             *  Rows come from the activity-level builder so this and the dates strip's past
+             *  view can never drift apart. */
             void renderAnswers(SessionItem item) {
                 answersContainer.removeAllViews();
                 if (item.responses == null || item.responses.isEmpty()) {
@@ -1764,65 +2005,10 @@ public class DailyCheckInActivity extends AppCompatActivity {
                 header.setPadding(0, dpToPx(10), 0, dpToPx(4));
                 answersContainer.addView(header);
 
-                for (JSONObject r : item.responses) {
-                    final String rid = r.optString("_id", "");
-                    String q = r.optString("questionText", "");
-                    String emoji = r.optString("selectedEmoji", "");
-                    String label = r.optString("selectedLabel", r.optString("selectedValue", "\u2014"));
-
-                    // Row: [ question + answer (weight 1) ] [ visible trash icon ]
-                    LinearLayout row = new LinearLayout(ctx);
-                    row.setOrientation(LinearLayout.HORIZONTAL);
-                    row.setGravity(android.view.Gravity.CENTER_VERTICAL);
-                    row.setPadding(0, dpToPx(6), 0, dpToPx(6));
-
-                    LinearLayout textCol = new LinearLayout(ctx);
-                    textCol.setOrientation(LinearLayout.VERTICAL);
-                    textCol.setLayoutParams(new LinearLayout.LayoutParams(0,
-                            LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
-                    if (!q.isEmpty()) {
-                        TextView qv = new TextView(ctx);
-                        qv.setText(q);
-                        qv.setTextSize(12f);
-                        qv.setTextColor(0xFF9E9E9E);
-                        textCol.addView(qv);
-                    }
-                    TextView av = new TextView(ctx);
-                    av.setText(emoji.isEmpty() ? label : emoji + "  " + label);
-                    av.setTextSize(14f);
-                    av.setTypeface(av.getTypeface(), android.graphics.Typeface.BOLD);
-                    av.setTextColor(0xFFFFFFFF);
-                    textCol.addView(av);
-                    row.addView(textCol);
-
-                    if (!rid.isEmpty()) {
-                        Runnable confirmDelete = () ->
-                                new androidx.appcompat.app.AlertDialog.Builder(ctx)
-                                        .setTitle("Remove this answer?")
-                                        .setMessage("Only this one answer is removed \u2014 the rest of the check-in stays.")
-                                        .setPositiveButton("Remove", (d, w) -> deleteResponse(rid, () -> {
-                                            item.responses.remove(r);
-                                            renderAnswers(item);
-                                            sessionSummary.setText(summaryLine(item));
-                                        }))
-                                        .setNegativeButton("Cancel", null)
-                                        .show();
-
-                        // Visible affordance (icon) + long-press kept as a shortcut.
-                        android.widget.ImageButton del = new android.widget.ImageButton(ctx);
-                        del.setImageResource(R.drawable.ic_delete);   // app's own delete glyph, not the system one
-                        del.setColorFilter(0xFF9E9E9E);
-                        del.setBackground(null);
-                        del.setPadding(dpToPx(6), dpToPx(6), 0, dpToPx(6));
-                        del.setContentDescription("Remove this answer");
-                        LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(dpToPx(32), dpToPx(32));
-                        del.setLayoutParams(dlp);
-                        del.setOnClickListener(view -> confirmDelete.run());
-                        row.addView(del);
-                        row.setOnLongClickListener(view -> { confirmDelete.run(); return true; });
-                    }
-                    answersContainer.addView(row);
-                }
+                buildResponseRows(item, answersContainer, () -> {
+                    renderAnswers(item);
+                    sessionSummary.setText(summaryLine(item));
+                });
                 answersContainer.setVisibility(View.VISIBLE);
             }
 

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One cell in the check-in dates strip. Android twin of CheckInSheetView.stripCell.
+
+     A check-in IS a date, so the cell shows a date rather than a weekday — cycles run
+     weekly, bi-weekly or monthly, so a calendar week would sit mostly empty. The cell's
+     tint carries status, which is exactly what the old Rhythm sparkline encoded, so
+     consistency stays visible instead of being restated in a sentence below. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/date_cell_root"
+    android:layout_width="58dp"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:paddingVertical="9dp"
+    android:layout_marginEnd="8dp"
+    android:background="@drawable/checkin_cell_bg"
+    android:clickable="true"
+    android:focusable="true">
+
+    <TextView
+        android:id="@+id/date_cell_month"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="11sp"
+        android:textAllCaps="true"
+        android:letterSpacing="0.06"
+        android:textColor="#9E9E9E"
+        android:includeFontPadding="false" />
+
+    <TextView
+        android:id="@+id/date_cell_day"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="17sp"
+        android:textStyle="bold"
+        android:textColor="@color/white"
+        android:includeFontPadding="false"
+        android:layout_marginTop="2dp" />
+
+    <!-- Status dot: teal completed, amber open, red missed. Same palette the sparkline used. -->
+    <View
+        android:id="@+id/date_cell_dot"
+        android:layout_width="6dp"
+        android:layout_height="6dp"
+        android:layout_marginTop="6dp"
+        android:background="@drawable/checkin_dot_bg" />
+</LinearLayout>
