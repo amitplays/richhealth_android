@@ -13,6 +13,21 @@ public class ApiConfig {
 //     public static final String BASE_URL = "https://richhealthbackend.onrender.com";
      public static final String BASE_URL = "https://richhealthbackend.vercel.app";
 
+    // ── AirVisual (IQAir) — air quality provider ──────────────────────────────
+    //
+    // THE ONE PLACE to change this key on Android. It used to be pasted inline into the
+    // URL in TWO fragments (HomeFragment.fetchAqiFromIQAir and ProfileFragment), so
+    // rotating it meant finding both and hoping there was not a third. iOS's equivalent
+    // is APIConfig.airVisualKey.
+    //
+    // Moving it here does NOT make it private: it is still compiled into the APK and
+    // anyone can read it out, so rotating it buys nothing on its own. The only fix that
+    // works is proxying the call through our own aqiController, so the key lives in a
+    // server env var and neither app ever carries it.
+    public static final String AIRVISUAL_KEY = "14e2baae-46bf-441a-8ec8-642da0410050";
+    public static final String AIRVISUAL_NEAREST_CITY_URL =
+            "https://api.airvisual.com/v2/nearest_city";
+
     // API endpoints
     public static final String LOGIN_URL = BASE_URL + "/api/auth/login";
     public static final String REGISTER_URL = BASE_URL + "/api/auth/signup";

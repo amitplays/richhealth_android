@@ -2895,8 +2895,9 @@ public class ProfileFragment extends Fragment {
         }
         if (loc == null) return; // no fix available right now
 
-        String url = "https://api.airvisual.com/v2/nearest_city?lat=" + loc.getLatitude()
-                + "&lon=" + loc.getLongitude() + "&key=14e2baae-46bf-441a-8ec8-642da0410050";
+        // Key and host come from ApiConfig — the one place either is written down now.
+        String url = Utils.ApiConfig.AIRVISUAL_NEAREST_CITY_URL + "?lat=" + loc.getLatitude()
+                + "&lon=" + loc.getLongitude() + "&key=" + Utils.ApiConfig.AIRVISUAL_KEY;
 
         StringRequest request = new StringRequest(Request.Method.GET, url,
                 response -> {

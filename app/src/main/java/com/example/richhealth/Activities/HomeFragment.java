@@ -1330,8 +1330,9 @@ public class HomeFragment extends Fragment {
 
         Log.d(TAG, "Making API request for location: " + latitude + ", " + longitude);
 
-        String iqairApiUrl = "https://api.airvisual.com/v2/nearest_city?lat=" +
-                latitude + "&lon=" + longitude + "&key=14e2baae-46bf-441a-8ec8-642da0410050";
+        // Key and host come from ApiConfig — the one place either is written down now.
+        String iqairApiUrl = Utils.ApiConfig.AIRVISUAL_NEAREST_CITY_URL + "?lat=" +
+                latitude + "&lon=" + longitude + "&key=" + Utils.ApiConfig.AIRVISUAL_KEY;
 
         RequestQueue queue = Volley.newRequestQueue(context);
         StringRequest stringRequest = new StringRequest(Request.Method.GET, iqairApiUrl,
