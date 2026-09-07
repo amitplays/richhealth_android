@@ -174,24 +174,29 @@ public class UsageStatusActivity extends AppCompatActivity {
         int chat, sessions, reports, dependents, nutriLimit, dietaryLimit, reportAnalysisLimit, analysisLimit;
         boolean sharingAvailable;
 
+        // Dependent caps mirror config/tiers.js on the server, which is what actually
+        // enforces them: free 1, plus 4, pro 12, ultra 25. This table had 0/1/2/5, so it
+        // told a free user they could not add anyone (they can add one) and understated
+        // every paid tier by a wide margin — the backend's plans.js feature copy had
+        // drifted to a third set again. tiers.js first, then this and plans.js.
         switch (plan) {
             case "ultra":
-                chat = 100; sessions = 100; reports = 0; dependents = 5;
+                chat = 100; sessions = 100; reports = 0; dependents = 25;
                 analysisLimit = 0; sharingAvailable = true;
                 nutriLimit = 0; dietaryLimit = 0; reportAnalysisLimit = 0;
                 break;
             case "pro":
-                chat = 50; sessions = 50; reports = 10; dependents = 2;
+                chat = 50; sessions = 50; reports = 10; dependents = 12;
                 analysisLimit = 10; sharingAvailable = true;
                 nutriLimit = 0; dietaryLimit = 20; reportAnalysisLimit = 10;
                 break;
             case "plus":
-                chat = 25; sessions = 25; reports = 5; dependents = 1;
+                chat = 25; sessions = 25; reports = 5; dependents = 4;
                 analysisLimit = 5; sharingAvailable = false;
                 nutriLimit = 15; dietaryLimit = 10; reportAnalysisLimit = 5;
                 break;
             default: // free
-                chat = 5; sessions = 5; reports = 2; dependents = 0;
+                chat = 5; sessions = 5; reports = 2; dependents = 1;
                 analysisLimit = 1; sharingAvailable = false;
                 nutriLimit = 5; dietaryLimit = 2; reportAnalysisLimit = 0;
                 break;
