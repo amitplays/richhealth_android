@@ -27,184 +27,473 @@
         android:textColor="#AAAAAA"
         android:layout_marginBottom="20dp" />
 
-    <!-- Location Picker -->
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/location_input_layout"
-        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+    <!-- Everything between the title and Close scrolls. The scale legend below the chart
+         made this dialog taller than a short screen, and in a fixed column the Close button
+         was the part that fell off the bottom — leaving a dialog with no way out. Weighted
+         to 0dp/1 so the content takes what is left and the button stays pinned. -->
+    <ScrollView
+        android:id="@+id/aqi_scroll"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Select Location"
-        app:boxStrokeColor="#008b8b"
-        app:hintTextColor="#008b8b"
-        android:textColorHint="#AAAAAA"
-        app:boxBackgroundColor="#262626"
-        android:layout_marginBottom="16dp">
-
-        <AutoCompleteTextView
-            android:id="@+id/location_spinner"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:inputType="none"
-            android:textSize="15sp"
-            android:textColor="#FFFFFF"
-            android:textColorHint="#008b8b"
-            android:padding="14dp" />
-
-    </com.google.android.material.textfield.TextInputLayout>
-
-    <!-- Stats Card -->
-    <com.google.android.material.card.MaterialCardView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:cardCornerRadius="8dp"
-        app:cardElevation="2dp"
-        android:layout_marginBottom="16dp"
-        app:cardBackgroundColor="#262626">
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:scrollbars="none">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:padding="12dp"
-            android:weightSum="3">
+            android:orientation="vertical">
 
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical"
-                android:gravity="center">
-
-                <TextView
-                    android:id="@+id/avg_aqi_value"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="--"
-                    android:textSize="20sp"
-                    android:textStyle="bold"
-                    android:textColor="#008b8b" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Avg AQI"
-                    android:textSize="11sp"
-                    android:textColor="#AAAAAA" />
-
-            </LinearLayout>
-
-            <View
-                android:layout_width="1dp"
-                android:layout_height="match_parent"
-                android:background="#404040" />
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical"
-                android:gravity="center">
-
-                <TextView
-                    android:id="@+id/max_aqi_value"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="--"
-                    android:textSize="20sp"
-                    android:textStyle="bold"
-                    android:textColor="#FF6B6B" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Max AQI"
-                    android:textSize="11sp"
-                    android:textColor="#AAAAAA" />
-
-            </LinearLayout>
-
-            <View
-                android:layout_width="1dp"
-                android:layout_height="match_parent"
-                android:background="#404040" />
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical"
-                android:gravity="center">
-
-                <TextView
-                    android:id="@+id/data_points_value"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="--"
-                    android:textSize="20sp"
-                    android:textStyle="bold"
-                    android:textColor="#4CAF50" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Records"
-                    android:textSize="11sp"
-                    android:textColor="#AAAAAA" />
-
-            </LinearLayout>
-
-        </LinearLayout>
-
-    </com.google.android.material.card.MaterialCardView>
-
-    <!-- Analysis Summary Card (initially hidden) -->
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/analysis_card"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:cardCornerRadius="8dp"
-        app:cardElevation="2dp"
-        android:layout_marginBottom="16dp"
-        android:visibility="gone"
-        app:cardBackgroundColor="#262626">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="12dp">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="30-Day Exposure Analysis"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:textColor="#008b8b"
-                android:layout_marginBottom="8dp"/>
-
-            <LinearLayout
+            <!-- Location Picker -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/location_input_layout"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal">
+                android:hint="Select Location"
+                app:boxStrokeColor="#008b8b"
+                app:hintTextColor="#008b8b"
+                android:textColorHint="#AAAAAA"
+                app:boxBackgroundColor="#262626"
+                android:layout_marginBottom="16dp">
 
-                <TextView
-                    android:id="@+id/high_exposure_days_text"
-                    android:layout_width="wrap_content"
+                <AutoCompleteTextView
+                    android:id="@+id/location_spinner"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="High exposure days: 0"
-                    android:textSize="13sp"
-                    android:textColor="#FFFFFF"/>
-            </LinearLayout>
-        </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
+                    android:inputType="none"
+                    android:textSize="15sp"
+                    android:textColor="#FFFFFF"
+                    android:textColorHint="#008b8b"
+                    android:padding="14dp" />
 
-    <!-- Chart -->
-    <com.github.mikephil.charting.charts.LineChart
-        android:id="@+id/aqi_chart"
-        android:layout_width="match_parent"
-        android:layout_height="280dp"
-        android:layout_marginBottom="16dp" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Stats Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="2dp"
+                android:layout_marginBottom="16dp"
+                app:cardBackgroundColor="#262626">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <!-- Three figures on ONE scale: the average, the cleanest air this place gave
+                         you, and the worst. "Max" read as a ceiling rather than something that
+                         happened, and "Records" was the database's word for a count, not the
+                         user's; a best beside the worst is what makes the average mean anything.
+                         weightSum stays 3 because the reading count left the row entirely (see the
+                         line below) instead of becoming a fourth column. -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:weightSum="3">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:gravity="center">
+
+                            <TextView
+                                android:id="@+id/avg_aqi_value"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="--"
+                                android:textSize="20sp"
+                                android:textStyle="bold"
+                                android:textColor="#008b8b" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Average"
+                                android:textSize="11sp"
+                                android:textColor="#AAAAAA" />
+
+                        </LinearLayout>
+
+                        <View
+                            android:layout_width="1dp"
+                            android:layout_height="match_parent"
+                            android:background="#404040" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:gravity="center">
+
+                            <TextView
+                                android:id="@+id/min_aqi_value"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="--"
+                                android:textSize="20sp"
+                                android:textStyle="bold"
+                                android:textColor="#4CAF50" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Best"
+                                android:textSize="11sp"
+                                android:textColor="#AAAAAA" />
+
+                        </LinearLayout>
+
+                        <View
+                            android:layout_width="1dp"
+                            android:layout_height="match_parent"
+                            android:background="#404040" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:gravity="center">
+
+                            <TextView
+                                android:id="@+id/max_aqi_value"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="--"
+                                android:textSize="20sp"
+                                android:textStyle="bold"
+                                android:textColor="#FF6B6B" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Worst"
+                                android:textSize="11sp"
+                                android:textColor="#AAAAAA" />
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+                    <!-- Sample size and window in one plain line under the row, not beside it as a
+                         fourth cell: there its number invited comparison with the three AQI figures,
+                         and it is not a measurement — it is how much they are worth. Teal because
+                         every other figure here is coloured by how bad the air was, and a band
+                         colour on a count would read as another verdict. -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center"
+                        android:layout_marginTop="10dp">
+
+                        <TextView
+                            android:id="@+id/data_points_value"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="--"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:textColor="#008b8b" />
+
+                        <TextView
+                            android:id="@+id/data_points_label"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="4dp"
+                            android:text="readings over the last 30 days"
+                            android:textSize="11sp"
+                            android:textColor="#AAAAAA" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Analysis Summary Card (initially hidden) -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/analysis_card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="2dp"
+                android:layout_marginBottom="16dp"
+                android:visibility="gone"
+                app:cardBackgroundColor="#262626">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="30-Day Exposure Analysis"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:textColor="#008b8b"
+                        android:layout_marginBottom="8dp"/>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:id="@+id/high_exposure_days_text"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="High exposure days: 0"
+                            android:textSize="13sp"
+                            android:textColor="#FFFFFF"/>
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Chart -->
+            <com.github.mikephil.charting.charts.LineChart
+                android:id="@+id/aqi_chart"
+                android:layout_width="match_parent"
+                android:layout_height="280dp"
+                android:layout_marginBottom="16dp" />
+
+
+            <!-- AQI scale legend. Last, because it is reference material: you read it once to learn
+                 the scale, then never again — everything above it is about YOUR readings. Without it
+                 the chart is a line with no units, and 63 is only legible if you already know what
+                 the scale is. Bands and boundaries are the US EPA's, shared verbatim with iOS
+                 (AQIData.bands); six bands over four colours, because the NAME is what separates
+                 "Sensitive groups" from "Unhealthy" and the colour only says how alarmed to be. -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="2dp"
+                android:layout_marginBottom="16dp"
+                app:cardBackgroundColor="#262626">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="What the numbers mean"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:textColor="#008b8b"
+                        android:layout_marginBottom="2dp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="6dp">
+
+                        <View
+                            android:layout_width="4dp"
+                            android:layout_height="14dp"
+                            android:background="#4CAF50" />
+
+                        <TextView
+                            android:layout_width="62dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="10dp"
+                            android:text="0–50"
+                            android:textSize="12sp"
+                            android:fontFamily="monospace"
+                            android:textColor="#FFFFFF" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Good"
+                            android:textSize="12sp"
+                            android:textColor="#AAAAAA" />
+
+                    </LinearLayout>
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="6dp">
+
+                        <View
+                            android:layout_width="4dp"
+                            android:layout_height="14dp"
+                            android:background="#E0B000" />
+
+                        <TextView
+                            android:layout_width="62dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="10dp"
+                            android:text="51–100"
+                            android:textSize="12sp"
+                            android:fontFamily="monospace"
+                            android:textColor="#FFFFFF" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Moderate"
+                            android:textSize="12sp"
+                            android:textColor="#AAAAAA" />
+
+                    </LinearLayout>
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="6dp">
+
+                        <View
+                            android:layout_width="4dp"
+                            android:layout_height="14dp"
+                            android:background="#E67E22" />
+
+                        <TextView
+                            android:layout_width="62dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="10dp"
+                            android:text="101–150"
+                            android:textSize="12sp"
+                            android:fontFamily="monospace"
+                            android:textColor="#FFFFFF" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Sensitive groups"
+                            android:textSize="12sp"
+                            android:textColor="#AAAAAA" />
+
+                    </LinearLayout>
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="6dp">
+
+                        <View
+                            android:layout_width="4dp"
+                            android:layout_height="14dp"
+                            android:background="#E67E22" />
+
+                        <TextView
+                            android:layout_width="62dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="10dp"
+                            android:text="151–200"
+                            android:textSize="12sp"
+                            android:fontFamily="monospace"
+                            android:textColor="#FFFFFF" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Unhealthy"
+                            android:textSize="12sp"
+                            android:textColor="#AAAAAA" />
+
+                    </LinearLayout>
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="6dp">
+
+                        <View
+                            android:layout_width="4dp"
+                            android:layout_height="14dp"
+                            android:background="#FF5252" />
+
+                        <TextView
+                            android:layout_width="62dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="10dp"
+                            android:text="201–300"
+                            android:textSize="12sp"
+                            android:fontFamily="monospace"
+                            android:textColor="#FFFFFF" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Very unhealthy"
+                            android:textSize="12sp"
+                            android:textColor="#AAAAAA" />
+
+                    </LinearLayout>
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="6dp">
+
+                        <View
+                            android:layout_width="4dp"
+                            android:layout_height="14dp"
+                            android:background="#FF5252" />
+
+                        <TextView
+                            android:layout_width="62dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="10dp"
+                            android:text="301+"
+                            android:textSize="12sp"
+                            android:fontFamily="monospace"
+                            android:textColor="#FFFFFF" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Hazardous"
+                            android:textSize="12sp"
+                            android:textColor="#AAAAAA" />
+
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:text="Measured on the US AQI scale. Readings are saved automatically when RichHealth checks the air where you are."
+                        android:textSize="11sp"
+                        android:lineSpacingExtra="2dp"
+                        android:textColor="#808080" />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+        </LinearLayout>
+
+    </ScrollView>
 
     <!-- Close Button -->
     <com.google.android.material.button.MaterialButton

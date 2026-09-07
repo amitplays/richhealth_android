@@ -765,6 +765,14 @@ public class DialogUtils {
 
     // Overloaded method with analysis data
     public static void showAQIChartDialog(Context context, List<AQIData> aqiHistory, int highExposureDays) {
+        // Nothing to plot? Say so and stop HERE. This check used to sit after the Dialog was
+        // constructed and inflated, so the early return left a fully-built Dialog behind the
+        // toast with no reference left to dismiss it — a leaked window for an empty chart.
+        if (aqiHistory == null || aqiHistory.isEmpty()) {
+            Utilities.toast(context, "No AQI history data available");
+            return;
+        }
+
         Dialog dialog = new Dialog(context, R.style.FullScreenDialog);
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
         dialog.setContentView(R.layout.dialog_aqi_chart);
@@ -776,11 +784,6 @@ public class DialogUtils {
         layoutParams.height = WindowManager.LayoutParams.WRAP_CONTENT;
         dialog.getWindow().setAttributes(layoutParams);
         dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-
-        if (aqiHistory == null || aqiHistory.isEmpty()) {
-            Utilities.toast(context, "No AQI history data available");
-            return;
-        }
 
         // Group data by location
         Map<String, List<AQIData>> locationGroups = new HashMap<>();
@@ -807,7 +810,13 @@ public class DialogUtils {
         com.github.mikephil.charting.charts.LineChart chart = dialog.findViewById(R.id.aqi_chart);
         TextView avgAqiValue = dialog.findViewById(R.id.avg_aqi_value);
         TextView maxAqiValue = dialog.findViewById(R.id.max_aqi_value);
+        // The cleanest reading this place gave you, shown beside the worst: a range is what
+        // makes an average mean anything — 80 reads very differently when the spread is
+        // 70-90 than when it is 20-200.
+        TextView minAqiValue = dialog.findViewById(R.id.min_aqi_value);
         TextView dataPointsValue = dialog.findViewById(R.id.data_points_value);
+        // The words after the count, so one reading does not read "1 readings".
+        TextView dataPointsLabel = dialog.findViewById(R.id.data_points_label);
 
         // Setup location spinner
         List<String> locations = new ArrayList<>(locationGroups.keySet());
@@ -816,12 +825,12 @@ public class DialogUtils {
         locationSpinner.setText(defaultLocation, false);
 
         // Display chart for default location
-        updateChartForLocation(chart, avgAqiValue, maxAqiValue, dataPointsValue, locationGroups.get(defaultLocation));
+        updateChartForLocation(chart, avgAqiValue, minAqiValue, maxAqiValue, dataPointsValue, dataPointsLabel, locationGroups.get(defaultLocation));
 
         // Handle location selection
         locationSpinner.setOnItemClickListener((parent, view, position, id) -> {
             String selectedLocation = locations.get(position);
-            updateChartForLocation(chart, avgAqiValue, maxAqiValue, dataPointsValue, locationGroups.get(selectedLocation));
+            updateChartForLocation(chart, avgAqiValue, minAqiValue, maxAqiValue, dataPointsValue, dataPointsLabel, locationGroups.get(selectedLocation));
         });
 
         // Show analysis card if high exposure days is provided
@@ -840,20 +849,35 @@ public class DialogUtils {
     }
 
     private static void updateChartForLocation(com.github.mikephil.charting.charts.LineChart chart,
-                                               TextView avgAqiValue, TextView maxAqiValue, TextView dataPointsValue,
+                                               TextView avgAqiValue, TextView minAqiValue, TextView maxAqiValue,
+                                               TextView dataPointsValue, TextView dataPointsLabel,
                                                List<AQIData> locationData) {
-        // Calculate stats
-        int sum = 0, max = 0;
+        // Calculate stats. min starts at MAX_VALUE (not 0) so the first reading always wins —
+        // seeded at 0 the "best" figure would read 0 for every location, an AQI nobody had.
+        int sum = 0, max = 0, min = Integer.MAX_VALUE;
         for (AQIData data : locationData) {
             sum += data.getAqiValue();
             if (data.getAqiValue() > max) max = data.getAqiValue();
+            if (data.getAqiValue() < min) min = data.getAqiValue();
         }
         int avg = sum / locationData.size();
 
         // Update stats
         avgAqiValue.setText(String.valueOf(avg));
         maxAqiValue.setText(String.valueOf(max));
+        // Guarded rather than assumed: an empty series would leave min at MAX_VALUE, and a
+        // nine-digit "best" is worse than the placeholder it replaced.
+        if (minAqiValue != null) {
+            minAqiValue.setText(min == Integer.MAX_VALUE ? "--" : String.valueOf(min));
+        }
+        // The count is no longer a fourth AQI figure in the stat row — it sits on its own
+        // line under it ("N readings over the last 30 days"), because how many readings you
+        // have is not a measurement and invited comparison with the three that are.
         dataPointsValue.setText(String.valueOf(locationData.size()));
+        if (dataPointsLabel != null) {
+            dataPointsLabel.setText(locationData.size() == 1
+                    ? "reading over the last 30 days" : "readings over the last 30 days");
+        }
 
         // Update chart
         setupAQIChart(chart, locationData);
@@ -887,8 +911,13 @@ public class DialogUtils {
         dataSet.setDrawFilled(true);
         dataSet.setFillColor(Color.parseColor("#1976D2"));
         dataSet.setFillAlpha(50);
-        dataSet.setMode(com.github.mikephil.charting.data.LineDataSet.Mode.CUBIC_BEZIER);
-        dataSet.setCubicIntensity(0.2f);
+        // LINEAR, not CUBIC_BEZIER: AQI readings are irregular — one per app open, not one
+        // per day — so a curve drawn between two of them invents air quality nobody
+        // breathed. Same rule the live report-trends chart follows (ReportTrendsSheet).
+        dataSet.setMode(com.github.mikephil.charting.data.LineDataSet.Mode.LINEAR);
+        // Kept, disabled: cubic intensity only shapes a CUBIC_BEZIER line, and is dead
+        // weight while the mode above is LINEAR. Restore it with the mode if that changes.
+        // dataSet.setCubicIntensity(0.2f);
 
         // Create line data
         com.github.mikephil.charting.data.LineData lineData = new com.github.mikephil.charting.data.LineData(dataSet);

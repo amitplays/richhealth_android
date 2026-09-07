@@ -103,6 +103,10 @@ public class AIFragment extends Fragment implements BackPressHandler {
     private ImageButton newChatHeaderButton;
     private ImageButton keepHistoryButton;
     private TextView savedCountText;
+    // Header bookmark icon. The saved-replies panel is built in setupSavedChatsPanel()
+    // on every onCreateView but had nothing that ever showed it; this button is that
+    // one way in, so it is bound here and wired there, beside the panel it opens.
+    private ImageButton savedChatsButton;
 
     // Welcome / empty state
     private LinearLayout welcomeContainer;
@@ -405,6 +409,7 @@ public class AIFragment extends Fragment implements BackPressHandler {
         sendButton = view.findViewById(R.id.send_button);
         keepHistoryButton = view.findViewById(R.id.keep_history_button);
         savedCountText = view.findViewById(R.id.saved_count);
+        savedChatsButton = view.findViewById(R.id.saved_chats_button);
         chatHistoryButton = view.findViewById(R.id.chat_history_button);
         newChatHeaderButton = view.findViewById(R.id.new_chat_header_button);
 
@@ -3247,41 +3252,51 @@ public class AIFragment extends Fragment implements BackPressHandler {
     private void renderSessionMessages(JSONArray messagesArray, String forSessionId) throws JSONException {
         chatAdapter.clear();
         for (int i = 0; i < messagesArray.length(); i++) {
-            JSONObject messageObj = messagesArray.getJSONObject(i);
-
-            ChatMessage message = new ChatMessage(
-                    messageObj.getString("message"),
-                    messageObj.getBoolean("isFromAI"));
-
-            message.setMessageId(messageObj.getString("_id"));
-            message.setSessionId(forSessionId);
-
-            // Persisted "logged" confirmation boxes render distinctly.
-            if ("log".equals(messageObj.optString("type"))) {
-                message.setLogEntry(true);
-            }
-            if (messageObj.has("timestamp")) {
-                message.setTimestamp(parseTimestamp(messageObj.getString("timestamp")));
-            }
-            if (messageObj.has("isSaved")) {
-                message.setSaved(messageObj.getBoolean("isSaved"));
-            }
-            // Restore the persisted "memory saved" icon (server keeps it true only
-            // while a memory linked to this turn still exists).
-            if (messageObj.optBoolean("memorySaved", false)) {
-                message.setMemoryAdded(true);
-            }
-            // Restore the persisted "Thinking" trace so the collapsible reasoning row
-            // survives reopening a past session.
-            String savedReasoning = messageObj.optString("reasoning", "");
-            if (!savedReasoning.trim().isEmpty()) {
-                message.setReasoning(savedReasoning);
-            }
-            message.setAgentTrace(messageObj.optJSONArray("agentSteps"), messageObj.optJSONArray("sources"));
-            message.setImageFileId(messageObj.isNull("imageFileId") ? null : messageObj.optString("imageFileId", null));
-
-            chatAdapter.addMessage(message);
+            chatAdapter.addMessage(parseChatMessage(messagesArray.getJSONObject(i), forSessionId));
         }
+    }
+
+    /**
+     * One server message row parsed into a ChatMessage. Split out of
+     * renderSessionMessages so the saved-replies panel reads a bookmark with exactly
+     * the rules the chat reads a message with. The saved-messages endpoint returns
+     * whole ChatMessage documents, so anything the chat learns to restore (the
+     * thinking trace, the agent trace, an attached image) cannot quietly go missing
+     * from a bookmark — there is only one parser to teach.
+     */
+    private ChatMessage parseChatMessage(JSONObject messageObj, String forSessionId) throws JSONException {
+        ChatMessage message = new ChatMessage(
+                messageObj.getString("message"),
+                messageObj.getBoolean("isFromAI"));
+
+        message.setMessageId(messageObj.getString("_id"));
+        message.setSessionId(forSessionId);
+
+        // Persisted "logged" confirmation boxes render distinctly.
+        if ("log".equals(messageObj.optString("type"))) {
+            message.setLogEntry(true);
+        }
+        if (messageObj.has("timestamp")) {
+            message.setTimestamp(parseTimestamp(messageObj.getString("timestamp")));
+        }
+        if (messageObj.has("isSaved")) {
+            message.setSaved(messageObj.getBoolean("isSaved"));
+        }
+        // Restore the persisted "memory saved" icon (server keeps it true only
+        // while a memory linked to this turn still exists).
+        if (messageObj.optBoolean("memorySaved", false)) {
+            message.setMemoryAdded(true);
+        }
+        // Restore the persisted "Thinking" trace so the collapsible reasoning row
+        // survives reopening a past session.
+        String savedReasoning = messageObj.optString("reasoning", "");
+        if (!savedReasoning.trim().isEmpty()) {
+            message.setReasoning(savedReasoning);
+        }
+        message.setAgentTrace(messageObj.optJSONArray("agentSteps"), messageObj.optJSONArray("sources"));
+        message.setImageFileId(messageObj.isNull("imageFileId") ? null : messageObj.optString("imageFileId", null));
+
+        return message;
     }
 
     /**
@@ -3481,7 +3496,13 @@ public class AIFragment extends Fragment implements BackPressHandler {
         RecyclerView savedChatsRecycler = savedChatsPanel.findViewById(R.id.saved_chats_recycler);
         savedChatAdapter = new SavedChatAdapter(requireContext());
 
-        // Set up action listener for delete
+        // Set up action listener for delete.
+        // Now that the list holds real rows this path is what keeps three surfaces in
+        // step: the panel drops the row here, toggleMessageSaved flips isSaved on the
+        // server and re-paints the bookmark icon on the chat bubble behind the panel,
+        // and the counter is refreshed again from the server once that PUT confirms.
+        // The panel is rebuilt from the endpoint on every open, so a failed unsave
+        // corrects itself the next time the user opens it.
         savedChatAdapter.setActionListener(message -> {
             // Unsave the message
             toggleMessageSaved(message);
@@ -3498,6 +3519,13 @@ public class AIFragment extends Fragment implements BackPressHandler {
 
         savedChatsRecycler.setLayoutManager(new LinearLayoutManager(requireContext()));
         savedChatsRecycler.setAdapter(savedChatAdapter);
+
+        // The panel was built on every onCreateView and then never shown — nothing
+        // called show(). The header bookmark button is the way in, wired here rather
+        // than in initViews because this is where the panel and its adapter exist.
+        if (savedChatsButton != null) {
+            savedChatsButton.setOnClickListener(v -> openSavedChatsPanel());
+        }
     }
 
     private void updateSavedChatsEmptyState() {
@@ -4768,7 +4796,12 @@ public class AIFragment extends Fragment implements BackPressHandler {
         if (context == null) return;
         TokenManager tokenManager = TokenManager.getInstance(context);
 
-        SimpleProgress progress = SimpleProgress.show(requireActivity(), "Saving...");
+        // Unsaving is also reachable from inside the saved-chats panel, which is a
+        // Dialog with its own window: shown on the activity the loader would sit behind
+        // it. Same panel-aware choice fetchChatSessions / deleteSession make.
+        SimpleProgress progress = (savedChatsPanel != null && savedChatsPanel.isShowing())
+                ? SimpleProgress.show(savedChatsPanel, "Saving...")
+                : SimpleProgress.show(requireActivity(), "Saving...");
 
         StringRequest request = new StringRequest(Request.Method.PUT, url,
                 response -> {
@@ -4842,6 +4875,96 @@ public class AIFragment extends Fragment implements BackPressHandler {
 
         RequestQueue queue = getSharedQueue(context);
         queue.add(request);
+    }
+
+    /**
+     * Open the saved-replies panel on real content: fetch first, show second.
+     * Deliberately the opposite order to showChatHistoryPanel() (which opens and then
+     * loads into the open panel). The saved list is the ENTIRE content of this panel,
+     * so opening it empty flashes "No saved chats yet" at a user who has plenty and
+     * then swaps it out. iOS made the same call for the same sheet.
+     *
+     * The same GET as fetchSavedMessagesCount — that one only ever measured the
+     * array and threw the rows away, which is why the panel had nothing to show.
+     */
+    private void openSavedChatsPanel() {
+        String url = ApiConfig.BASE_URL + "/api/chat/saved-messages";
+        Context context = getContext();
+        if (context == null) return; // Fragment detached, skip operation safely
+        TokenManager tokenManager = TokenManager.getInstance(context);
+
+        SimpleProgress progress = SimpleProgress.show(requireActivity(), "Loading saved chats...");
+
+        StringRequest request = new StringRequest(Request.Method.GET, url,
+                response -> {
+                    ApiConfig.logRestCall(url, true, "Saved messages fetched");
+                    progress.hide();
+                    // Detached mid-flight (tab switch): the panel belongs to a view that is
+                    // gone, and show() on it would leak a window.
+                    if (!isAdded() || savedChatsPanel == null || savedChatAdapter == null) return;
+                    try {
+                        JSONArray messagesArray = new JSONArray(response);
+                        savedChatAdapter.setSavedMessages(parseSavedMessages(messagesArray));
+                        // The list we just loaded IS the count — keep the counter honest
+                        // without a second round trip to the endpoint we just called.
+                        if (savedCountText != null) {
+                            savedCountText.setText(String.valueOf(messagesArray.length()));
+                        }
+                        updateSavedChatsEmptyState();
+                        savedChatsPanel.show();
+                    } catch (JSONException e) {
+                        Log.e(TAG, "Error parsing saved messages response", e);
+                        Utilities.toast(requireContext(), "Failed to load saved chats");
+                    }
+                },
+                error -> {
+                    ApiConfig.logRestCall(url, false, error.toString());
+                    progress.hide();
+                    Log.e(TAG, "Error fetching saved messages: " + error.toString());
+                    // Nothing to show, so nothing is opened — an empty panel here would
+                    // read as "you have no bookmarks" rather than "the load failed".
+                    if (isAdded()) Utilities.toast(requireContext(), "Failed to load saved chats");
+                }
+        ) {
+            @Override
+            public Map<String, String> getHeaders() throws AuthFailureError {
+                Map<String, String> headers = new HashMap<>();
+                headers.put("Authorization", "Bearer " + tokenManager.getToken());
+                return headers;
+            }
+        };
+
+        RequestQueue queue = getSharedQueue(context);
+        queue.add(request);
+    }
+
+    /**
+     * The saved-messages endpoint hands back whole ChatMessage documents, newest-saved
+     * first, with `session` populated down to {sessionId, title}. So each row goes
+     * through the chat's own parser, plus the one field only a bookmark carries:
+     * savedAt, which is what the panel row prints as "Saved on ...".
+     */
+    private List<ChatMessage> parseSavedMessages(JSONArray messagesArray) throws JSONException {
+        List<ChatMessage> saved = new ArrayList<>();
+        for (int i = 0; i < messagesArray.length(); i++) {
+            JSONObject messageObj = messagesArray.getJSONObject(i);
+            // `session` is a populated ref: an object normally, but null or a bare id
+            // string once the conversation behind it is deleted. optJSONObject returns
+            // null for both, so a deleted chat costs its bookmark the session id rather
+            // than throwing and costing the user the whole list.
+            JSONObject sessionObj = messageObj.optJSONObject("session");
+            String fromSessionId = sessionObj != null ? sessionObj.optString("sessionId", "") : "";
+            ChatMessage message = parseChatMessage(messageObj, fromSessionId);
+            String savedAt = messageObj.optString("savedAt", "");
+            if (!savedAt.trim().isEmpty()) {
+                // parseTimestamp falls back to "now" on anything it can't read, so only
+                // feed it a value that is actually there — the row would otherwise claim
+                // every undated bookmark was saved today. The adapter skips a null date.
+                message.setSavedAt(new Date(parseTimestamp(savedAt)));
+            }
+            saved.add(message);
+        }
+        return saved;
     }
 
 

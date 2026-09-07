@@ -83,11 +83,18 @@
             android:padding="4dp" />
     </FrameLayout>
 
-    <!-- Bottom action buttons -->
+    <!-- Bottom action buttons — hidden, not removed.
+         Neither Clear All nor Export is wired to anything: they have no click
+         listener in AIFragment and no endpoint behind them. Now that this panel
+         actually opens, two buttons that do nothing when tapped read as a broken
+         feature, and "Clear All" reads as one that silently threw the user's
+         bookmarks away. The row is kept intact so wiring it later is a
+         one-attribute change, not a rewrite. -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
+        android:visibility="gone"
         android:paddingHorizontal="12dp"
         android:paddingVertical="10dp">
 

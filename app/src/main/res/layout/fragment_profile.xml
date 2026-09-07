@@ -167,10 +167,21 @@
                 android:orientation="horizontal"
                 android:baselineAligned="false">
 
+                <!-- Air Quality opens the stored history chart — the readings behind this
+                     number were already being kept, with nothing on this screen that opened
+                     them. Same tappable treatment as the Family slot below so the two tap
+                     targets in this row look and feel alike. -->
                 <LinearLayout
+                    android:id="@+id/aqi_stat"
                     android:layout_width="0dp" android:layout_height="wrap_content"
                     android:layout_weight="1" android:orientation="vertical"
-                    android:gravity="center_horizontal">
+                    android:gravity="center_horizontal"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="View your air quality history">
                     <ImageView android:layout_width="@dimen/icon_sm" android:layout_height="@dimen/icon_sm"
                         android:src="@drawable/ic_air" app:tint="@color/rh_accent" android:layout_marginBottom="7dp"/>
                     <TextView android:id="@+id/aqi_value" android:layout_width="wrap_content" android:layout_height="wrap_content"

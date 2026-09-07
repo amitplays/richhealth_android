@@ -90,6 +90,9 @@ public class ProfileFragment extends Fragment {
 
     // Health Metrics section
     private TextView aqiValue;
+    // The whole Air Quality slot, not just its number — tapping it opens the stored
+    // AQI history chart (the readings were being kept with nowhere to read them).
+    private View aqiStat;
     private TextView weightValue;
     private TextView sleepValue;
     // At-a-Glance "Family" slot — replaced Water, which is still shown in full in
@@ -824,6 +827,10 @@ public class ProfileFragment extends Fragment {
 
         // Health Metrics section
         aqiValue = view.findViewById(R.id.aqi_value);
+        aqiStat = view.findViewById(R.id.aqi_stat);
+        if (aqiStat != null) {
+            aqiStat.setOnClickListener(v -> fetchAndShowAqiHistory());
+        }
         weightValue = view.findViewById(R.id.weight_value);
         sleepValue = view.findViewById(R.id.sleep_value);
         familyStat = view.findViewById(R.id.family_stat);
@@ -2803,6 +2810,56 @@ public class ProfileFragment extends Fragment {
                 }
             }
             @Override public void onError(String errorMessage) { refreshAqiFromLocation(); }
+        });
+    }
+
+    /**
+     * Tapping the At-a-Glance "Air Quality" slot opens the history chart behind that number.
+     *
+     * 30 days, matching the endpoint's own default and the window the dialog's own copy
+     * promises. Reuses AQIAPIService.getUserAQIHistory (the single wrapper around
+     * GET /api/aqi/user/history — auth header, ApiConfig.logRestCall and error mapping all
+     * live there) rather than opening a second route to the same rows.
+     *
+     * Empty and failed are told apart on purpose: an empty table is almost always a
+     * permissions story (readings are only stored when an AQI actually resolves, which needs
+     * location), and "couldn't load" sent for that would send the user looking for a fault
+     * that isn't there. Neither case opens the dialog — an empty chart explains nothing.
+     */
+    private void fetchAndShowAqiHistory() {
+        Context ctx = getContext();
+        if (ctx == null) return;
+        if (aqiApiService == null) aqiApiService = new Api.AQIAPIService(ctx);
+
+        SimpleProgress progress = SimpleProgress.show(requireActivity(), "Loading air quality history…");
+        aqiApiService.getUserAQIHistory(30, new Api.AQIAPIService.OnAQIHistoryListener() {
+            @Override public void onSuccess(java.util.List<Models.AQIData> history) {
+                progress.hide();
+                if (!isAdded()) return;
+                Context c = getContext();
+                if (c == null) return;
+                if (history == null || history.isEmpty()) {
+                    // Single-button info dialog (negativeText = null) rather than a toast:
+                    // this one has to explain WHY there is nothing, and that does not fit in
+                    // a toast the user can miss.
+                    DialogUtils.showConfirmDialog(c,
+                            "No air quality history yet",
+                            "Readings are saved each time RichHealth checks the air where you are. "
+                                    + "Allow location access and open the app outdoors to start building this.",
+                            "Got it", null, false, null);
+                    return;
+                }
+                // The one-argument form: high-exposure days come from /api/aqi/user/analysis,
+                // and a second round trip for one integer is not worth making the user wait.
+                DialogUtils.showAQIChartDialog(c, history);
+            }
+
+            @Override public void onError(String errorMessage) {
+                progress.hide();
+                if (!isAdded()) return;
+                Log.e(TAG, "Error fetching AQI history: " + errorMessage);
+                Utilities.toast(getContext(), "Couldn't load your air quality history. Please try again.");
+            }
         });
     }
 

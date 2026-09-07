@@ -44,15 +44,38 @@
             android:padding="9dp"
             android:scaleType="fitCenter"/>
 
+        <!-- Right: saved AI replies — opens the bookmarks panel.
+             Same 38dp / 9dp / borderless treatment as the two icons already in this
+             bar, in the history button's neutral tint rather than teal: teal marks the
+             one primary action here (New chat), and this is a way back to something
+             you already have, like history. iOS ships Bookmarks in the same trailing
+             group next to New Chat, so the two platforms read the same.
+             No count badge — nothing in this bar carries one, and a bubble
+             invented for a number the panel itself states as a list is just noise. -->
+        <ImageButton
+            android:id="@+id/saved_chats_button"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:layout_toStartOf="@id/new_chat_header_button"
+            android:layout_centerVertical="true"
+            android:src="@drawable/ic_bookmark_outline"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Saved Chats"
+            app:tint="#C4CFCF"
+            android:padding="9dp"
+            android:scaleType="fitCenter"/>
+
         <!-- Center: active chat title / summary. Empty while on a new chat,
-             set to the session title (shrunk) once a chat is open. -->
+             set to the session title (shrunk) once a chat is open. Its right
+             edge is the bookmark button, the inner-most of the two trailing
+             icons — anchored to New chat a long title ran underneath it. -->
         <TextView
             android:id="@+id/header_title"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_centerVertical="true"
             android:layout_toEndOf="@id/chat_history_button"
-            android:layout_toStartOf="@id/new_chat_header_button"
+            android:layout_toStartOf="@id/saved_chats_button"
             android:layout_marginStart="4dp"
             android:layout_marginEnd="4dp"
             android:text=""
@@ -260,6 +283,11 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:visibility="gone">
+        <!-- The bookmark button moved up into the top bar (it is a real entry
+             point now, not a compat stub). Kept here commented out rather than
+             dropped so the history of this block stays readable — it MUST NOT be
+             re-enabled: two views with the same id in one layout make
+             findViewById return whichever the inflater reaches first.
         <ImageButton
             android:id="@+id/saved_chats_button"
             android:layout_width="0dp"
@@ -267,6 +295,10 @@
             android:src="@drawable/ic_bookmark_outline"
             android:contentDescription="Saved Chats"
             android:background="@null"/>
+        -->
+        <!-- saved_count stays hidden: the count is still fetched and written here
+             (harmless, and it keeps the field truthful for whoever surfaces it
+             next), but this bar has no badge language to render it in. -->
         <TextView
             android:id="@+id/saved_count"
             android:layout_width="0dp"
