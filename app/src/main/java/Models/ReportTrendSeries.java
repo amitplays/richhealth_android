@@ -26,6 +26,7 @@ public class ReportTrendSeries {
         public Double v;               // canonical value; null when the result is a word
         public String text = "";       // "Non-reactive", "O+"
         public String raw = "";        // exactly what the lab printed — the record
+        public String unitRaw = "";    // the unit the lab printed it in, when `v` was converted
         public String status = "";     // normal|low|high|critical_low|critical_high|abnormal
         public Double refLow;          // the band THIS lab printed
         public Double refHigh;
@@ -159,6 +160,7 @@ public class ReportTrendSeries {
                     p.v = optDouble(po, "v");
                     p.text = po.optString("text", "");
                     p.raw = po.optString("raw", "");
+                    p.unitRaw = po.optString("unitRaw", "");
                     p.status = po.optString("status", "");
                     p.refLow = optDouble(po, "refLow");
                     p.refHigh = optDouble(po, "refHigh");

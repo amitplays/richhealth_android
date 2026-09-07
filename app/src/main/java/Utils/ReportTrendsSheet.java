@@ -478,7 +478,12 @@ public final class ReportTrendsSheet {
      */
     private static String displayValue(ReportTrendSeries s, ReportTrendSeries.Point p) {
         if (p.raw != null && !p.raw.isEmpty()) {
-            return s.unit.isEmpty() ? p.raw : p.raw + " " + s.unit;
+            // `raw` is what the LAB printed, so it carries the LAB's unit — `unitRaw` whenever
+            // the backend converted the value into the series' canonical unit. Pairing it with
+            // s.unit printed a converted 5.40 mmol/L result as "5.40 mg/dL". latestText() and
+            // the reference range above are canonical values, so they keep s.unit.
+            String printed = (p.unitRaw != null && !p.unitRaw.isEmpty()) ? p.unitRaw : s.unit;
+            return printed.isEmpty() ? p.raw : p.raw + " " + printed;
         }
         if (p.text != null && !p.text.isEmpty()) return p.text;
         if (p.v == null) return "--";
