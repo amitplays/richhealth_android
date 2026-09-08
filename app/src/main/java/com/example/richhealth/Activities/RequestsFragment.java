@@ -226,13 +226,13 @@ public class RequestsFragment extends Fragment {
 
         String url;
         if (isDoctor) {
-            url = ApiConfig.BASE_URL + "/api/users/doctor/respond";
+            url = ApiConfig.BASE_URL + "/api/users/doctor/doctor/respond";
         } else {
             // Check if it's a doctor relationship type
             ListItem item = listItems.get(adapterPosition);
             String relationship = item.data != null ? item.data.get("relationship") : "";
             if ("Doctor".equalsIgnoreCase(relationship)) {
-                url = ApiConfig.BASE_URL + "/api/users/doctor/respond";
+                url = ApiConfig.BASE_URL + "/api/users/doctor/doctor/respond";
             } else {
                 url = ApiConfig.BASE_URL + "/api/users/relationship/respond";
             }

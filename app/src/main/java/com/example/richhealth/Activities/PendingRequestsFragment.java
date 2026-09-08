@@ -158,7 +158,7 @@ public class PendingRequestsFragment extends Fragment {
             return;
         }
 
-        String url = ApiConfig.BASE_URL + "/api/user/doctor/pending";
+        String url = ApiConfig.BASE_URL + "/api/users/doctor/doctor/pending";
 
         StringRequest request = new StringRequest(Request.Method.GET, url,
                 response -> {
@@ -236,7 +236,7 @@ public class PendingRequestsFragment extends Fragment {
             return;
         }
 
-        String url = ApiConfig.BASE_URL + "/api/user/doctor/cancel";
+        String url = ApiConfig.BASE_URL + "/api/users/doctor/doctor/cancel";
 
         JSONObject requestBody = new JSONObject();
         try {

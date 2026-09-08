@@ -117,6 +117,14 @@ public class FindDoctorFragment extends Fragment {
             // Set button text based on connection status
             Button actionButton = holder.actionButton;
             switch (doctor.getConnectionStatus()) {
+                // "accepted" is what the server sends: doctorController.js:125 assigns
+                // `connection.status` straight through, and DoctorConnection's enum is
+                // ["pending","accepted","rejected"] — "connected" never appears on the
+                // wire. Matching only "connected" sent every already-connected doctor to
+                // the default branch, so they rendered as "Send Request".
+                // "connected" is kept as a fallthrough because ConnectedDoctorsFragment:179
+                // sets it locally on its own list.
+                case "accepted":
                 case "connected":
                     actionButton.setText("Connected");
                     actionButton.setEnabled(false);
@@ -177,7 +185,7 @@ public class FindDoctorFragment extends Fragment {
             return;
         }
 
-        String url = ApiConfig.BASE_URL + "/api/user/doctor/search?query=" + query;
+        String url = ApiConfig.BASE_URL + "/api/users/doctor/doctor/search?query=" + query;
 
         StringRequest request = new StringRequest(Request.Method.GET, url,
                 response -> {

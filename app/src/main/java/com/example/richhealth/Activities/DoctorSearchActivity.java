@@ -158,7 +158,7 @@ public class DoctorSearchActivity extends AppCompatActivity {
             return;
         }
 
-        String url = ApiConfig.BASE_URL + "/api/user/doctor/request";
+        String url = ApiConfig.BASE_URL + "/api/users/doctor/doctor/request";
 
         JSONObject requestBody = new JSONObject();
         try {

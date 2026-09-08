@@ -155,7 +155,7 @@ public class ConnectedDoctorsFragment extends Fragment {
             return;
         }
 
-        String url = ApiConfig.BASE_URL + "/api/user/doctor/connected";
+        String url = ApiConfig.BASE_URL + "/api/users/doctor/doctor/connected";
 
         StringRequest request = new StringRequest(Request.Method.GET, url,
                 response -> {

@@ -238,7 +238,11 @@ public class ProfileFragment extends Fragment {
         setupListeners();
         setupLogoutButton();
         loadAndDisplayProfile();
-        setupContactImport();
+        // Contact import is not wired up — setupContactImport()'s own importContacts()
+        // call is commented out, so all this did was raise the system READ_CONTACTS
+        // permission dialog the moment Profile opened, for a feature that cannot run.
+        // Left in place (not deleted) so re-enabling is one line once the importer ships.
+        // setupContactImport();
         Utils.IconAnimator.animateSectionIcons(rootView);
         // Cards no longer slide up from the bottom on entry (removed for a calmer,
         // consistent feel across the three profile tabs).
@@ -996,9 +1000,19 @@ public class ProfileFragment extends Fragment {
         displayMenstrualSection();
     }
 
+    /**
+     * Whether to OFFER the reproductive-health section.
+     *
+     * "Other" counts. models/User.js puts no gender constraint on these fields, and iOS
+     * has always included it (UserProfile.showReproductiveHealth) — female-only here meant
+     * a user who picked "Other" lost the section outright, along with anything already
+     * stored in it. The name is kept so the ~12 call sites read the same.
+     */
     private boolean isFemaleUser() {
         String gender = userProfile.getGender();
-        return gender != null && (gender.equalsIgnoreCase("female") || gender.equalsIgnoreCase("f"));
+        return gender != null && (gender.equalsIgnoreCase("female")
+                || gender.equalsIgnoreCase("f")
+                || gender.equalsIgnoreCase("other"));
     }
 
     /** Maps stored contraception value → display label; falls back to the raw text for "Other". */
@@ -1170,13 +1184,21 @@ public class ProfileFragment extends Fragment {
         }
     }
 
+    /**
+     * Stress display labels.
+     *
+     * These MUST be the keys of STRESS_OPTIONS, which is what this screen's own picker
+     * writes: 1..4 = Rarely / Sometimes / Often / Almost Always. The old map was a 1..5
+     * "Very Low..Very High" scale that nothing produced, so picking "Rarely" read back as
+     * "Very Low" and "Almost Always" read back as "High" — the screen contradicting its
+     * own input. iOS uses the same 1..4 wording (Models/UserProfile.swift stressLabel).
+     */
     private String stressLabel(int level) {
         switch (level) {
-            case 1: return "Very Low";
-            case 2: return "Low";
-            case 3: return "Moderate";
-            case 4: return "High";
-            case 5: return "Very High";
+            case 1: return "Rarely";
+            case 2: return "Sometimes";
+            case 3: return "Often";
+            case 4: return "Almost Always";
             default: return getString(R.string.empty_value);
         }
     }
@@ -1579,7 +1601,11 @@ public class ProfileFragment extends Fragment {
             }
 
             // Health & Lifestyle
-            String[] activityLevels = {"Sedentary", "Light", "Moderate", "Active", "Very Active"};
+            // Same wording as ACTIVITY_OPTIONS below (the picker that WRITES this value)
+            // and as iOS's activityLevelLabel. The old "Sedentary..Very Active" set was a
+            // third vocabulary: choosing "Athlete" (5) read back as "Very Active", and
+            // "Very Active" (4) read back as "Active".
+            String[] activityLevels = {"Mostly Sitting", "Light Activity", "Moderately Active", "Very Active", "Athlete"};
             int activityLevelIndex = userProfile.getActivityLevel();
 
             // Ensure activity level is within valid range
@@ -2229,6 +2255,7 @@ public class ProfileFragment extends Fragment {
     private static final java.util.LinkedHashMap<String, String> ALCOHOL_OPTIONS = new java.util.LinkedHashMap<String, String>() {{
         put("I don't drink", "None");
         put("Special occasions", "Special Occasions");
+        put("Rarely", "Rarely");
         put("Socially / weekends", "Socially");
         put("Few times a week", "Regularly");
         put("Almost daily", "Frequently");
@@ -2237,6 +2264,10 @@ public class ProfileFragment extends Fragment {
         put("No caffeine", "none");
         put("Tea person", "tea");
         put("Coffee lover", "coffee");
+        // "both" is in the schema enum (models/User.js:92) and iOS offers it. Missing
+        // here, an account already holding it showed a blank picker and the next save
+        // overwrote the user's real answer.
+        put("Tea & coffee", "both");
         put("Energy drinks", "energy_drinks");
     }};
     // Sodium & sugar screeners — labels/values aligned with onboarding's diet step.
@@ -2500,8 +2531,15 @@ public class ProfileFragment extends Fragment {
         fieldList.add(new DialogUtils.DialogField("bloodType", "Blood Type", bloodTypes, currentBloodType));
         fieldList.add(new DialogUtils.DialogField("medicalConditions", "Medical Conditions (comma-separated)",
                 android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE, currentMedicalConditions));
-        fieldList.add(new DialogUtils.DialogField("medications", "Medications (comma-separated)",
-                android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE, currentMedications));
+        // "Medications" is NOT an updatable field. It is absent from updateUserProfile's
+        // allowedUpdates (userController.js:93-176) and is not a top-level User path, so
+        // everything typed here was filtered out server-side and silently lost — the user
+        // edited a list that could never be saved. "Medication Types" above
+        // (medicationCategories) IS whitelisted and is what both clients should use.
+        // Left commented rather than deleted: re-enabling is one line if the backend ever
+        // takes the field.
+        // fieldList.add(new DialogUtils.DialogField("medications", "Medications (comma-separated)",
+        //         android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE, currentMedications));
         fieldList.add(new DialogUtils.DialogField("allergies", "Allergies (comma-separated)",
                 android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE, currentAllergies));
 

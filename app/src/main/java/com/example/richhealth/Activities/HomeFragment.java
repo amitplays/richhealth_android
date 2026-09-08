@@ -1988,7 +1988,7 @@ public class HomeFragment extends Fragment {
         // Show progress indicator
         SimpleProgress progress = SimpleProgress.show(requireActivity(), "Processing doctor request...");
 
-        String url = ApiConfig.BASE_URL + "/api/users/doctor/respond";
+        String url = ApiConfig.BASE_URL + "/api/users/doctor/doctor/respond";
 
         JSONObject requestBody = new JSONObject();
         try {
@@ -2096,7 +2096,7 @@ public class HomeFragment extends Fragment {
         String url;
         UserProfile.RelationshipRequest req = incomingRequests.get(position);
         if (req != null && "Doctor".equalsIgnoreCase(req.getRelationship())) {
-            url = ApiConfig.BASE_URL + "/api/users/doctor/respond";
+            url = ApiConfig.BASE_URL + "/api/users/doctor/doctor/respond";
         } else {
             url = ApiConfig.BASE_URL + "/api/users/relationship/respond";
         }
