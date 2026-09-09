@@ -2808,8 +2808,9 @@ public class AIFragment extends Fragment implements BackPressHandler {
             case "web_search":           return "Searching the web" + suffix;
             case "drug_info":            return "Checking drug info" + suffix;
             case "clinical_trials":      return "Checking clinical trials" + suffix;
-            case "fetch_health_records": return "Checking your " + ((q == null || q.isEmpty()) ? "records" : q);
-            case "log_health_record":    return "Preparing to log " + ((q == null || q.isEmpty()) ? "health data" : q);
+            // Same wording as iOS: describe the user's world, not our pipeline.
+            case "fetch_health_records": return "Looking at your " + ((q == null || q.isEmpty()) ? "records" : q);
+            case "log_health_record":    return "Saving your " + ((q == null || q.isEmpty()) ? "health data" : q);
             case "read_image":           return "Looking at your image";
             default:                     return "Working\u2026";
         }
