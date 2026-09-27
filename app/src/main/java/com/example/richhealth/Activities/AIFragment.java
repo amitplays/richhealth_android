@@ -2808,9 +2808,17 @@ public class AIFragment extends Fragment implements BackPressHandler {
             case "web_search":           return "Searching the web" + suffix;
             case "drug_info":            return "Checking drug info" + suffix;
             case "clinical_trials":      return "Checking clinical trials" + suffix;
+            // Was missing, so a MedlinePlus lookup showed the generic "Working\u2026" while it
+            // ran and then became "Looked up \u2026" in the finished trace (ChatMessage
+            // .setAgentTrace) the moment the reply landed. Present tense of that same line.
+            case "lookup_health_topic":  return "Looking up " + ((q == null || q.isEmpty()) ? "what that means" : q);
             // Same wording as iOS: describe the user's world, not our pipeline.
             case "fetch_health_records": return "Looking at your " + ((q == null || q.isEmpty()) ? "records" : q);
-            case "log_health_record":    return "Saving your " + ((q == null || q.isEmpty()) ? "health data" : q);
+            // NOT "Saving your \u2026": this tool never writes anything. The backend's own tool
+            // description ends "It NEVER saves \u2014 the user confirms each card", and the receipt
+            // in ChatMessage.setAgentTrace already says "Preparing to log \u2026". Suffix style
+            // matches the search tools so the item stays visible. Kept identical to iOS.
+            case "log_health_record":    return "Checking what to log" + suffix;
             case "read_image":           return "Looking at your image";
             default:                     return "Working\u2026";
         }
